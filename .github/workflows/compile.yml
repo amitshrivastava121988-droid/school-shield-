@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths: ['index.html']
   workflow_dispatch:
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -18,11 +19,7 @@ jobs:
 
       - name: Install Babel
         run: |
-          npm install --save-dev @babel/core @babel/preset-react \
-            @babel/plugin-transform-optional-chaining \
-            @babel/plugin-transform-nullish-coalescing-operator \
-            @babel/plugin-transform-class-properties \
-            @babel/plugin-transform-async-to-generator
+          npm install --save-dev @babel/core @babel/preset-react @babel/preset-env
 
       - name: Pre-compile JSX
         run: |
@@ -40,12 +37,9 @@ jobs:
           const jsxCode = html.slice(contentStart, endIdx);
 
           const result = babel.transformSync(jsxCode, {
-            presets: ['@babel/preset-react'],
-            plugins: [
-              '@babel/plugin-transform-optional-chaining',
-              '@babel/plugin-transform-nullish-coalescing-operator',
-              '@babel/plugin-transform-class-properties',
-              '@babel/plugin-transform-async-to-generator'
+            presets: [
+              ['@babel/preset-env', { targets: { chrome: '90' } }],
+              '@babel/preset-react'
             ],
             compact: false
           });
