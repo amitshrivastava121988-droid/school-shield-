@@ -1,0 +1,67 @@
+name: Compile JSX & Deploy
+
+on:
+  push:
+    branches: [main]
+    paths: ['index.html']
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Babel
+        run: |
+          npm install --save-dev @babel/core @babel/preset-react \
+            @babel/plugin-transform-optional-chaining \
+            @babel/plugin-transform-nullish-coalescing-operator \
+            @babel/plugin-transform-class-properties \
+            @babel/plugin-transform-async-to-generator
+
+      - name: Pre-compile JSX
+        run: |
+          node -e "
+          const fs = require('fs');
+          const babel = require('@babel/core');
+
+          const html = fs.readFileSync('index.html', 'utf8');
+
+          const startTag = '<script type=\"text/babel\" data-presets=\"react\">';
+          const endTag = '</script>';
+          const startIdx = html.indexOf(startTag);
+          const contentStart = startIdx + startTag.length;
+          const endIdx = html.lastIndexOf(endTag);
+          const jsxCode = html.slice(contentStart, endIdx);
+
+          const result = babel.transformSync(jsxCode, {
+            presets: ['@babel/preset-react'],
+            plugins: [
+              '@babel/plugin-transform-optional-chaining',
+              '@babel/plugin-transform-nullish-coalescing-operator',
+              '@babel/plugin-transform-class-properties',
+              '@babel/plugin-transform-async-to-generator'
+            ],
+            compact: false
+          });
+
+          const before = html.slice(0, startIdx);
+          const after = html.slice(endIdx + endTag.length);
+          const compiled = before + '<script>' + result.code + endTag + after;
+
+          fs.writeFileSync('index.html', compiled);
+          console.log('JSX compiled successfully');
+          "
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          exclude_assets: '.github,node_modules,package*.json'
