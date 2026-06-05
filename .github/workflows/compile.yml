@@ -37,8 +37,12 @@ jobs:
           const jsxCode = html.slice(contentStart, endIdx);
 
           const result = babel.transformSync(jsxCode, {
+            filename: 'app.jsx',
+            parserOpts: {
+              plugins: ['jsx', 'asyncGenerators', 'classProperties', 'optionalChaining', 'nullishCoalescingOperator']
+            },
             presets: [
-              ['@babel/preset-env', { targets: { chrome: '90' } }],
+              ['@babel/preset-env', { targets: { chrome: '90' }, modules: false }],
               '@babel/preset-react'
             ],
             compact: false
@@ -51,7 +55,6 @@ jobs:
           fs.writeFileSync('index.html', compiled);
           console.log('JSX compiled successfully');
           "
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
