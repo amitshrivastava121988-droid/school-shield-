@@ -18,11 +18,19 @@ jobs:
           node-version: '22'
 
       - name: Install Babel
-        run: npm install --save-dev @babel/core @babel/preset-react @babel/preset-env
+        run: |
+          npm install --save-dev \
+            @babel/core \
+            @babel/preset-react \
+            @babel/preset-env \
+            @babel/plugin-transform-optional-chaining \
+            @babel/plugin-transform-nullish-coalescing-operator \
+            @babel/plugin-transform-class-properties \
+            @babel/plugin-transform-logical-assignment-operators
 
       - name: Pre-compile JSX
         run: |
-          node << 'NODEOF'
+          cat > compile.js << 'EOF'
           const fs = require('fs');
           const babel = require('@babel/core');
 
@@ -35,8 +43,10 @@ jobs:
           const endIdx = html.lastIndexOf(endTag);
           const jsxCode = html.slice(contentStart, endIdx);
 
+          console.log('JSX size:', jsxCode.length, 'chars');
+
           const result = babel.transformSync(jsxCode, {
-            filename: 'app.js',
+            filename: 'app.jsx',
             presets: [
               ['@babel/preset-env', {
                 targets: { chrome: '90' },
@@ -44,6 +54,12 @@ jobs:
                 loose: true
               }],
               ['@babel/preset-react', { runtime: 'classic' }]
+            ],
+            plugins: [
+              '@babel/plugin-transform-optional-chaining',
+              '@babel/plugin-transform-nullish-coalescing-operator',
+              '@babel/plugin-transform-class-properties',
+              '@babel/plugin-transform-logical-assignment-operators'
             ],
             compact: false
           });
@@ -53,8 +69,9 @@ jobs:
           const compiled = before + '<script>' + result.code + endTag + after;
 
           fs.writeFileSync('index.html', compiled);
-          console.log('JSX compiled successfully, size:', compiled.length);
-          NODEOF
+          console.log('Compiled successfully! Size:', compiled.length);
+          EOF
+          node compile.js
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -62,4 +79,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
           publish_branch: gh-pages
-          exclude_assets: '.github,node_modules,package*.json'
+          exclude_assets: '.github,node_modules,package*.json,compile.js'
