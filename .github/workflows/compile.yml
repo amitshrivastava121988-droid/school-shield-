@@ -3,7 +3,7 @@ name: Compile JSX & Deploy
 on:
   push:
     branches: [main]
-    paths: ['index.html']
+    paths: ['app.html', 'index.html']
   workflow_dispatch:
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
           const fs = require('fs');
           const babel = require('@babel/core');
 
-          const html = fs.readFileSync('index.html', 'utf8');
+          const html = fs.readFileSync('app.html', 'utf8');
 
           const startTag = '<script type="text/babel" data-presets="react">';
           const endTag = '</script>';
@@ -70,7 +70,7 @@ jobs:
 
           const before = html.slice(0, startIdx);
           const after = html.slice(endIdx + endTag.length);
-          fs.writeFileSync('index.html', before + '<script>' + result.code + endTag + after);
+          fs.writeFileSync('app.html', before + '<script>' + result.code + endTag + after);
           console.log('Done!');
           COMPILEOF
           node compile.js
