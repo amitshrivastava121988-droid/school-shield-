@@ -539,13 +539,13 @@ return mode === "edit";
 function PermGuard({ ctx, section, children }) {
 const role = ctx?.loggedInUser?.role || ctx?.role;
 if (["principal","founder","superadmin","parent","teacher","driver","librarian"].includes(role)) return children;
+// Reception: visitors always accessible by default
+if (role === "reception" && section === "visitors") return children;
 // ── Default sections are always accessible (at least view) for all employee roles ──
 if (PERM_BASED_ROLES.has(role) && EMPLOYEE_DEFAULT_KEYS.has(section)) {
 const perms = getMyPerms(ctx);
 const mode = getPermMode(perms, section);
-// If principal explicitly set to "off", still allow view (default sections can't be fully blocked)
-// But if principal set a specific mode, respect edit vs view
-if (mode === "off") return children; // show but PermGuard won't block — section itself handles view-only
+if (mode === "off") return children;
 return children;
 }
 const perms = getMyPerms(ctx);
@@ -2208,6 +2208,8 @@ window.__receptionUser?.receptionPermissions ||
 window.__accountantUser?.accountantPermissions
 )) || loggedInUser?.staffPermissions || loggedInUser?.receptionPermissions || loggedInUser?.accountantPermissions || [];
 const keys = extractPermKeys(userPerms);
+// Reception: visitors always in nav by default
+if (role === "reception" && !keys.includes("visitors")) keys.push("visitors");
 return mergeWithDefaults(keys, allSectionsMap);
 }
 if (role === "coordinator") {
@@ -20377,6 +20379,8 @@ var COMMON_DEFAULTS = ["leaves","healthcheckin","staffpanic","reachedhome","unif
 var ROLE_EXTRA_DEFAULTS = { reception: ["visitors"] };
 var defaultsForRole = COMMON_DEFAULTS.concat(ROLE_EXTRA_DEFAULTS[acc.role] || []);
 var allDefaultKeys = new Set([...defaultsForRole, ...Array.from(EMPLOYEE_DEFAULT_KEYS)]);
+// Also add visitors to EMPLOYEE_DEFAULT_KEYS for reception role directly
+if (acc.role === "reception") allDefaultKeys.add("visitors");
 var initPerms = normalize(acc[permKey]);
 Array.from(allDefaultKeys).forEach(function(key) {
 var defSec = EMPLOYEE_DEFAULT_SECTIONS.find(function(s){return s.key===key;});
