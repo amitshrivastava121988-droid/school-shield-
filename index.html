@@ -511,6 +511,20 @@ return typeof p==="string" ? "edit" : (p.mode||"edit");
 }
 function hasPermAccess(perms, key) { return getPermMode(perms,key)!=="off"; }
 function hasPermEdit(perms, key)   { return getPermMode(perms,key)==="edit"; }
+// ── Section-level edit/view check for perm-based roles ──────────────────────
+// Usage: const {canEdit, canView} = sectionPerm(ctx, "transport");
+function sectionPerm(ctx, sectionKey) {
+const role = ctx?.loggedInUser?.role || ctx?.role;
+const FULL_ROLES = ["principal","founder","superadmin"];
+if (FULL_ROLES.includes(role)) return {canEdit:true, canView:true};
+const perms = getMyPerms(ctx);
+const mode = getPermMode(perms, sectionKey);
+return {
+canEdit: mode === "edit",
+canView: mode === "edit" || mode === "view",
+isViewOnly: mode === "view"
+};
+}
 function extractPermKeys(perms) {
 if (!Array.isArray(perms)) return [];
 return perms.map(function(p){ return typeof p==="string"?p:p.key; }).filter(Boolean);
@@ -4159,8 +4173,9 @@ const CLASSES = classNames || DEFAULT_CLASSES;
 const [search, setSearch] = useState("");
 const [selectedClass, setSelectedClass] = useState(null); // null = show class tiles
 const canDelete = ["principal","founder","superadmin"].includes(role);
-const isViewOnly = role === "reception" || role === "coordinator";
-const canAdd = ["principal","founder","vice_principal","superadmin"].includes(role);
+const _sp = sectionPerm(ctx, "students");
+const isViewOnly = _sp.isViewOnly || (role === "reception");
+const canAdd = ["principal","founder","vice_principal","superadmin"].includes(role) || _sp.canEdit;
 const isCoordinator = role === "coordinator";
 const coordinatorClasses = isCoordinator ? (loggedInUser?.assignedClasses || []) : null;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
@@ -7912,11 +7927,10 @@ try { localStorage.setItem("ss_reminderLog_"+mySchoolId, JSON.stringify(newLog))
 toast("📲 WhatsApp reminder bheja gaya! Log save ho gaya.", "success");
 };
 const _fmp = loggedInUser?.vpPermissions||loggedInUser?.staffPermissions||loggedInUser?.receptionPermissions||loggedInUser?.accountantPermissions||loggedInUser?.coordinatorPermissions||[];
-const canEditFees = ["principal","founder","superadmin"].includes(role) ||
-(["accountant","vice_principal"].includes(role) && hasPermEdit(_fmp,"fees")) ||
-hasPermEdit(_fmp,"fees");
-const canViewFees = canEditFees || hasPermAccess(_fmp,"fees");
-const canViewOnlyFees = role === "coordinator";
+const _fsp = sectionPerm(ctx, "fees");
+const canEditFees = ["principal","founder","superadmin"].includes(role) || _fsp.canEdit;
+const canViewFees = canEditFees || _fsp.canView;
+const canViewOnlyFees = _fsp.isViewOnly || role === "coordinator";
 const canCollectFees = ["principal","founder","superadmin","accountant","reception"].includes(role);
 const isCoordinator = role === "coordinator";
 const isTransportHead = role === "transport_head";
@@ -9731,7 +9745,10 @@ function TransportSection({ ctx }) {
 const { l, buses, setBuses, toast, setModal, setUserAccounts, currentSchool, students, setStudents, role, notices, setNotices, loggedInUser, stopRequests, setStopRequests } = ctx;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const myBuses = buses.filter(b => sameId(b.schoolId, mySchoolId));
-const canManageTransport = ["principal","founder","superadmin","vice_principal","transport_head"].includes(role);
+const _tmp = getMyPerms(ctx);
+const _tsp = sectionPerm(ctx, "transport");
+const canManageTransport = ["principal","founder","superadmin","vice_principal","transport_head"].includes(role) || _tsp.canEdit;
+const canViewTransport = canManageTransport || _tsp.canView;
 const isTransportHead = role === "transport_head";
 const [selectedBusId, setSelectedBusId] = React.useState(null);
 const [thTab, setThTab] = React.useState("buses"); // buses | requests | routes
