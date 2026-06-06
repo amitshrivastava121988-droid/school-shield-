@@ -27521,7 +27521,7 @@ const [form, setForm] = useState({ name:"", purpose:"", phone:"", photo:"" });
 const [filter, setFilter] = useState("all");
 const [showPermForm, setShowPermForm] = useState(false);
 const [permForm, setPermForm] = useState({ accountUsername:"", accountName:"" });
-const canManage = isPrincipal || visitorPerms.some(p => p.username === loggedInUser?.username && p.active);
+const canManage = isPrincipal || role === "reception" || visitorPerms.some(p => p.username === loggedInUser?.username && p.active);
 const addVisitor = () => {
 if (!form.name.trim()) { toast(lang==="hi" ? "विज़िटर का नाम ज़रूरी है!" : "Visitor name is required!", "error"); return; }
 const now = new Date();
