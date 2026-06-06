@@ -649,7 +649,6 @@ return init;
 // ── On mount: listen to Firebase realtime — always fresh ──
 const isGlobalKey = GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_");
 const effectDep = isGlobalKey ? key : (key + "|" + (currentSID || ""));
-// ── Track firebaseReady state so useEffect re-runs when Firebase connects ──
 const [fbReady, setFbReady] = useState(() => !!window.firebaseReady);
 useEffect(() => {
 if (window.firebaseReady) { setFbReady(true); return; }
@@ -1763,7 +1762,6 @@ toast("Galat password ❌", "error");
 };
 checkPass(); return;
 }
-// ── If userAccounts not yet loaded from Firebase, fetch directly ──
 const doLogin = (accounts) => {
 const acc = (accounts||[]).find(a => a.username === loginUsername && a.password === pw && a.active);
 if (acc) {
@@ -1794,7 +1792,6 @@ window.__founderUser = null;
 }
 setRole(acc.role);
 setLoggedInUser(acc);
-// ── Set school-specific Firebase path — event dispatch karega taaki usePersist re-subscribe ho ──
 if (acc.schoolId) {
 const cleanSchoolId = String(acc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
 setCurrentSchoolId("SCH_" + cleanSchoolId);
@@ -1806,26 +1803,21 @@ toast(`Welcome ${acc.name}! 🎉`, "success"); return;
 }
 toast("Invalid username or password!", "error");
 };
-// ── Try login with current accounts, if empty fetch from Firebase first ──
 if ((userAccounts||[]).length === 0 && window.firebaseReady) {
-toast("⏳ Loading accounts...", "info");
+toast("Loading accounts...", "info");
 window.db.ref("schoolshield/userAccounts").once("value").then(function(snap) {
 try {
 const data = snap.val();
 const parsed = data ? (typeof data === "string" ? JSON.parse(data) : data) : [];
 const arr = Array.isArray(parsed) ? parsed : Object.values(parsed||{});
-if (arr.length > 0) {
-setUserAccounts(arr);
-doLogin(arr);
-} else {
-toast("Account data nahi mila. Admin se contact karein.", "error");
-}
+if (arr.length > 0) { setUserAccounts(arr); doLogin(arr); }
+else { toast("Account data nahi mila. Admin se contact karein.", "error"); }
 } catch(e) { toast("Login error. Retry karein.", "error"); }
 }).catch(function() { toast("Network error. Internet check karein.", "error"); });
 } else {
 doLogin(userAccounts);
 }
-
+};
 const handleAccessCode = () => {
 const schoolsArr1515 = Array.isArray(schools) ? schools : Object.values(schools || {}); const school = schoolsArr1515.find(s => s.accessCode === accessCode);
 if (school) {
@@ -20401,7 +20393,7 @@ var ROLE_PROTECTED = {
 teacher:       ["safety","visitors"],
 staff:         ["safety","visitors"],
 accountant:    ["safety","visitors"],
-reception:     ["safety"],
+reception:     ["safety"],           // reception ko visitors toggle karne do
 vice_principal:["safety"],
 coordinator:   ["safety","visitors"],
 transport_head:["safety","visitors"],
@@ -20431,10 +20423,9 @@ return (
 </div>
 <button onClick={onClose} style={{background:"none",border:"none",color:T.textMuted,cursor:"pointer",fontSize:20}}>✕</button>
 </div>
-{/* ── Coordinator: Class Assignment ── */}
 {acc.role === "coordinator" && (
-<div style={{marginBottom:16,background:"#A78BFA15",border:"1px solid #A78BFA40",borderRadius:12,padding:14}}>
-<p style={{fontSize:13,fontWeight:700,color:"#A78BFA",marginBottom:4}}>📋 Assigned Classes</p>
+<div style={{marginBottom:14,background:"#A78BFA15",border:"1px solid #A78BFA40",borderRadius:12,padding:14}}>
+<p style={{fontSize:13,fontWeight:700,color:"#A78BFA",marginBottom:4}}>📋 Assign Classes</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:10}}>Ye coordinator in classes ke students, teachers, fees, attendance aur leaves manage karega</p>
 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
 {AVAIL_CLASSES.map(function(cls){
@@ -20449,13 +20440,13 @@ style={{padding:"8px 4px",borderRadius:8,fontFamily:"Outfit,sans-serif",fontSize
 border:"1.5px solid "+(sel?"#A78BFA":T.border),
 background:sel?"#A78BFA25":"transparent",
 color:sel?"#A78BFA":T.textMuted,cursor:"pointer"}}>
-{sel?"✔ ":""}{cls}
+{sel ? "OK " : ""}{cls}
 </button>
 );
 })}
 </div>
 {assignedClasses.length > 0 && (
-<p style={{fontSize:10,color:"#A78BFA",marginTop:8}}>✅ {assignedClasses.length} classes assigned: {assignedClasses.join(", ")}</p>
+<p style={{fontSize:10,color:"#A78BFA",marginTop:8}}>Assigned: {assignedClasses.join(", ")}</p>
 )}
 </div>
 )}
@@ -20490,7 +20481,7 @@ style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:
 <div style={{display:"flex",gap:8,marginTop:16}}>
 <button onClick={function(){onSave(perms, permKey, acc.role==="coordinator" ? assignedClasses : null);}}
 style={{flex:1,padding:"11px",background:T.green,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-✅ Save ({perms.filter(function(p){return p&&p.key;}).length} sections{acc.role==="coordinator" && assignedClasses.length>0 ? " + "+assignedClasses.length+" classes":""})
+Save ({perms.filter(function(p){return p&&p.key;}).length} sections{acc.role==="coordinator" && assignedClasses.length > 0 ? " + "+assignedClasses.length+" classes" : ""})
 </button>
 <button onClick={onClose} style={{padding:"11px 20px",background:"none",border:"1px solid "+T.border,borderRadius:10,color:T.textMuted,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>Cancel</button>
 </div>
@@ -20612,7 +20603,7 @@ setModal(
 acc={acc}
 classNames={classNames}
 onSave={(perms, permKey, assignedCls) => {
-const update = {...acc, [permKey]:perms};
+const update = {[permKey]:perms};
 if (assignedCls !== null && assignedCls !== undefined) update.assignedClasses = assignedCls;
 setUserAccounts(p => p.map(a => a.id===acc.id ? {...a, ...update} : a));
 if (acc.role === "vice_principal" && window.__vpUser?.id === acc.id) {
