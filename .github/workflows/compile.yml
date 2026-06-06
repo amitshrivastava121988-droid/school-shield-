@@ -15,21 +15,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Babel
-        run: |
-          npm install --save-dev @babel/core @babel/preset-react @babel/preset-env
+        run: npm install --save-dev @babel/core @babel/preset-react @babel/preset-env
 
       - name: Pre-compile JSX
         run: |
-          node -e "
+          node << 'NODEOF'
           const fs = require('fs');
           const babel = require('@babel/core');
 
           const html = fs.readFileSync('index.html', 'utf8');
 
-          const startTag = '<script type=\"text/babel\" data-presets=\"react\">';
+          const startTag = '<script type="text/babel" data-presets="react">';
           const endTag = '</script>';
           const startIdx = html.indexOf(startTag);
           const contentStart = startIdx + startTag.length;
@@ -37,13 +36,14 @@ jobs:
           const jsxCode = html.slice(contentStart, endIdx);
 
           const result = babel.transformSync(jsxCode, {
-            filename: 'app.jsx',
-            parserOpts: {
-              plugins: ['jsx', 'asyncGenerators', 'classProperties', 'optionalChaining', 'nullishCoalescingOperator']
-            },
+            filename: 'app.js',
             presets: [
-              ['@babel/preset-env', { targets: { chrome: '90' }, modules: false }],
-              '@babel/preset-react'
+              ['@babel/preset-env', {
+                targets: { chrome: '90' },
+                modules: false,
+                loose: true
+              }],
+              ['@babel/preset-react', { runtime: 'classic' }]
             ],
             compact: false
           });
@@ -53,10 +53,11 @@ jobs:
           const compiled = before + '<script>' + result.code + endTag + after;
 
           fs.writeFileSync('index.html', compiled);
-          console.log('JSX compiled successfully');
-          "
+          console.log('JSX compiled successfully, size:', compiled.length);
+          NODEOF
+
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./
