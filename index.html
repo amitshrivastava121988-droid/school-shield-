@@ -501,7 +501,7 @@ const EMPLOYEE_DEFAULT_SECTIONS = [
 ];
 const EMPLOYEE_DEFAULT_KEYS = new Set(EMPLOYEE_DEFAULT_SECTIONS.map(s=>s.key));
 // Roles that use permission-based nav (not hardcoded NAV_MAP)
-const PERM_BASED_ROLES = new Set(["vice_principal","staff","reception","accountant","coordinator","transport_head","librarian","driver"]);
+const PERM_BASED_ROLES = new Set(["teacher","vice_principal","staff","reception","accountant","coordinator","transport_head","librarian","driver"]);
 // ── Permission helpers ───────────────────────────────────────────────────────
 function getPermMode(perms, key) {
 if (!Array.isArray(perms)) return "off";
@@ -511,19 +511,12 @@ return typeof p==="string" ? "edit" : (p.mode||"edit");
 }
 function hasPermAccess(perms, key) { return getPermMode(perms,key)!=="off"; }
 function hasPermEdit(perms, key)   { return getPermMode(perms,key)==="edit"; }
-// ── Section-level edit/view check for perm-based roles ──────────────────────
-// Usage: const {canEdit, canView} = sectionPerm(ctx, "transport");
 function sectionPerm(ctx, sectionKey) {
 const role = ctx?.loggedInUser?.role || ctx?.role;
-const FULL_ROLES = ["principal","founder","superadmin"];
-if (FULL_ROLES.includes(role)) return {canEdit:true, canView:true};
+if (["principal","founder","superadmin"].includes(role)) return {canEdit:true, canView:true, isViewOnly:false};
 const perms = getMyPerms(ctx);
 const mode = getPermMode(perms, sectionKey);
-return {
-canEdit: mode === "edit",
-canView: mode === "edit" || mode === "view",
-isViewOnly: mode === "view"
-};
+return {canEdit: mode==="edit", canView: mode==="edit"||mode==="view", isViewOnly: mode==="view"};
 }
 function extractPermKeys(perms) {
 if (!Array.isArray(perms)) return [];
@@ -533,9 +526,19 @@ return perms.map(function(p){ return typeof p==="string"?p:p.key; }).filter(Bool
 function getMyPerms(ctx) {
 const u = ctx?.loggedInUser;
 if (!u) return [];
+const role = u.role;
+if (role === "teacher" && window.__teacherUser) return window.__teacherUser.teacherPermissions || u.teacherPermissions || [];
+if (role === "vice_principal" && window.__vpUser) return window.__vpUser.vpPermissions || [];
+if (role === "staff" && window.__staffUser) return window.__staffUser.staffPermissions || [];
+if (role === "reception" && window.__receptionUser) return window.__receptionUser.receptionPermissions || [];
+if (role === "accountant" && window.__accountantUser) return window.__accountantUser.accountantPermissions || [];
+if (role === "coordinator" && window.__coordinatorUser) return window.__coordinatorUser.coordinatorPermissions || [];
+if (role === "transport_head" && window.__transportHeadUser) return window.__transportHeadUser.transportHeadPermissions || [];
+if (role === "librarian" && window.__librarianUser) return window.__librarianUser.librarianPermissions || [];
+if (role === "driver" && window.__driverUser) return window.__driverUser.driverPermissions || [];
 return u.vpPermissions || u.staffPermissions || u.receptionPermissions ||
 u.accountantPermissions || u.coordinatorPermissions ||
-u.transportHeadPermissions || u.librarianPermissions || u.driverPermissions || [];
+u.transportHeadPermissions || u.librarianPermissions || u.driverPermissions || u.teacherPermissions || [];
 }
 function canDo(ctx, section, action) {
 const role = ctx?.loggedInUser?.role || ctx?.role;
@@ -553,13 +556,14 @@ return mode === "edit";
 function PermGuard({ ctx, section, children }) {
 const role = ctx?.loggedInUser?.role || ctx?.role;
 if (["principal","founder","superadmin","parent","teacher","driver","librarian"].includes(role)) return children;
-// Reception: visitors always accessible by default
 if (role === "reception" && section === "visitors") return children;
 // ── Default sections are always accessible (at least view) for all employee roles ──
 if (PERM_BASED_ROLES.has(role) && EMPLOYEE_DEFAULT_KEYS.has(section)) {
 const perms = getMyPerms(ctx);
 const mode = getPermMode(perms, section);
-if (mode === "off") return children;
+// If principal explicitly set to "off", still allow view (default sections can't be fully blocked)
+// But if principal set a specific mode, respect edit vs view
+if (mode === "off") return children; // show but PermGuard won't block — section itself handles view-only
 return children;
 }
 const perms = getMyPerms(ctx);
@@ -666,9 +670,7 @@ const effectDep = isGlobalKey ? key : (key + "|" + (currentSID || ""));
 const [fbReady, setFbReady] = useState(() => !!window.firebaseReady);
 useEffect(() => {
 if (window.firebaseReady) { setFbReady(true); return; }
-const interval = setInterval(() => {
-if (window.firebaseReady) { setFbReady(true); clearInterval(interval); }
-}, 300);
+const interval = setInterval(() => { if (window.firebaseReady) { setFbReady(true); clearInterval(interval); } }, 300);
 return () => clearInterval(interval);
 }, []);
 useEffect(() => {
@@ -1806,6 +1808,7 @@ window.__founderUser = null;
 }
 setRole(acc.role);
 setLoggedInUser(acc);
+// ── Set school-specific Firebase path — event dispatch karega taaki usePersist re-subscribe ho ──
 if (acc.schoolId) {
 const cleanSchoolId = String(acc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
 setCurrentSchoolId("SCH_" + cleanSchoolId);
@@ -1828,9 +1831,7 @@ if (arr.length > 0) { setUserAccounts(arr); doLogin(arr); }
 else { toast("Account data nahi mila. Admin se contact karein.", "error"); }
 } catch(e) { toast("Login error. Retry karein.", "error"); }
 }).catch(function() { toast("Network error. Internet check karein.", "error"); });
-} else {
-doLogin(userAccounts);
-}
+} else { doLogin(userAccounts); }
 };
 const handleAccessCode = () => {
 const schoolsArr1515 = Array.isArray(schools) ? schools : Object.values(schools || {}); const school = schoolsArr1515.find(s => s.accessCode === accessCode);
@@ -2158,6 +2159,7 @@ teacher: [
 {key:"chat",icon:"💬",label:"chat"},
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
+{key:"transport",icon:"🚌",label:"Transport"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
 ],
 parent: [
@@ -2206,6 +2208,17 @@ return result;
 }
 function resolveNavItems(role, loggedInUser) {
 const allSectionsMap = Object.fromEntries(ALL_PERM_SECTIONS.map(s=>([s.key, {key:s.key, icon:s.icon, label:s.label||s.key}])));
+if (role === "teacher") {
+if (typeof window !== "undefined" && !window.__teacherUser && loggedInUser?.role === "teacher") window.__teacherUser = loggedInUser;
+const teacherPerms = (window.__teacherUser?.teacherPermissions) || loggedInUser?.teacherPermissions || [];
+const teacherNavMap = NAV_MAP.teacher || [];
+const teacherNavKeys = new Set(teacherNavMap.map(s=>s.key));
+if (teacherPerms.length > 0) {
+const permKeys = extractPermKeys(teacherPerms).filter(k => teacherNavKeys.has(k));
+return mergeWithDefaults(permKeys, allSectionsMap);
+}
+return teacherNavMap.map(s => allSectionsMap[s.key] || s).filter(Boolean);
+}
 if (role === "vice_principal") {
 if (typeof window !== "undefined" && !window.__vpUser && loggedInUser?.role === "vice_principal") {
 window.__vpUser = loggedInUser;
@@ -2222,7 +2235,6 @@ window.__receptionUser?.receptionPermissions ||
 window.__accountantUser?.accountantPermissions
 )) || loggedInUser?.staffPermissions || loggedInUser?.receptionPermissions || loggedInUser?.accountantPermissions || [];
 const keys = extractPermKeys(userPerms);
-// Reception: visitors always in nav by default
 if (role === "reception" && !keys.includes("visitors")) keys.push("visitors");
 return mergeWithDefaults(keys, allSectionsMap);
 }
@@ -9745,7 +9757,6 @@ function TransportSection({ ctx }) {
 const { l, buses, setBuses, toast, setModal, setUserAccounts, currentSchool, students, setStudents, role, notices, setNotices, loggedInUser, stopRequests, setStopRequests } = ctx;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const myBuses = buses.filter(b => sameId(b.schoolId, mySchoolId));
-const _tmp = getMyPerms(ctx);
 const _tsp = sectionPerm(ctx, "transport");
 const canManageTransport = ["principal","founder","superadmin","vice_principal","transport_head"].includes(role) || _tsp.canEdit;
 const canViewTransport = canManageTransport || _tsp.canView;
@@ -20379,6 +20390,7 @@ return (
 // ─── ACCOUNTS SECTION (PRINCIPAL) ────────────────────────────────────────────
 // ─── GENERIC PERMISSIONS MODAL (VP / Staff / Reception / Accountant) ──────────
 const ROLE_PERM_CONFIG = {
+teacher:        { key:"teacherPermissions",        sections: ()=>ALL_PERM_SECTIONS,       title:"🔐 Teacher Section Permissions",        hint:"Jin sections ko ON karo, woh Teacher ke login mein dikhengi" },
 vice_principal: { key:"vpPermissions",            sections: ()=>ALL_VP_SECTIONS,         title:"🔐 VP Section Permissions",             hint:"Jin sections ko ON karo, woh Vice Principal ke login mein dikhengi" },
 staff:          { key:"staffPermissions",          sections: ()=>ALL_STAFF_SECTIONS,      title:"🔐 Staff Section Permissions",           hint:"Jin sections ko ON karo, woh Staff ke login mein dikhengi" },
 reception:      { key:"receptionPermissions",      sections: ()=>ALL_RECEPTION_SECTIONS,  title:"🔐 Reception Section Permissions",       hint:"Jin sections ko ON karo, woh Receptionist ke login mein dikhengi" },
@@ -20393,11 +20405,12 @@ var cfg = ROLE_PERM_CONFIG[acc.role];
 var permKey = cfg.key;
 var normalize = function(raw) { return (raw||[]).map(function(p){ return typeof p==="string"?{key:p,mode:"edit"}:p; }); };
 var COMMON_DEFAULTS = ["leaves","healthcheckin","staffpanic","reachedhome","unifiedcalendar"];
-var ROLE_EXTRA_DEFAULTS = { reception: ["visitors"] };
+var ROLE_EXTRA_DEFAULTS = {
+reception: ["visitors"],
+};
 var defaultsForRole = COMMON_DEFAULTS.concat(ROLE_EXTRA_DEFAULTS[acc.role] || []);
+// Merge EMPLOYEE_DEFAULT_SECTIONS keys into defaults
 var allDefaultKeys = new Set([...defaultsForRole, ...Array.from(EMPLOYEE_DEFAULT_KEYS)]);
-// Also add visitors to EMPLOYEE_DEFAULT_KEYS for reception role directly
-if (acc.role === "reception") allDefaultKeys.add("visitors");
 var initPerms = normalize(acc[permKey]);
 Array.from(allDefaultKeys).forEach(function(key) {
 var defSec = EMPLOYEE_DEFAULT_SECTIONS.find(function(s){return s.key===key;});
@@ -20444,6 +20457,7 @@ return (
 </div>
 <button onClick={onClose} style={{background:"none",border:"none",color:T.textMuted,cursor:"pointer",fontSize:20}}>✕</button>
 </div>
+
 {acc.role === "coordinator" && (
 <div style={{marginBottom:14,background:"#A78BFA15",border:"1px solid #A78BFA40",borderRadius:12,padding:14}}>
 <p style={{fontSize:13,fontWeight:700,color:"#A78BFA",marginBottom:4}}>📋 Assign Classes</p>
@@ -20452,23 +20466,16 @@ return (
 {AVAIL_CLASSES.map(function(cls){
 var sel = assignedClasses.includes(cls);
 return (
-<button key={cls} onClick={function(){
-setAssignedClasses(function(prev){
-return sel ? prev.filter(function(c){return c!==cls;}) : prev.concat([cls]);
-});
-}}
+<button key={cls} onClick={function(){setAssignedClasses(function(prev){return sel ? prev.filter(function(c){return c!==cls;}) : prev.concat([cls]);});}}
 style={{padding:"8px 4px",borderRadius:8,fontFamily:"Outfit,sans-serif",fontSize:11,fontWeight:700,
-border:"1.5px solid "+(sel?"#A78BFA":T.border),
-background:sel?"#A78BFA25":"transparent",
+border:"1.5px solid "+(sel?"#A78BFA":T.border),background:sel?"#A78BFA25":"transparent",
 color:sel?"#A78BFA":T.textMuted,cursor:"pointer"}}>
 {sel ? "OK " : ""}{cls}
 </button>
 );
 })}
 </div>
-{assignedClasses.length > 0 && (
-<p style={{fontSize:10,color:"#A78BFA",marginTop:8}}>Assigned: {assignedClasses.join(", ")}</p>
-)}
+{assignedClasses.length > 0 && <p style={{fontSize:10,color:"#A78BFA",marginTop:8}}>Assigned: {assignedClasses.join(", ")}</p>}
 </div>
 )}
 <div style={{background:T.accent+"10",border:"1px solid "+T.accent+"30",borderRadius:10,padding:"10px 14px",marginBottom:10}}>
@@ -20502,7 +20509,7 @@ style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:
 <div style={{display:"flex",gap:8,marginTop:16}}>
 <button onClick={function(){onSave(perms, permKey, acc.role==="coordinator" ? assignedClasses : null);}}
 style={{flex:1,padding:"11px",background:T.green,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-Save ({perms.filter(function(p){return p&&p.key;}).length} sections{acc.role==="coordinator" && assignedClasses.length > 0 ? " + "+assignedClasses.length+" classes" : ""})
+Save ({perms.filter(function(p){return p&&p.key;}).length} sections{acc.role==="coordinator" && assignedClasses.length>0?" + "+assignedClasses.length+" classes":""})
 </button>
 <button onClick={onClose} style={{padding:"11px 20px",background:"none",border:"1px solid "+T.border,borderRadius:10,color:T.textMuted,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>Cancel</button>
 </div>
@@ -20627,6 +20634,9 @@ onSave={(perms, permKey, assignedCls) => {
 const update = {[permKey]:perms};
 if (assignedCls !== null && assignedCls !== undefined) update.assignedClasses = assignedCls;
 setUserAccounts(p => p.map(a => a.id===acc.id ? {...a, ...update} : a));
+if (acc.role === "teacher" && window.__teacherUser?.id === acc.id) {
+window.__teacherUser = {...window.__teacherUser, teacherPermissions:perms};
+}
 if (acc.role === "vice_principal" && window.__vpUser?.id === acc.id) {
 window.__vpUser = {...window.__vpUser, vpPermissions:perms};
 }
@@ -20915,10 +20925,7 @@ return sec ? (
 })()}
 </div>
 <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
-{acc.role === "vice_principal" && (
-<Btn onClick={()=>openPermissions(acc)} color={"#06B6D4"} small>🔐 Permissions</Btn>
-)}
-{["staff","reception","accountant","coordinator","transport_head"].includes(acc.role) && (
+{ROLE_PERM_CONFIG[acc.role] && (
 <Btn onClick={()=>openPermissions(acc)} color={"#06B6D4"} small>🔐 Permissions</Btn>
 )}
 {role === "superadmin" && <Btn onClick={()=>resetPassword(acc.id)} color={T.yellow} small>🔄 {l("resetPassword")}</Btn>}
@@ -27538,7 +27545,8 @@ const [form, setForm] = useState({ name:"", purpose:"", phone:"", photo:"" });
 const [filter, setFilter] = useState("all");
 const [showPermForm, setShowPermForm] = useState(false);
 const [permForm, setPermForm] = useState({ accountUsername:"", accountName:"" });
-const canManage = isPrincipal || role === "reception" || visitorPerms.some(p => p.username === loggedInUser?.username && p.active);
+const _vsp = sectionPerm(ctx, "visitors");
+const canManage = isPrincipal || _vsp.canEdit || visitorPerms.some(p => p.username === loggedInUser?.username && p.active);
 const addVisitor = () => {
 if (!form.name.trim()) { toast(lang==="hi" ? "विज़िटर का नाम ज़रूरी है!" : "Visitor name is required!", "error"); return; }
 const now = new Date();
