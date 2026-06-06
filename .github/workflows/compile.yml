@@ -30,7 +30,7 @@ jobs:
 
       - name: Pre-compile JSX
         run: |
-          cat > compile.js << 'EOF'
+          cat > compile.js << 'COMPILEOF'
           const fs = require('fs');
           const babel = require('@babel/core');
 
@@ -38,21 +38,25 @@ jobs:
 
           const startTag = '<script type="text/babel" data-presets="react">';
           const endTag = '</script>';
+
           const startIdx = html.indexOf(startTag);
           const contentStart = startIdx + startTag.length;
-          const endIdx = html.lastIndexOf(endTag);
-          const jsxCode = html.slice(contentStart, endIdx);
 
-          console.log('JSX size:', jsxCode.length, 'chars');
+          let endIdx = html.length;
+          while (endIdx > contentStart) {
+            endIdx = html.lastIndexOf(endTag, endIdx - 1);
+            if (endIdx < contentStart) break;
+            const between = html.slice(contentStart, endIdx);
+            if (!between.includes('<script')) break;
+          }
+
+          const jsxCode = html.slice(contentStart, endIdx);
+          console.log('JSX lines:', jsxCode.split('\n').length);
 
           const result = babel.transformSync(jsxCode, {
             filename: 'app.jsx',
             presets: [
-              ['@babel/preset-env', {
-                targets: { chrome: '90' },
-                modules: false,
-                loose: true
-              }],
+              ['@babel/preset-env', { targets: { chrome: '90' }, modules: false, loose: true }],
               ['@babel/preset-react', { runtime: 'classic' }]
             ],
             plugins: [
@@ -66,11 +70,9 @@ jobs:
 
           const before = html.slice(0, startIdx);
           const after = html.slice(endIdx + endTag.length);
-          const compiled = before + '<script>' + result.code + endTag + after;
-
-          fs.writeFileSync('index.html', compiled);
-          console.log('Compiled successfully! Size:', compiled.length);
-          EOF
+          fs.writeFileSync('index.html', before + '<script>' + result.code + endTag + after);
+          console.log('Done!');
+          COMPILEOF
           node compile.js
 
       - name: Deploy to GitHub Pages
