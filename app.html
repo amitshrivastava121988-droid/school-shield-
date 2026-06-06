@@ -1868,8 +1868,15 @@ const arr = Array.isArray(p) ? p : Object.values(p||{});
 const filtered = arr.filter(a => !String(a.id).startsWith("da"));
 return [...filtered, ...demoAccounts];
 });
-setMode("main");
-toast("🎉 Demo School ready! Login: demo_principal / demo123", "success");
+// ── Auto-login as demo principal with isolated school context ──
+const demoPrincipalAcc = {id:"da1", schoolId:demoSchoolId, role:"principal", name:"Demo Principal", username:"demo_principal", password:"demo123", active:true};
+window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null;
+window.__accountantUser = null; window.__coordinatorUser = null;
+setRole("principal");
+setLoggedInUser(demoPrincipalAcc);
+setCurrentSchoolId("SCH_DEMO_SCH_2026");
+setActiveSection("dashboard");
+toast("🎉 Demo School open! Explore karein — demo_principal ke roop mein logged in hain.", "success");
 return;
 }
 const schoolsArr1515 = Array.isArray(schools) ? schools : Object.values(schools || {}); const school = schoolsArr1515.find(s => s.accessCode === accessCode);
