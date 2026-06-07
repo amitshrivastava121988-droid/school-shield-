@@ -50,7 +50,37 @@ This application contains sensitive and live data including:
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ── FIREBASE CONFIG ──
+// ── Auto-activate demo from landing page redirect ──
+(function() {
+var hash = window.location.hash || '';
+if (hash.indexOf('#demo_') === 0) {
+var token = hash.slice(6);
+try {
+var decoded = atob(token);
+var parts = decoded.split('|');
+var mobile = parts[0];
+var createdAt = parseInt(parts[1]);
+var now = Date.now();
+var EXPIRY = 2 * 60 * 60 * 1000;
+if ((now - createdAt) < EXPIRY && mobile && mobile.length === 10) {
+// Valid token — save to demo store so activateDemo can find it
+var DEMO_STORE_KEY = 'ss_demo_codes';
+var store = {};
+try { store = JSON.parse(localStorage.getItem(DEMO_STORE_KEY)||'{}'); } catch(e) {}
+var entry = store[mobile] || { attempts: 0, sessions: [] };
+var exists = (entry.sessions||[]).some(function(s){ return s.createdAt === createdAt; });
+if (!exists) {
+entry.sessions = entry.sessions || [];
+entry.sessions.push({ createdAt: createdAt, mobile: mobile });
+store[mobile] = entry;
+try { localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(store)); } catch(e) {}
+}
+window.__autoDemoToken = token;
+}
+} catch(e) {}
+window.history.replaceState(null, '', window.location.pathname);
+}
+})();
 const FIREBASE_CONFIG = {
 apiKey: "AIzaSyBZ-l1Mp-B4m024DLD-e2yRuXu49gld1Lg",
 authDomain: "school-shield-df230.firebaseapp.com",
@@ -122,7 +152,16 @@ xhr.onerror = function() { reject(new Error("Network error")); };
 xhr.send(formData);
 });
 };
-// ── One-time migration: rename old ss_ cache keys to ss_cache_ ──
+// ── Auto-trigger demo if coming from landing page ──
+useEffect(() => {
+if (window.__autoDemoToken && !loggedInUser) {
+setTimeout(() => {
+window.activateDemo({setSchools,setUserAccounts,setRole,setLoggedInUser,setCurrentSchoolId,setActiveSection,setMode,toast});
+window.__autoDemoToken = null;
+}, 600);
+}
+}, []);
+
 (function migrateCache() {
 const MIGRATED_KEY = "ss_cache_migrated_v5"; // v27: schoolList path fix
 if (localStorage.getItem(MIGRATED_KEY)) return;
@@ -151,57 +190,59 @@ window.PARENT_SCHOOL_ID = urlParams.get("school") || "1";
 <script>
 // Demo System
 window.activateDemo = function(deps) {
-var DEMO_KEY = "ss_demo_usage";
-var MAX = 3;
+var DEMO_STORE_KEY = 'ss_demo_codes';
 var EXPIRY = 2 * 60 * 60 * 1000;
-var usage = {};
-try { usage = JSON.parse(localStorage.getItem(DEMO_KEY)||"{}"); } catch(e) {}
 var now = Date.now();
-var active = usage.startTime && (now - usage.startTime) < EXPIRY;
-if (!active && usage.attempts >= MAX) {
-deps.toast("Demo limit reached (3/3)! Contact: 8839913233", "error");
-return;
-}
-if (!active) {
-usage.attempts = (usage.attempts||0) + 1;
-usage.startTime = now;
-try { localStorage.setItem(DEMO_KEY, JSON.stringify(usage)); } catch(e) {}
-}
-var mins = Math.ceil(Math.max(0, EXPIRY - (now - usage.startTime)) / 60000);
+var store = {};
+try { store = JSON.parse(localStorage.getItem(DEMO_STORE_KEY)||'{}'); } catch(e) {}
+var validEntry = null;
+var mins = 120;
+Object.keys(store).forEach(function(mobile) {
+var entry = store[mobile] || {};
+(entry.codes||[]).forEach(function(cd) {
+if ((now - cd.createdAt) < EXPIRY) { validEntry = cd; mins = Math.ceil((EXPIRY-(now-cd.createdAt))/60000); }
+});
+});
+if (!validEntry) { deps.toast("No valid demo code! Get one from schoolshield.pro", "error"); return; }
 var sid = "DEMO_SCH_2026";
+var SESSION_KEY = "ss_demo_session_" + validEntry.code;
+var sd = null;
+try { sd = JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); } catch(e) {}
+var ss=[{id:"ds1",schoolId:sid,name:"Aarav Sharma",class:"Class 5",rollNo:"S99-C05-01",gender:"Male",parentName:"Rajesh Sharma",parentPhone:"9876500001",dob:"2015-03-10",attendance:92},{id:"ds2",schoolId:sid,name:"Priya Patel",class:"Class 5",rollNo:"S99-C05-02",gender:"Female",parentName:"Suresh Patel",parentPhone:"9876500002",dob:"2015-07-22",attendance:88},{id:"ds3",schoolId:sid,name:"Kabir Singh",class:"Class 3",rollNo:"S99-C03-01",gender:"Male",parentName:"Manpreet Singh",parentPhone:"9876500003",dob:"2017-01-15",attendance:75},{id:"ds4",schoolId:sid,name:"Meera Joshi",class:"Class 3",rollNo:"S99-C03-02",gender:"Female",parentName:"Ramesh Joshi",parentPhone:"9876500004",dob:"2017-05-20",attendance:95},{id:"ds5",schoolId:sid,name:"Rohan Verma",class:"Class 1",rollNo:"S99-C01-01",gender:"Male",parentName:"Suresh Verma",parentPhone:"9876500005",dob:"2019-08-12",attendance:80},{id:"ds6",schoolId:sid,name:"Ananya Gupta",class:"Class 1",rollNo:"S99-C01-02",gender:"Female",parentName:"Vivek Gupta",parentPhone:"9876500006",dob:"2019-11-03",attendance:90}];
+var st=[{id:"dt1",schoolId:sid,name:"Sunita Verma",subject:"Mathematics",phone:"9876500010",salary:35000,assignedClass:"Class 5",joinDate:"2020-06-01"},{id:"dt2",schoolId:sid,name:"Ramesh Joshi",subject:"Science",phone:"9876500011",salary:32000,assignedClass:"Class 3",joinDate:"2021-07-15"},{id:"dt3",schoolId:sid,name:"Pooja Singh",subject:"Hindi",phone:"9876500012",salary:30000,assignedClass:"Class 1",joinDate:"2022-01-10"}];
+var sf=[{id:"df1",schoolId:sid,studentName:"Aarav Sharma",month:"April",amount:8000,type:"Tuition Fee",paid:true,paidAmount:8000,paymentMethod:"Cash",date:"2026-04-05",feeItems:[{type:"Tuition Fee",amount:8000}]},{id:"df2",schoolId:sid,studentName:"Aarav Sharma",month:"May",amount:8000,type:"Tuition Fee",paid:false,dueDate:"2026-05-10",feeItems:[{type:"Tuition Fee",amount:8000}]},{id:"df3",schoolId:sid,studentName:"Priya Patel",month:"April",amount:8000,type:"Tuition Fee",paid:true,paidAmount:8000,paymentMethod:"Online",date:"2026-04-03",feeItems:[{type:"Tuition Fee",amount:8000}]},{id:"df4",schoolId:sid,studentName:"Kabir Singh",month:"April",amount:7000,type:"Tuition Fee",paid:false,dueDate:"2026-04-10",feeItems:[{type:"Tuition Fee",amount:7000}]},{id:"df5",schoolId:sid,studentName:"Meera Joshi",month:"April",amount:7000,type:"Tuition Fee",paid:true,paidAmount:7000,paymentMethod:"Cash",date:"2026-04-02",feeItems:[{type:"Tuition Fee",amount:7000}]},{id:"df6",schoolId:sid,studentName:"Ananya Gupta",month:"April",amount:6000,type:"Tuition Fee",paid:true,paidAmount:6000,paymentMethod:"Online",date:"2026-04-07",feeItems:[{type:"Tuition Fee",amount:6000}]}];
+var sfs=[{id:"dfs1",schoolId:sid,class:"Class 1",total:24000,session:"2026-27"},{id:"dfs2",schoolId:sid,class:"Class 3",total:28000,session:"2026-27"},{id:"dfs3",schoolId:sid,class:"Class 5",total:32000,session:"2026-27"}];
+var sal=[{id:"dal1",schoolId:sid,title:"PTM on 15th June",message:"Parent Teacher Meeting on 15th June 2026 at 10 AM.",type:"notice",date:new Date().toISOString(),active:true},{id:"dal2",schoolId:sid,title:"School Holiday — 16th June",message:"School closed on 16th June 2026 due to local holiday.",type:"notice",date:new Date().toISOString(),active:true}];
+var sb=[{id:"db1",schoolId:sid,busNo:"MP-09-1234",driverName:"Ramkumar Patel",driverPhone:"9876500020",route:"City Center to School",capacity:40,status:"running"}];
 try {
-localStorage.setItem("ss_cache_SCH_"+sid+"_students", JSON.stringify([
-{id:"ds1",schoolId:sid,name:"Aarav Sharma",class:"Class 5",rollNo:"S99-C05-01",gender:"Male",parentName:"Rajesh Sharma",parentPhone:"9876500001",dob:"2015-03-10"},
-{id:"ds2",schoolId:sid,name:"Priya Patel",class:"Class 5",rollNo:"S99-C05-02",gender:"Female",parentName:"Suresh Patel",parentPhone:"9876500002",dob:"2015-07-22"}
-]));
-localStorage.setItem("ss_cache_SCH_"+sid+"_teachers", JSON.stringify([
-{id:"dt1",schoolId:sid,name:"Sunita Verma",subject:"Mathematics",phone:"9876500010",salary:35000,assignedClass:"Class 5"}
-]));
+localStorage.setItem("ss_cache_SCH_"+sid+"_students",JSON.stringify(sd?sd.students:ss));
+localStorage.setItem("ss_cache_SCH_"+sid+"_teachers",JSON.stringify(sd?sd.teachers:st));
+localStorage.setItem("ss_cache_SCH_"+sid+"_fees",JSON.stringify(sd?sd.fees:sf));
+localStorage.setItem("ss_cache_SCH_"+sid+"_feeStructure",JSON.stringify(sd?sd.feeStructure:sfs));
+localStorage.setItem("ss_cache_SCH_"+sid+"_alerts",JSON.stringify(sd?sd.alerts:sal));
+localStorage.setItem("ss_cache_SCH_"+sid+"_buses",JSON.stringify(sd?sd.buses:sb));
 } catch(e) {}
-var demoSchool = {id:sid,schoolCode:"S99",name:"SchoolShield Demo School",address:"Indore, MP",contact:"8839913233",logo:"🏫",active:true,paid:true,setup:true,accessCode:"DEMO2026",principalUsername:"demo_principal",principalPassword:"demo123",principalName:"Demo Principal"};
-var demoAccs = [
-{id:"da1",schoolId:sid,role:"principal",name:"Demo Principal",username:"demo_principal",password:"demo123",active:true},
-{id:"da2",schoolId:sid,role:"teacher",name:"Demo Teacher",username:"demo_teacher",password:"demo123",active:true},
-{id:"da3",schoolId:sid,role:"parent",name:"Demo Parent",username:"demo_parent",password:"demo123",active:true}
-];
+var demoSchool={id:sid,schoolCode:"S99",name:"SchoolShield Demo School",address:"Indore, MP",contact:"8839913233",logo:"🏫",active:true,paid:true,setup:true};
+var demoAccs=[{id:"da1",schoolId:sid,role:"principal",name:"Demo Principal",username:"demo_principal",password:"demo123",active:true},{id:"da2",schoolId:sid,role:"teacher",name:"Sunita Verma",username:"demo_teacher",password:"demo123",active:true,assignedClass:"Class 5"},{id:"da3",schoolId:sid,role:"parent",name:"Rajesh Sharma",username:"demo_parent",password:"demo123",active:true}];
 deps.setSchools(function(p){var arr=Array.isArray(p)?p:Object.values(p||{});if(!arr.find(function(s){return s.id===sid;}))return arr.concat([demoSchool]);return arr;});
 deps.setUserAccounts(function(p){var arr=Array.isArray(p)?p:Object.values(p||{});return arr.filter(function(a){return !String(a.id).startsWith("da");}).concat(demoAccs);});
-window.__isDemoMode = true;
-window.currentSchoolId = null;
-// First clear, then set demo after short delay so React re-renders cleanly
+window.__isDemoMode=true;
+window.__demoSessionKey=SESSION_KEY;
+window.currentSchoolId=null;
 deps.setCurrentSchoolId(null);
 deps.setRole(null);
 deps.setLoggedInUser(null);
-setTimeout(function() {
-if (deps.setMode) deps.setMode("main");
+setTimeout(function(){
+if(deps.setMode)deps.setMode("main");
 deps.setRole("principal");
 deps.setLoggedInUser({id:"da1",schoolId:sid,role:"principal",name:"Demo Principal",username:"demo_principal",active:true});
-window.currentSchoolId = "SCH_"+sid;
+window.currentSchoolId="SCH_"+sid;
 deps.setCurrentSchoolId("SCH_"+sid);
 deps.setActiveSection("dashboard");
-deps.toast("🎉 Demo open! Session "+usage.attempts+"/3 — "+mins+" min remaining.", "success");
-}, 300);
+deps.toast("Demo open! "+mins+" min remaining. Your data stays on this device.",  "success");
+},400);
 };
+
 </script>
 </head>
 <body>
@@ -1859,8 +1900,7 @@ const handleAccessCode = () => {
 if (accessCode.trim().toUpperCase() === "DEMO2026") {
 window.activateDemo({setSchools,setUserAccounts,setRole,setLoggedInUser,setCurrentSchoolId,setActiveSection,setMode,toast});
 return;
-}
-const schoolsArr1515 = Array.isArray(schools) ? schools : Object.values(schools || {}); const school = schoolsArr1515.find(s => s.accessCode === accessCode);
+}const schoolsArr1515 = Array.isArray(schools) ? schools : Object.values(schools || {}); const school = schoolsArr1515.find(s => s.accessCode === accessCode);
 if (school) {
 if (!school.setup) { setMode("setup"); toast("Code verified! Setup your school.", "success"); }
 else { toast("School already set up. Use normal login.", "info"); setMode("main"); }
