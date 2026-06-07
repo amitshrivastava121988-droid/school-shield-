@@ -6715,11 +6715,17 @@ const [installmentRows, setInstallmentRows] = React.useState([]);
 const [customMode, setCustomMode] = React.useState(false);
 const [discountType, setDiscountType] = React.useState("None");
 const [discountAmt, setDiscountAmt] = React.useState("");
-const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Custom"];
+const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Admission Fee Waiver","Custom"];
 const sameIdM2=(a,b)=>String(a)===String(b);
 const stuExist = (existingFees||[]).filter(f=>f.studentName===student.name&&(!f.schoolId||sameIdM2(f.schoolId,mySchoolId))&&!f.isDiscount);
 const alreadyTotal = stuExist.reduce((s,f)=>s+(Number(f.amount)||0),0);
-const discountAmount = discountType==="None"?0:discountType==="RTE (Free)"?(parseFloat(totalFee)||0):(parseFloat(discountAmt)||0);
+// Admission Fee Waiver: auto-detect admission fee from structure
+const admissionFeeInStructure = (structureEntry&&structureEntry.items||[]).find(i=>i.type==="Admission Fee");
+const admissionFeeAmt = admissionFeeInStructure ? (Number(admissionFeeInStructure.amount)||0) : 0;
+const discountAmount = discountType==="None"?0
+:discountType==="RTE (Free)"?(parseFloat(totalFee)||0)
+:discountType==="Admission Fee Waiver"?admissionFeeAmt
+:(parseFloat(discountAmt)||0);
 const feeTypes = ["Tuition Fee","Admission Fee","Transport Fee","Uniform Fee","Exam Fee","Development Fee","Computer Fee","Sports Fee","Library Fee","Other"];
 const admissionTotal = admissionItems.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
 const addAdmissionItem = ()=>setAdmissionItems(p=>[...p,{id:Date.now(),type:"Admission Fee",amount:""}]);
@@ -6803,6 +6809,20 @@ placeholder={structureTotal>0?"Structure se auto-fill: "+structureTotal:"e.g. 50
 style={{width:"100%",background:T.surface,border:"1px solid "+(structureTotal>0?T.green+"60":T.border),borderRadius:8,
 padding:"11px 12px",color:T.text,fontSize:15,fontWeight:700,boxSizing:"border-box",
 fontFamily:"Outfit,sans-serif"}}/>
+{/* Fee Structure Breakdown */}
+{structureEntry && (structureEntry.items||[]).length>0 && (
+<div style={{marginTop:8,background:T.surface,border:"1px solid "+T.border,borderRadius:8,overflow:"hidden"}}>
+<p style={{fontSize:10,color:T.textMuted,padding:"6px 10px",borderBottom:"1px solid "+T.border,fontWeight:600}}>📋 Fee Structure Breakdown (Reference)</p>
+{(structureEntry.items||[]).map((item,i)=>(
+<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+padding:"6px 10px",borderBottom:i<(structureEntry.items.length-1)?"1px solid "+T.border+"60":"none",
+background:item.type==="Admission Fee"?"rgba(245,166,35,0.05)":"transparent"}}>
+<span style={{fontSize:11,color:T.text}}>{item.type==="Admission Fee"?"🎓":item.type==="Tuition Fee"?"📚":item.type==="Transport Fee"?"🚌":"💳"} {item.type}</span>
+<span style={{fontSize:11,fontWeight:700,color:item.type==="Admission Fee"?T.yellow:T.text}}>₹{(Number(item.amount)||0).toLocaleString()}</span>
+</div>
+))}
+</div>
+)}
 </div>
 {/* Admission Items — multiple fees at admission time */}
 <div style={{marginBottom:12}}>
@@ -6849,11 +6869,17 @@ Total Admission: ₹{admissionTotal.toLocaleString()}
 style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",marginBottom:6}}>
 {DISC_TYPES.map(d=><option key={d} value={d}>{d}</option>)}
 </select>
-{discountType!=="None"&&discountType!=="RTE (Free)"&&(
+{discountType!=="None"&&discountType!=="RTE (Free)"&&discountType!=="Admission Fee Waiver"&&(
 <input type="number" value={discountAmt} onChange={e=>setDiscountAmt(e.target.value)}
 placeholder="Discount amount (Rs.)"
 style={{width:"100%",background:T.surface,border:"1px solid #A78BFA60",borderRadius:8,
 padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}}/>
+)}
+{discountType==="Admission Fee Waiver" && (
+<div style={{background:T.yellow+"15",border:"1px solid "+T.yellow+"30",borderRadius:8,padding:"8px",marginTop:4}}>
+<p style={{fontSize:11,color:T.yellow,fontWeight:600}}>🎓 Auto: ₹{admissionFeeAmt.toLocaleString()} minus hogi</p>
+<p style={{fontSize:10,color:T.textMuted,marginTop:2}}>{admissionFeeAmt>0?"Structure se admission fee automatically waive hogi":"Structure mein admission fee set nahi hai"}</p>
+</div>
 )}
 {discountAmount>0&&<p style={{fontSize:10,color:"#A78BFA",marginTop:4,fontWeight:700}}>Applied: Rs.{discountAmount.toLocaleString()}</p>}
 </div>
