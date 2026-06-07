@@ -108,18 +108,11 @@ setSchools(p=>{const arr=Array.isArray(p)?p:Object.values(p||{});if(!arr.find(s=
 setUserAccounts(p=>{const arr=Array.isArray(p)?p:Object.values(p||{});return[...arr.filter(a=>!String(a.id).startsWith("da")),...demoAccounts];});
 window.__vpUser=null;window.__staffUser=null;window.__receptionUser=null;window.__accountantUser=null;
 window.__isDemoMode = true;
-window.currentSchoolId = null;
-setCurrentSchoolId(null);
-setRole(null);
-setLoggedInUser(null);
-setTimeout(function() {
 setRole("principal");
 setLoggedInUser({id:"da1",schoolId:demoSchoolId,role:"principal",name:"Demo Principal",username:"demo_principal",active:true});
-window.currentSchoolId = "SCH_DEMO_SCH_2026";
 setCurrentSchoolId("SCH_DEMO_SCH_2026");
 setActiveSection("dashboard");
-toast("Demo open! Session "+usage.attempts+"/3 — "+remainMins+" min remaining.", "success");
-}, 400);
+toast("🎉 Demo open! Session "+usage.attempts+"/3 — "+remainMins+" min baaki. Data sirf is device pe.", "success");
 return true;
 };
 // ── FIREBASE CONFIG ──
