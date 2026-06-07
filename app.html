@@ -6662,6 +6662,24 @@ return (
 </div>
 <div style={{display:"flex",gap:6,alignItems:"center"}}>
 {str && <span style={{fontWeight:800,color:T.accent,fontSize:15}}>₹{str.total.toLocaleString()}</span>}
+{/* Final toggle — only principal/founder */}
+{str && ["principal","founder","superadmin"].includes(role) && (
+<button onClick={()=>{
+setFeeStructure(p=>{
+const updated = p.map(fs=>fs.id===str.id?{...fs,isFinal:!fs.isFinal}:fs);
+if(window.firebaseReady&&window.currentSchoolId)
+try{window.db.ref("schoolshield/schools/"+window.currentSchoolId+"/feeStructure").set(JSON.stringify(updated));}catch(e){}
+return updated;
+});
+toast((str.isFinal?"🔓 Draft":"✅ Final")+" — "+cls,"success");
+}}
+style={{background:str.isFinal?T.green+"20":"rgba(255,255,255,0.06)",
+border:"1px solid "+(str.isFinal?T.green:T.border),
+borderRadius:6,padding:"4px 10px",fontSize:10,cursor:"pointer",fontWeight:700,
+color:str.isFinal?T.green:T.textMuted,fontFamily:"Outfit,sans-serif"}}>
+{str.isFinal?"✅ Final":"🔓 Draft"}
+</button>
+)}
 {canEdit && (
 str
 ? <div style={{display:"flex",gap:4}}>
@@ -7485,7 +7503,11 @@ style={{width:"100%", padding:"12px", background:"#0ECB81", border:"none", borde
 function FeeDueTab({ sortedFees, totalBalance, fmt, currentSchool, parentChildName, toast }) {
 const dueFees = sortedFees.filter(f => !f.paid);
 const [selectedIds, setSelectedIds] = React.useState(() => dueFees.map(f => f.id));
+const [customAmt, setCustomAmt] = React.useState("");
+const [useCustomAmt, setUseCustomAmt] = React.useState(false);
 const selectedAmt = dueFees.filter(f => selectedIds.includes(f.id)).reduce((s, f) => s + (Number(f.amount) || 0), 0);
+const payAmt = useCustomAmt && parseFloat(customAmt) > 0 ? parseFloat(customAmt) : selectedAmt;
+const canPay = payAmt > 0;
 const toggleId = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 if (dueFees.length === 0) return (
 <div style={{background:T.card, border:`1px solid ${T.green}40`, borderRadius:16, padding:"32px 20px", textAlign:"center", marginTop:8}}>
@@ -7536,22 +7558,40 @@ style={{background: isSelected?`${T.accent}12`:T.card, border:`2px solid ${isSel
 </div>
 );
 })}
-{/* Pay Online section */}
-{selectedIds.length > 0 && (
-<div style={{background:T.card, border:`1px solid ${T.accent}40`, borderRadius:16, padding:"16px", marginTop:4, marginBottom:80}}>
+{/* Pay Online section — always visible */}
+{(true) && (
+<div style={{background:T.card, border:"1px solid "+T.accent+"40", borderRadius:16, padding:"16px", marginTop:4, marginBottom:80}}>
 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}}>
 <p style={{fontWeight:700, fontSize:13, color:T.accent}}>💳 Pay Online</p>
-<span style={{fontSize:13, fontWeight:800, color:T.accent}}>₹{selectedAmt.toLocaleString("en-IN")}</span>
+<span style={{fontSize:13, fontWeight:800, color:T.accent}}>₹{payAmt.toLocaleString("en-IN")}</span>
+</div>
+{/* Custom Amount Toggle */}
+<div style={{background:T.surface, borderRadius:10, padding:"10px 12px", marginBottom:12}}>
+<div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:useCustomAmt?8:0}}>
+<span style={{fontSize:12, color:T.textMuted}}>Pay custom amount instead?</span>
+<button onClick={()=>{setUseCustomAmt(!useCustomAmt); setCustomAmt("");}}
+style={{background:useCustomAmt?T.accent+"20":"rgba(255,255,255,0.06)", border:"1px solid "+(useCustomAmt?T.accent:T.border), borderRadius:6, padding:"3px 10px", fontSize:11, fontWeight:700, cursor:"pointer", color:useCustomAmt?T.accent:T.textMuted, fontFamily:"Outfit,sans-serif"}}>
+{useCustomAmt?"✕ Cancel":"✏️ Custom"}
+</button>
+</div>
+{useCustomAmt && (
+<div>
+<input type="number" value={customAmt} onChange={e=>setCustomAmt(e.target.value)}
+placeholder={"Enter amount (selected: ₹"+selectedAmt.toLocaleString("en-IN")+")"}
+style={{width:"100%", background:T.card, border:"1px solid "+T.accent+"60", borderRadius:8, padding:"10px 12px", color:T.accent, fontWeight:700, fontSize:15, boxSizing:"border-box", fontFamily:"Outfit,sans-serif", outline:"none"}}/>
+{parseFloat(customAmt)>0 && <p style={{fontSize:10, color:T.textMuted, marginTop:4}}>You will pay: <b style={{color:T.accent}}>₹{parseFloat(customAmt).toLocaleString("en-IN")}</b></p>}
+</div>
+)}
 </div>
 {currentSchool?.upiId && (
 <button onClick={(e) => {
 e.stopPropagation();
-const upiUrl = `upi://pay?pa=${encodeURIComponent(currentSchool.upiId)}&pn=${encodeURIComponent(currentSchool.name||"School Fee")}&am=${selectedAmt}&cu=INR&tn=${encodeURIComponent("Fee — "+parentChildName)}`;
+const upiUrl = `upi://pay?pa=${encodeURIComponent(currentSchool.upiId)}&pn=${encodeURIComponent(currentSchool.name||"School Fee")}&am=${payAmt}&cu=INR&tn=${encodeURIComponent("Fee — "+parentChildName)}`;
 let fr = document.getElementById("__upi_pay_frame__");
 if (!fr) { fr = document.createElement("iframe"); fr.id = "__upi_pay_frame__"; fr.style.display = "none"; document.body.appendChild(fr); }
 fr.src = upiUrl;
 toast("💳 UPI app open ho raha hai...", "success");
-}} style={{width:"100%",padding:"13px",marginBottom:10,background:`linear-gradient(135deg,${T.accent},${T.purple})`,border:"none",borderRadius:12,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+}} style={{width:"100%",padding:"13px",marginBottom:10,background:canPay?`linear-gradient(135deg,${T.accent},${T.purple})`:"rgba(255,255,255,0.1)",border:"none",borderRadius:12,color:canPay?"#fff":T.textMuted,fontWeight:700,fontSize:14,cursor:canPay?"pointer":"not-allowed",fontFamily:"Outfit,sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:canPay?1:0.5}}>
 📱 UPI ID: {currentSchool.upiId}
 </button>
 )}
@@ -7896,6 +7936,38 @@ return (
 </div>
 <div style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:16, padding:"16px", marginBottom:14}}>
 <p style={{fontWeight:700, fontSize:13, color:T.accent, marginBottom:10}}>📋 Complete Fee Structure</p>
+{/* Show Annual Fee Structure only if isFinal = true for child's class */}
+{(()=>{
+const mySchoolId2 = loggedInUser?.schoolId;
+const curY2 = new Date().getFullYear();
+const sess2 = curY2+"-"+String(curY2+1).slice(2);
+const childCls = myChild?.class||"";
+const structEntry = (feeStructure||[]).find(fs=>
+fs.class===childCls &&
+fs.isFinal===true &&
+(!fs.schoolId||sameId(fs.schoolId,mySchoolId2)) &&
+(fs.session===sess2||!fs.session)
+);
+if (!structEntry||(structEntry.items||[]).length===0) return null;
+return (
+<div style={{background:T.accent+"10",border:"1px solid "+T.accent+"30",borderRadius:10,padding:12,marginBottom:14}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<p style={{fontSize:11,fontWeight:700,color:T.accent}}>📊 Annual Fee Breakdown — {structEntry.session}</p>
+<span style={{fontSize:10,background:T.green+"20",color:T.green,borderRadius:4,padding:"2px 8px",fontWeight:700}}>✅ Final</span>
+</div>
+{(structEntry.items||[]).map((it,i)=>(
+<div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:i<structEntry.items.length-1?"1px solid "+T.border+"40":"none"}}>
+<span style={{fontSize:12,color:T.text}}>{it.type}</span>
+<span style={{fontSize:12,fontWeight:700,color:T.accent}}>₹{(it.amount||0).toLocaleString()}</span>
+</div>
+))}
+<div style={{display:"flex",justifyContent:"space-between",marginTop:8,paddingTop:8,borderTop:"1px solid "+T.border}}>
+<span style={{fontSize:12,fontWeight:700,color:T.text}}>Total Annual</span>
+<span style={{fontSize:14,fontWeight:800,color:T.green}}>₹{(structEntry.total||0).toLocaleString()}</span>
+</div>
+</div>
+);
+})()}
 {sortedFees.map((f,i)=>{
 const feeItems = f.feeItems?.length ? f.feeItems : [{type:"Tuition Fee", amount:f.amount}];
 return (
