@@ -50,6 +50,78 @@ This application contains sensitive and live data including:
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+
+// ── Demo System ──────────────────────────────────────────────────────────────
+window.activateDemo = function(setSchools, setUserAccounts, setRole, setLoggedInUser, setCurrentSchoolId, setActiveSection, toast, setModal, T) {
+const DEMO_KEY = "ss_demo_usage";
+const MAX_ATTEMPTS = 3;
+const EXPIRY_MS = 2 * 60 * 60 * 1000;
+let usage = {};
+try { usage = JSON.parse(localStorage.getItem(DEMO_KEY)||"{}"); } catch {}
+const now = Date.now();
+if (usage.attempts >= MAX_ATTEMPTS && !(usage.startTime && (now - usage.startTime) < EXPIRY_MS)) {
+if (setModal && T) {
+setModal(React.createElement('div', {style:{background:T.card,border:"1px solid #f7555540",borderRadius:16,padding:28,maxWidth:340,margin:"0 auto",textAlign:"center"}},
+React.createElement('p',{style:{fontSize:32,marginBottom:12}},'🚫'),
+React.createElement('h3',{style:{color:T.text,fontSize:17,fontWeight:700,marginBottom:8}},'Demo Limit Reached'),
+React.createElement('p',{style:{color:T.textMuted,fontSize:13,marginBottom:16,lineHeight:1.6}},'Aapne 3 demo sessions use kar liye. Full access ke liye contact karein.'),
+React.createElement('a',{href:"https://wa.me/918839913233?text=Demo+limit+reached.+Full+access+chahiye.",target:"_blank",style:{display:"block",padding:"11px",background:"#25D366",color:"#fff",borderRadius:10,fontWeight:700,fontSize:14,textDecoration:"none",marginBottom:8}},'💬 WhatsApp pe Contact Karo')
+));
+}
+return false;
+}
+if (!(usage.startTime && (now - usage.startTime) < EXPIRY_MS)) {
+usage.attempts = (usage.attempts||0) + 1;
+usage.startTime = now;
+try { localStorage.setItem(DEMO_KEY, JSON.stringify(usage)); } catch {}
+}
+const elapsed = now - (usage.startTime || now);
+const remaining = Math.max(0, EXPIRY_MS - elapsed);
+const remainMins = Math.ceil(remaining / 60000);
+const demoSchoolId = "DEMO_SCH_2026";
+const demoStudents = [
+{id:"ds1",schoolId:demoSchoolId,name:"Aarav Sharma",class:"Class 5",rollNo:"S99-C05-01",gender:"Male",parentName:"Rajesh Sharma",parentPhone:"9876500001",dob:"2015-03-10"},
+{id:"ds2",schoolId:demoSchoolId,name:"Priya Patel",class:"Class 5",rollNo:"S99-C05-02",gender:"Female",parentName:"Suresh Patel",parentPhone:"9876500002",dob:"2015-07-22"},
+{id:"ds3",schoolId:demoSchoolId,name:"Kabir Singh",class:"Class 3",rollNo:"S99-C03-01",gender:"Male",parentName:"Manpreet Singh",parentPhone:"9876500003",dob:"2017-01-15"},
+];
+const demoTeachers = [
+{id:"dt1",schoolId:demoSchoolId,name:"Sunita Verma",subject:"Mathematics",phone:"9876500010",salary:35000,assignedClass:"Class 5",joinDate:"2020-06-01"},
+{id:"dt2",schoolId:demoSchoolId,name:"Ramesh Joshi",subject:"Science",phone:"9876500011",salary:32000,assignedClass:"Class 3",joinDate:"2021-07-15"},
+];
+const demoFees = [
+{id:"df1",schoolId:demoSchoolId,studentName:"Aarav Sharma",month:"April",amount:5000,type:"Tuition Fee",paid:true,paidAmount:5000,paymentMethod:"Cash",date:"2026-04-05"},
+{id:"df2",schoolId:demoSchoolId,studentName:"Aarav Sharma",month:"May",amount:5000,type:"Tuition Fee",paid:false,dueDate:"2026-05-10"},
+{id:"df3",schoolId:demoSchoolId,studentName:"Priya Patel",month:"April",amount:5000,type:"Tuition Fee",paid:true,paidAmount:5000,paymentMethod:"Online",date:"2026-04-03"},
+];
+try {
+localStorage.setItem("ss_cache_SCH_DEMO_SCH_2026_students", JSON.stringify(demoStudents));
+localStorage.setItem("ss_cache_SCH_DEMO_SCH_2026_teachers", JSON.stringify(demoTeachers));
+localStorage.setItem("ss_cache_SCH_DEMO_SCH_2026_fees", JSON.stringify(demoFees));
+} catch {}
+const demoSchool = {id:demoSchoolId,schoolCode:"S99",name:"SchoolShield Demo School",address:"Indore, MP",contact:"8839913233",logo:"🏫",active:true,paid:true,setup:true,accessCode:"DEMO2026",principalUsername:"demo_principal",principalPassword:"demo123",principalName:"Demo Principal"};
+const demoAccounts = [
+{id:"da1",schoolId:demoSchoolId,role:"principal",name:"Demo Principal",username:"demo_principal",password:"demo123",active:true},
+{id:"da2",schoolId:demoSchoolId,role:"teacher",name:"Demo Teacher",username:"demo_teacher",password:"demo123",active:true,assignedClass:"Class 5"},
+{id:"da3",schoolId:demoSchoolId,role:"parent",name:"Demo Parent",username:"demo_parent",password:"demo123",active:true},
+];
+setSchools(p=>{const arr=Array.isArray(p)?p:Object.values(p||{});if(!arr.find(s=>s.id===demoSchoolId))return[...arr,demoSchool];return arr;});
+setUserAccounts(p=>{const arr=Array.isArray(p)?p:Object.values(p||{});return[...arr.filter(a=>!String(a.id).startsWith("da")),...demoAccounts];});
+window.__vpUser=null;window.__staffUser=null;window.__receptionUser=null;window.__accountantUser=null;
+window.__isDemoMode = true;
+window.currentSchoolId = null;
+setCurrentSchoolId(null);
+setRole(null);
+setLoggedInUser(null);
+setTimeout(function() {
+setRole("principal");
+setLoggedInUser({id:"da1",schoolId:demoSchoolId,role:"principal",name:"Demo Principal",username:"demo_principal",active:true});
+window.currentSchoolId = "SCH_DEMO_SCH_2026";
+setCurrentSchoolId("SCH_DEMO_SCH_2026");
+setActiveSection("dashboard");
+toast("Demo open! Session "+usage.attempts+"/3 — "+remainMins+" min remaining.", "success");
+}, 400);
+return true;
+};
 // ── FIREBASE CONFIG ──
 const FIREBASE_CONFIG = {
 apiKey: "AIzaSyBZ-l1Mp-B4m024DLD-e2yRuXu49gld1Lg",
@@ -146,53 +218,6 @@ console.log("✅ v4+v27 Cache migration done — schoolList path fix applied");
 const urlParams = new URLSearchParams(window.location.search);
 window.NO_LOGIN_PARENT_MODE = urlParams.get("parent") === "1" || urlParams.get("panic") === "1";
 window.PARENT_SCHOOL_ID = urlParams.get("school") || "1";
-</script>
-
-<script>
-// Demo System
-window.activateDemo = function(deps) {
-var DEMO_KEY = "ss_demo_usage";
-var MAX = 3;
-var EXPIRY = 2 * 60 * 60 * 1000;
-var usage = {};
-try { usage = JSON.parse(localStorage.getItem(DEMO_KEY)||"{}"); } catch(e) {}
-var now = Date.now();
-var active = usage.startTime && (now - usage.startTime) < EXPIRY;
-if (!active && usage.attempts >= MAX) {
-deps.toast("Demo limit reached (3/3)! Contact: 8839913233", "error");
-return;
-}
-if (!active) {
-usage.attempts = (usage.attempts||0) + 1;
-usage.startTime = now;
-try { localStorage.setItem(DEMO_KEY, JSON.stringify(usage)); } catch(e) {}
-}
-var mins = Math.ceil(Math.max(0, EXPIRY - (now - usage.startTime)) / 60000);
-var sid = "DEMO_SCH_2026";
-try {
-localStorage.setItem("ss_cache_SCH_"+sid+"_students", JSON.stringify([
-{id:"ds1",schoolId:sid,name:"Aarav Sharma",class:"Class 5",rollNo:"S99-C05-01",gender:"Male",parentName:"Rajesh Sharma",parentPhone:"9876500001",dob:"2015-03-10"},
-{id:"ds2",schoolId:sid,name:"Priya Patel",class:"Class 5",rollNo:"S99-C05-02",gender:"Female",parentName:"Suresh Patel",parentPhone:"9876500002",dob:"2015-07-22"}
-]));
-localStorage.setItem("ss_cache_SCH_"+sid+"_teachers", JSON.stringify([
-{id:"dt1",schoolId:sid,name:"Sunita Verma",subject:"Mathematics",phone:"9876500010",salary:35000,assignedClass:"Class 5"}
-]));
-} catch(e) {}
-var demoSchool = {id:sid,schoolCode:"S99",name:"SchoolShield Demo School",address:"Indore, MP",contact:"8839913233",logo:"🏫",active:true,paid:true,setup:true,accessCode:"DEMO2026",principalUsername:"demo_principal",principalPassword:"demo123",principalName:"Demo Principal"};
-var demoAccs = [
-{id:"da1",schoolId:sid,role:"principal",name:"Demo Principal",username:"demo_principal",password:"demo123",active:true},
-{id:"da2",schoolId:sid,role:"teacher",name:"Demo Teacher",username:"demo_teacher",password:"demo123",active:true},
-{id:"da3",schoolId:sid,role:"parent",name:"Demo Parent",username:"demo_parent",password:"demo123",active:true}
-];
-deps.setSchools(function(p){var arr=Array.isArray(p)?p:Object.values(p||{});if(!arr.find(function(s){return s.id===sid;}))return arr.concat([demoSchool]);return arr;});
-deps.setUserAccounts(function(p){var arr=Array.isArray(p)?p:Object.values(p||{});return arr.filter(function(a){return !String(a.id).startsWith("da");}).concat(demoAccs);});
-window.__isDemoMode = true;
-deps.setRole("principal");
-deps.setLoggedInUser({id:"da1",schoolId:sid,role:"principal",name:"Demo Principal",username:"demo_principal",active:true});
-deps.setCurrentSchoolId("SCH_"+sid);
-deps.setActiveSection("dashboard");
-deps.toast("Demo open! Session "+usage.attempts+"/3 — "+mins+" min. Data sirf is device pe.", "success");
-};
 </script>
 </head>
 <body>
@@ -548,7 +573,7 @@ const EMPLOYEE_DEFAULT_SECTIONS = [
 ];
 const EMPLOYEE_DEFAULT_KEYS = new Set(EMPLOYEE_DEFAULT_SECTIONS.map(s=>s.key));
 // Roles that use permission-based nav (not hardcoded NAV_MAP)
-const PERM_BASED_ROLES = new Set(["vice_principal","staff","reception","accountant","coordinator","transport_head","librarian","driver"]);
+const PERM_BASED_ROLES = new Set(["teacher","vice_principal","staff","reception","accountant","coordinator","transport_head","librarian","driver"]);
 // ── Permission helpers ───────────────────────────────────────────────────────
 function getPermMode(perms, key) {
 if (!Array.isArray(perms)) return "off";
@@ -558,6 +583,13 @@ return typeof p==="string" ? "edit" : (p.mode||"edit");
 }
 function hasPermAccess(perms, key) { return getPermMode(perms,key)!=="off"; }
 function hasPermEdit(perms, key)   { return getPermMode(perms,key)==="edit"; }
+function sectionPerm(ctx, sectionKey) {
+const role = ctx?.loggedInUser?.role || ctx?.role;
+if (["principal","founder","superadmin"].includes(role)) return {canEdit:true, canView:true, isViewOnly:false};
+const perms = getMyPerms(ctx);
+const mode = getPermMode(perms, sectionKey);
+return {canEdit: mode==="edit", canView: mode==="edit"||mode==="view", isViewOnly: mode==="view"};
+}
 function extractPermKeys(perms) {
 if (!Array.isArray(perms)) return [];
 return perms.map(function(p){ return typeof p==="string"?p:p.key; }).filter(Boolean);
@@ -566,9 +598,19 @@ return perms.map(function(p){ return typeof p==="string"?p:p.key; }).filter(Bool
 function getMyPerms(ctx) {
 const u = ctx?.loggedInUser;
 if (!u) return [];
+const role = u.role;
+if (role === "teacher" && window.__teacherUser) return window.__teacherUser.teacherPermissions || u.teacherPermissions || [];
+if (role === "vice_principal" && window.__vpUser) return window.__vpUser.vpPermissions || [];
+if (role === "staff" && window.__staffUser) return window.__staffUser.staffPermissions || [];
+if (role === "reception" && window.__receptionUser) return window.__receptionUser.receptionPermissions || [];
+if (role === "accountant" && window.__accountantUser) return window.__accountantUser.accountantPermissions || [];
+if (role === "coordinator" && window.__coordinatorUser) return window.__coordinatorUser.coordinatorPermissions || [];
+if (role === "transport_head" && window.__transportHeadUser) return window.__transportHeadUser.transportHeadPermissions || [];
+if (role === "librarian" && window.__librarianUser) return window.__librarianUser.librarianPermissions || [];
+if (role === "driver" && window.__driverUser) return window.__driverUser.driverPermissions || [];
 return u.vpPermissions || u.staffPermissions || u.receptionPermissions ||
 u.accountantPermissions || u.coordinatorPermissions ||
-u.transportHeadPermissions || u.librarianPermissions || u.driverPermissions || [];
+u.transportHeadPermissions || u.librarianPermissions || u.driverPermissions || u.teacherPermissions || [];
 }
 function canDo(ctx, section, action) {
 const role = ctx?.loggedInUser?.role || ctx?.role;
@@ -586,6 +628,7 @@ return mode === "edit";
 function PermGuard({ ctx, section, children }) {
 const role = ctx?.loggedInUser?.role || ctx?.role;
 if (["principal","founder","superadmin","parent","teacher","driver","librarian"].includes(role)) return children;
+if (role === "reception" && section === "visitors") return children;
 // ── Default sections are always accessible (at least view) for all employee roles ──
 if (PERM_BASED_ROLES.has(role) && EMPLOYEE_DEFAULT_KEYS.has(section)) {
 const perms = getMyPerms(ctx);
@@ -696,8 +739,14 @@ return init;
 // ── On mount: listen to Firebase realtime — always fresh ──
 const isGlobalKey = GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_");
 const effectDep = isGlobalKey ? key : (key + "|" + (currentSID || ""));
+const [fbReady, setFbReady] = useState(() => !!window.firebaseReady);
 useEffect(() => {
-if (!window.firebaseReady) return;
+if (window.firebaseReady) { setFbReady(true); return; }
+const interval = setInterval(() => { if (window.firebaseReady) { setFbReady(true); clearInterval(interval); } }, 300);
+return () => clearInterval(interval);
+}, []);
+useEffect(() => {
+if (!fbReady || !window.firebaseReady) return;
 const fbPath = getFirebasePath(key);
 if (!fbPath) return;
 if (!isGlobalKey && !window.currentSchoolId) return;
@@ -743,7 +792,7 @@ setVal(emptyVal);
 console.warn("[usePersist] Firebase read error for", key, err.message);
 });
 return () => ref.off("value", onValue);
-}, [effectDep]); // GLOBAL_KEYS: key only; School-specific: key+schoolId
+}, [effectDep, fbReady]); // GLOBAL_KEYS: key only; School-specific: key+schoolId
 const setPersist = (updater) => {
 setVal(prev => {
 const next = typeof updater === "function" ? updater(prev) : updater;
@@ -763,7 +812,7 @@ const fbPath = getFirebasePath(key);
 const isGlobal = GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_");
 const canWrite = fbPath && (isGlobal || window.currentSchoolId);
 if (window.__isDemoMode) {
-// Demo mode: no Firebase write
+// Demo: localStorage only
 } else if (canWrite && window.firebaseReady && navigator.onLine) {
 try {
 window.db.ref(fbPath).set(jsonStr);
@@ -1803,7 +1852,8 @@ toast("Galat password ❌", "error");
 };
 checkPass(); return;
 }
-const acc = (userAccounts||[]).find(a => a.username === loginUsername && a.password === pw && a.active);
+const doLogin = (accounts) => {
+const acc = (accounts||[]).find(a => a.username === loginUsername && a.password === pw && a.active);
 if (acc) {
 if (acc.role === "vice_principal") {
 window.__vpUser = acc;
@@ -1844,9 +1894,22 @@ toast(`Welcome ${acc.name}! 🎉`, "success"); return;
 }
 toast("Invalid username or password!", "error");
 };
+if ((userAccounts||[]).length === 0 && window.firebaseReady) {
+toast("Loading accounts...", "info");
+window.db.ref("schoolshield/userAccounts").once("value").then(function(snap) {
+try {
+const data = snap.val();
+const parsed = data ? (typeof data === "string" ? JSON.parse(data) : data) : [];
+const arr = Array.isArray(parsed) ? parsed : Object.values(parsed||{});
+if (arr.length > 0) { setUserAccounts(arr); doLogin(arr); }
+else { toast("Account data nahi mila.", "error"); }
+} catch(e) { toast("Login error. Retry karein.", "error"); }
+}).catch(function() { toast("Network error.", "error"); });
+} else { doLogin(userAccounts); }
+};
 const handleAccessCode = () => {
 if (accessCode.trim().toUpperCase() === "DEMO2026") {
-window.activateDemo({setSchools,setUserAccounts,setRole,setLoggedInUser,setCurrentSchoolId,setActiveSection,toast});
+window.activateDemo(setSchools, setUserAccounts, setRole, setLoggedInUser, setCurrentSchoolId, setActiveSection, toast, setModal, T);
 return;
 }
 const schoolsArr1515 = Array.isArray(schools) ? schools : Object.values(schools || {}); const school = schoolsArr1515.find(s => s.accessCode === accessCode);
@@ -2174,6 +2237,7 @@ teacher: [
 {key:"chat",icon:"💬",label:"chat"},
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
+{key:"transport",icon:"🚌",label:"Transport"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
 ],
 parent: [
@@ -2222,6 +2286,17 @@ return result;
 }
 function resolveNavItems(role, loggedInUser) {
 const allSectionsMap = Object.fromEntries(ALL_PERM_SECTIONS.map(s=>([s.key, {key:s.key, icon:s.icon, label:s.label||s.key}])));
+if (role === "teacher") {
+if (typeof window !== "undefined" && !window.__teacherUser && loggedInUser?.role === "teacher") window.__teacherUser = loggedInUser;
+const teacherPerms = (window.__teacherUser?.teacherPermissions) || loggedInUser?.teacherPermissions || [];
+const teacherNavMap = NAV_MAP.teacher || [];
+const teacherNavKeys = new Set(teacherNavMap.map(s=>s.key));
+if (teacherPerms.length > 0) {
+const permKeys = extractPermKeys(teacherPerms).filter(k => teacherNavKeys.has(k));
+return mergeWithDefaults(permKeys, allSectionsMap);
+}
+return teacherNavMap.map(s => allSectionsMap[s.key] || s).filter(Boolean);
+}
 if (role === "vice_principal") {
 if (typeof window !== "undefined" && !window.__vpUser && loggedInUser?.role === "vice_principal") {
 window.__vpUser = loggedInUser;
@@ -3960,7 +4035,8 @@ style={{background:`${color}12`, border:`1.5px solid ${color}40`, borderRadius:1
 <p style={{color:T.text, fontWeight:700, fontSize:22}}>{c.value}</p>
 </div>
 </Card>
-))}
+);
+})}
 </div>
 {/* Coordinator: Assigned Classes Overview + Teachers Reporting */}
 {role === "coordinator" && coordClasses.length > 0 && (
@@ -4182,7 +4258,7 @@ return map[type] || "🔔";
 }
 // ─── STUDENTS SECTION ─────────────────────────────────────────────────────────
 function StudentsSection({ ctx }) {
-const { l, role, students, setStudents, teachers, toast, setModal, marks, remarks, userAccounts, setUserAccounts, currentSchool, attendanceLogs, setAttendanceLogs, houseNames, setHouseNames, saveHouseNames, setAlerts, classNames, fees, setFees, loggedInUser, pickups, setPickups, leaves } = ctx;
+const { l, role, students, setStudents, teachers, toast, setModal, marks, remarks, userAccounts, setUserAccounts, currentSchool, attendanceLogs, setAttendanceLogs, houseNames, setHouseNames, saveHouseNames, setAlerts, classNames, fees, setFees, feeStructure, loggedInUser, pickups, setPickups, leaves } = ctx;
 const CLASSES = classNames || DEFAULT_CLASSES;
 const [search, setSearch] = useState("");
 const [selectedClass, setSelectedClass] = useState(null); // null = show class tiles
@@ -6637,7 +6713,7 @@ background:T.surface,padding:"6px 10px",borderRadius:6}}>
 );
 }
 // ─── FEE INSTALLMENT MODAL ────────────────────────────────────────────────────
-function FeeInstallmentModal({ student, students, loggedInUser, onSave, onClose, feeStructure }) {
+function FeeInstallmentModal({ student, students, loggedInUser, onSave, onClose, feeStructure, existingFees }) {
 const mySchoolId = loggedInUser?.schoolId||null;
 const curYearM = new Date().getFullYear();
 const sessionM = curYearM+"-"+String(curYearM+1).slice(2);
@@ -6655,6 +6731,13 @@ const [admissionItems, setAdmissionItems] = React.useState([{id:Date.now(),type:
 const [installments, setInstallments] = React.useState(3);
 const [installmentRows, setInstallmentRows] = React.useState([]);
 const [customMode, setCustomMode] = React.useState(false);
+const [discountType, setDiscountType] = React.useState("None");
+const [discountAmt, setDiscountAmt] = React.useState("");
+const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Custom"];
+const sameIdM2=(a,b)=>String(a)===String(b);
+const stuExist = (existingFees||[]).filter(f=>f.studentName===student.name&&(!f.schoolId||sameIdM2(f.schoolId,mySchoolId)));
+const alreadyTotal = stuExist.filter(f=>!f.isDiscount).reduce((s,f)=>s+(Number(f.amount)||0),0);
+const discountAmount = discountType==="None"?0:discountType==="RTE (Free)"?(parseFloat(totalFee)||0):(parseFloat(discountAmt)||0);
 const feeTypes = ["Tuition Fee","Admission Fee","Transport Fee","Uniform Fee","Exam Fee","Development Fee","Computer Fee","Sports Fee","Library Fee","Other"];
 const admissionTotal = admissionItems.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
 const addAdmissionItem = ()=>setAdmissionItems(p=>[...p,{id:Date.now(),type:"Admission Fee",amount:""}]);
@@ -6663,7 +6746,7 @@ const updateAdmissionItem = (id,key,val)=>setAdmissionItems(p=>p.map(i=>i.id===i
 React.useEffect(()=>{
 const total = parseFloat(totalFee)||0;
 const adm = admissionTotal;
-const remaining = total - adm;
+const remaining = total - adm - discountAmount - alreadyTotal;
 if (remaining<=0||installments<=0) { setInstallmentRows([]); return; }
 const perInst = Math.floor(remaining/installments);
 const lastInst = remaining - perInst*(installments-1);
@@ -6685,6 +6768,13 @@ setInstallmentRows(p=>p.map((r,i)=>i===idx?{...r,[key]:val}:r));
 const handleSave = ()=>{
 const records = [];
 const total=parseFloat(totalFee)||0;
+if (discountAmount>0 && discountType!=="None") {
+records.push({id:genId(),schoolId:mySchoolId,studentName:student.name,studentId:student.id,
+month:"Discount",amount:0,type:discountType,discount:discountAmount,
+paid:true,status:"paid",paidAmount:0,dueDate:"",isDiscount:true,
+feeItems:[{type:discountType,amount:discountAmount}],
+addedBy:loggedInUser?.name||"",date:new Date().toISOString().slice(0,10)});
+}
 admissionItems.forEach(item=>{
 const amt = parseFloat(item.amount)||0;
 if (amt>0) records.push({
@@ -8100,12 +8190,15 @@ const stu = selectedStudent;
 const curYear = new Date().getFullYear();
 const session = curYear+"-"+String(curYear+1).slice(2);
 const classStr = feeStructure.find(fs=>fs.class===stu.class&&(!fs.schoolId||sameId(fs.schoolId,mySchoolId))&&(fs.session===session||!fs.session));
-const totalRecordAmount = stuFees.reduce((s,f)=>s+(f.amount||0),0);
-const totalAnnual = totalRecordAmount > 0 ? totalRecordAmount : (classStr ? (classStr.total||0) : 0);
-const totalPaid = stuFees.filter(f=>f.paid).reduce((s,f)=>s+(f.paidAmount||f.amount||0),0);
-const advanceDeposit = Math.max(0, totalPaid - totalRecordAmount);
-const totalDue = Math.max(0, totalAnnual - totalPaid);
-const pct = totalAnnual>0?Math.round((totalPaid/totalAnnual)*100):0;
+const totalRecordAmount = stuFees.filter(f=>!f.isDiscount).reduce((s,f)=>s+(Number(f.amount)||0),0);
+const structureAnnual = classStr ? (Number(classStr.total)||0) : 0;
+const totalAnnual = structureAnnual > 0 ? structureAnnual : totalRecordAmount;
+const totalPaid = stuFees.filter(f=>(f.paid||f.status==="paid")&&!f.isDiscount).reduce((s,f)=>s+(Number(f.paidAmount)||Number(f.amount)||0),0);
+const totalDiscount = stuFees.filter(f=>f.isDiscount).reduce((s,f)=>s+(Number(f.discount)||0),0);
+const netDue = Math.max(0, totalAnnual - totalDiscount);
+const advanceDeposit = totalPaid > netDue ? totalPaid - netDue : 0;
+const totalDue = Math.max(0, netDue - totalPaid);
+const pct = totalAnnual>0?Math.min(100,Math.round(((totalPaid+totalDiscount)/totalAnnual)*100)):0;
 const r=54, circ=2*Math.PI*r;
 return (
 <div className="fadeUp">
@@ -8136,16 +8229,23 @@ strokeLinecap="round" transform="rotate(-90 65 65)" style={{transition:"stroke-d
 </div>
 </div>
 <div style={{flex:1,display:"grid",gap:8}}>
-{[["💰 Total","₹"+totalAnnual.toLocaleString(),T.text],
+{[["💰 Total (Annual)","₹"+totalAnnual.toLocaleString(),T.text],
 ["✅ Paid","₹"+totalPaid.toLocaleString(),T.green],
 ["⏳ Remaining","₹"+totalDue.toLocaleString(),totalDue>0?T.red:T.green]
-].map(([l,v,c])=>(
+].map(([l,v,cl])=>(
 <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
 background:T.surface,padding:"8px 12px",borderRadius:8}}>
 <span style={{fontSize:12,color:T.textMuted}}>{l}</span>
-<span style={{fontWeight:800,color:c,fontSize:14}}>{v}</span>
+<span style={{fontWeight:800,color:cl,fontSize:14}}>{v}</span>
 </div>
 ))}
+{totalDiscount>0 && (
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+background:"#A78BFA15",border:"1px solid #A78BFA40",padding:"8px 12px",borderRadius:8}}>
+<span style={{fontSize:12,color:"#A78BFA"}}>🎁 Discount</span>
+<span style={{fontWeight:800,color:"#A78BFA",fontSize:14}}>₹{totalDiscount.toLocaleString()}</span>
+</div>
+)}
 {advanceDeposit > 0 && (
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
 background:T.accent+"15",border:"1px solid "+T.accent+"40",padding:"8px 12px",borderRadius:8}}>
@@ -8161,21 +8261,27 @@ background:T.accent+"15",border:"1px solid "+T.accent+"40",padding:"8px 12px",bo
 <p style={{fontWeight:700,color:T.text,fontSize:14}}>📋 Fee Records</p>
 {canEditFees && (
 <div style={{display:"flex",gap:6}}>
-<Btn onClick={()=>setModal(<FeeInstallmentModal student={stu} students={students} loggedInUser={loggedInUser} feeStructure={feeStructure} onSave={(recs)=>{setFees(p=>[...p,...recs]);toast("✅ Installments add ho gayi!","success");}} onClose={()=>setModal(null)} />)} color={T.purple} small>📆 Installments</Btn>
+<Btn onClick={()=>setModal(<FeeInstallmentModal student={stu} students={students} loggedInUser={loggedInUser} feeStructure={feeStructure} existingFees={fees} onSave={(recs)=>{setFees(p=>[...p,...recs]);toast("Installments add ho gayi!","success");}} onClose={()=>setModal(null)} />)} color={T.purple} small>📆 Installments</Btn>
 <Btn onClick={()=>setModal(<FeeAddModal students={students} loggedInUser={loggedInUser} onSave={(d)=>setFees(p=>[...p,d])} onClose={()=>setModal(null)} defaultStudent={stu.name} />)} color={T.accent} small>+ Add</Btn>
 </div>
 )}
 </div>
 <div style={{display:"grid",gap:8}}>
 {stuFees.length===0 && <p style={{color:T.textMuted,textAlign:"center",padding:20}}>Koi fee record nahi.</p>}
-{stuFees.map(f=>(
-<Card key={f.id} style={{padding:"12px 14px",border:"1px solid "+(f.paid?T.green+"40":T.red+"40")}}>
+{stuFees.map(f=>{
+const isOD=!f.paid&&!f.isDiscount&&f.dueDate&&new Date(f.dueDate)<new Date();
+const odDays=isOD?Math.floor((new Date()-new Date(f.dueDate))/(864e5)):0;
+return (
+<Card key={f.id} style={{padding:"12px 14px",
+border:"1px solid "+(f.isDiscount?"#A78BFA40":f.paid?T.green+"40":isOD?T.red+"60":T.yellow+"40"),
+background:f.isDiscount?"#A78BFA08":f.paid?T.green+"06":isOD?T.red+"06":"transparent"}}>
 <Row>
 <div style={{flex:1}}>
 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}>
-<div style={{width:8,height:8,borderRadius:"50%",background:f.paid?T.green:T.red}}/>
-<p style={{fontWeight:700,color:T.text,fontSize:14}}>{f.month}</p>
-<Badge color={f.paid?T.green:T.red} style={{fontSize:9}}>{f.paid?"Paid":"Due"}</Badge>
+<div style={{width:8,height:8,borderRadius:"50%",flexShrink:0,background:f.isDiscount?"#A78BFA":f.paid?T.green:isOD?T.red:T.yellow}}/>
+<p style={{fontWeight:700,color:T.text,fontSize:14,textDecoration:f.paid&&!f.isDiscount?"line-through":"none",opacity:f.paid&&!f.isDiscount?0.6:1}}>{f.month}</p>
+{f.isDiscount?<Badge color="#A78BFA" style={{fontSize:9}}>🎁 {f.type}</Badge>:<Badge color={f.paid?T.green:isOD?T.red:T.yellow} style={{fontSize:9}}>{f.paid?"✅ Paid":isOD?"⚠️ OVERDUE":"⏳ Due"}</Badge>}
+{isOD&&<span style={{fontSize:9,color:T.red,fontWeight:700}}>({odDays}d late)</span>}
 </div>
 {f.dueDate && <p style={{fontSize:11,color:T.textMuted,marginLeft:14}}>📅 Due: {f.dueDate}</p>}
 {(f.feeItems||[]).map((item,i)=>(
@@ -8226,7 +8332,8 @@ fontFamily:"Outfit,sans-serif",opacity:!hasPhone?0.4:1}}>
 </div>
 </Row>
 </Card>
-))}
+);
+})}
 </div>
 {/* Fee Slip Download */}
 <div style={{marginTop:14}}>
@@ -9759,7 +9866,9 @@ function TransportSection({ ctx }) {
 const { l, buses, setBuses, toast, setModal, setUserAccounts, currentSchool, students, setStudents, role, notices, setNotices, loggedInUser, stopRequests, setStopRequests } = ctx;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const myBuses = buses.filter(b => sameId(b.schoolId, mySchoolId));
-const canManageTransport = ["principal","founder","superadmin","vice_principal","transport_head"].includes(role);
+const _tsp = sectionPerm(ctx, "transport");
+const canManageTransport = ["principal","founder","superadmin","vice_principal","transport_head"].includes(role) || _tsp.canEdit;
+const canViewTransport = canManageTransport || _tsp.canView;
 const isTransportHead = role === "transport_head";
 const [selectedBusId, setSelectedBusId] = React.useState(null);
 const [thTab, setThTab] = React.useState("buses"); // buses | requests | routes
@@ -9943,11 +10052,11 @@ return (
 <div style={{ borderTop: `1px solid ${T.border}`, padding: "14px 16px", background: T.surface }}>
 {/* Action Buttons */}
 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-<Btn onClick={() => setModal(<BusForm initial={b} onSave={d => { updateBus(b.id, d); setModal(null); toast("Bus updated ✓","success"); }} onClose={() => setModal(null)} />)} color={T.yellow} small>✏️ Edit Bus</Btn>
-<Btn onClick={() => toggleStatus(b.id)} color={b.status === "running" ? T.yellow : T.green} small>{b.status === "running" ? "✅ Mark Parked" : "🚌 Mark Running"}</Btn>
-<Btn onClick={() => setModal(<AddChildToRouteModal bus={b} students={students} onAdd={cd => { addChildToRoute(b.id, cd); setModal(null); }} onClose={() => setModal(null)} />)} color={T.accent} small>➕ Add Child</Btn>
+{canManageTransport && <Btn onClick={() => setModal(<BusForm initial={b} onSave={d => { updateBus(b.id, d); setModal(null); toast("Bus updated ✓","success"); }} onClose={() => setModal(null)} />)} color={T.yellow} small>✏️ Edit Bus</Btn>}
+{canManageTransport && <Btn onClick={() => toggleStatus(b.id)} color={b.status === "running" ? T.yellow : T.green} small>{b.status === "running" ? "✅ Mark Parked" : "🚌 Mark Running"}</Btn>}
+{canManageTransport && <Btn onClick={() => setModal(<AddChildToRouteModal bus={b} students={students} onAdd={cd => { addChildToRoute(b.id, cd); setModal(null); }} onClose={() => setModal(null)} />)} color={T.accent} small>➕ Add Child</Btn>}
 <Btn onClick={() => setModal(<BusLiveMap bus={b} onClose={() => setModal(null)} />)} color="#0ECB81" small>🛰️ Full Map</Btn>
-<Btn onClick={() => deleteBus(b.id)} color={T.red} small>🗑️ Delete</Btn>
+{canManageTransport && <Btn onClick={() => deleteBus(b.id)} color={T.red} small>🗑️ Delete</Btn>}
 </div>
 {/* 🛰️ Inline Satellite Map */}
 <BusSatelliteMapCard myBus={b} currentStopName={b.currentStop || ""} currentSchool={currentSchool} />
@@ -10034,7 +10143,7 @@ return (
 <p style={{ fontSize: 10, color: T.textMuted, marginTop: 4 }}>⏰ Pickup: {c.pickupTime} {c.dropTime ? `  🏠 Drop: ${c.dropTime}` : ""}</p>
 )}
 </div>
-<Btn onClick={() => removeChildFromRoute(b.id, c.studentId)} color={T.red} small>✕</Btn>
+{canManageTransport && <Btn onClick={() => removeChildFromRoute(b.id, c.studentId)} color={T.red} small>✕</Btn>}
 </div>
 </div>
 );
@@ -20390,6 +20499,7 @@ return (
 // ─── ACCOUNTS SECTION (PRINCIPAL) ────────────────────────────────────────────
 // ─── GENERIC PERMISSIONS MODAL (VP / Staff / Reception / Accountant) ──────────
 const ROLE_PERM_CONFIG = {
+teacher:        { key:"teacherPermissions",        sections: ()=>ALL_PERM_SECTIONS,       title:"🔐 Teacher Section Permissions",        hint:"Jin sections ko ON karo, woh Teacher ke login mein dikhengi" },
 vice_principal: { key:"vpPermissions",            sections: ()=>ALL_VP_SECTIONS,         title:"🔐 VP Section Permissions",             hint:"Jin sections ko ON karo, woh Vice Principal ke login mein dikhengi" },
 staff:          { key:"staffPermissions",          sections: ()=>ALL_STAFF_SECTIONS,      title:"🔐 Staff Section Permissions",           hint:"Jin sections ko ON karo, woh Staff ke login mein dikhengi" },
 reception:      { key:"receptionPermissions",      sections: ()=>ALL_RECEPTION_SECTIONS,  title:"🔐 Reception Section Permissions",       hint:"Jin sections ko ON karo, woh Receptionist ke login mein dikhengi" },
@@ -27518,7 +27628,8 @@ const [form, setForm] = useState({ name:"", purpose:"", phone:"", photo:"" });
 const [filter, setFilter] = useState("all");
 const [showPermForm, setShowPermForm] = useState(false);
 const [permForm, setPermForm] = useState({ accountUsername:"", accountName:"" });
-const canManage = isPrincipal || visitorPerms.some(p => p.username === loggedInUser?.username && p.active);
+const _vsp = sectionPerm(ctx, "visitors");
+const canManage = isPrincipal || _vsp.canEdit || visitorPerms.some(p => p.username === loggedInUser?.username && p.active);
 const addVisitor = () => {
 if (!form.name.trim()) { toast(lang==="hi" ? "विज़िटर का नाम ज़रूरी है!" : "Visitor name is required!", "error"); return; }
 const now = new Date();
