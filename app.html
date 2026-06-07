@@ -152,16 +152,6 @@ xhr.onerror = function() { reject(new Error("Network error")); };
 xhr.send(formData);
 });
 };
-// ── Auto-trigger demo if coming from landing page ──
-useEffect(() => {
-if (window.__autoDemoToken && !loggedInUser) {
-setTimeout(() => {
-window.activateDemo({setSchools,setUserAccounts,setRole,setLoggedInUser,setCurrentSchoolId,setActiveSection,setMode,toast});
-window.__autoDemoToken = null;
-}, 600);
-}
-}, []);
-
 (function migrateCache() {
 const MIGRATED_KEY = "ss_cache_migrated_v5"; // v27: schoolList path fix
 if (localStorage.getItem(MIGRATED_KEY)) return;
@@ -2176,6 +2166,7 @@ principal: [
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
 {key:"staffdirectory",icon:"📋",label:"Staff Directory"},
+{key:"inventory",icon:"📦",label:"Inventory"},
 ],
 vice_principal: "__VP_DYNAMIC__",
 staff: [
@@ -2226,6 +2217,7 @@ teacher: [
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
+{key:"inventory",icon:"📦",label:"Inventory"},
 ],
 parent: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"mychild",icon:"👶",label:"myChild"},
@@ -3003,6 +2995,7 @@ if (section === "healthgrowth") return <HealthGrowthSection ctx={ctx} />;
 if (section === "allpickup") return <AllPickupSection ctx={ctx} />;
 if (section === "tripmanagement") return <TripManagementSection ctx={ctx} />;
 if (section === "onlineclasses") return <OnlineClassesSection ctx={ctx} />;
+if (section === "inventory") return <InventorySection ctx={ctx} />;
 return <div style={{color:T.textMuted}}>Section: {section}</div>;
 }
 // ─── OFFLINE STATUS CARD ─────────────────────────────────────────────────────
@@ -30190,6 +30183,252 @@ style={{width:"100%",padding:"13px",borderRadius:11,border:"none",background:T.a
 </div>
 );
 }
+
+function InventorySection({ ctx }) {
+const { role, loggedInUser, toast, setModal } = ctx;
+const mySchoolId = loggedInUser?.schoolId || null;
+const isPrincipal = ["principal","founder","superadmin","vice_principal"].includes(role);
+const FB_BASE = mySchoolId ? ("schoolshield/inventory/" + mySchoolId) : null;
+const [items, setItems] = React.useState([]);
+const [transactions, setTransactions] = React.useState([]);
+const [verifications, setVerifications] = React.useState([]);
+const [tab, setTab] = React.useState("items");
+const [verifyQtys, setVerifyQtys] = React.useState({});
+const [loaded, setLoaded] = React.useState(false);
+
+React.useEffect(() => {
+if (!mySchoolId) { setLoaded(true); return; }
+const LI = "ss_inv_"+mySchoolId+"_items";
+const LT = "ss_inv_"+mySchoolId+"_trans";
+const LV = "ss_inv_"+mySchoolId+"_verif";
+try { const d=localStorage.getItem(LI); if(d) setItems(JSON.parse(d)); } catch(e) {}
+try { const d=localStorage.getItem(LT); if(d) setTransactions(JSON.parse(d)); } catch(e) {}
+try { const d=localStorage.getItem(LV); if(d) setVerifications(JSON.parse(d)); } catch(e) {}
+setLoaded(true);
+if (!window.firebaseReady || !window.db) return;
+try {
+window.db.ref(FB_BASE+"/items").on("value", function(snap) {
+try { const d=snap.val(); const arr=d?(Array.isArray(d)?d:Object.values(d)):[]; setItems(arr); localStorage.setItem(LI,JSON.stringify(arr)); } catch(e) {}
+});
+window.db.ref(FB_BASE+"/transactions").on("value", function(snap) {
+try { const d=snap.val(); const arr=d?Object.values(d):[]; setTransactions(arr); localStorage.setItem(LT,JSON.stringify(arr)); } catch(e) {}
+});
+window.db.ref(FB_BASE+"/verifications").on("value", function(snap) {
+try { const d=snap.val(); const arr=d?Object.values(d):[]; setVerifications(arr); localStorage.setItem(LV,JSON.stringify(arr)); } catch(e) {}
+});
+} catch(e) {}
+}, [mySchoolId]);
+
+const saveItems = function(arr) {
+setItems(arr);
+try { localStorage.setItem("ss_inv_"+mySchoolId+"_items",JSON.stringify(arr)); } catch(e) {}
+if (!window.__isDemoMode && FB_BASE && window.firebaseReady) try { window.db.ref(FB_BASE+"/items").set(arr); } catch(e) {}
+};
+const saveTrans = function(arr) {
+setTransactions(arr);
+try { localStorage.setItem("ss_inv_"+mySchoolId+"_trans",JSON.stringify(arr)); } catch(e) {}
+if (!window.__isDemoMode && FB_BASE && window.firebaseReady) try { const o={}; arr.forEach(function(t){if(t.id)o[String(t.id)]=t;}); window.db.ref(FB_BASE+"/transactions").set(o); } catch(e) {}
+};
+const saveVerif = function(arr) {
+setVerifications(arr);
+try { localStorage.setItem("ss_inv_"+mySchoolId+"_verif",JSON.stringify(arr)); } catch(e) {}
+if (!window.__isDemoMode && FB_BASE && window.firebaseReady) try { const o={}; arr.forEach(function(v){if(v.id)o[String(v.id)]=v;}); window.db.ref(FB_BASE+"/verifications").set(o); } catch(e) {}
+};
+
+const calcStock = function(itemId) {
+try {
+const item = (items||[]).find(function(i){return String(i.id)===String(itemId);});
+const total = Number(item&&item.totalQty)||0;
+const issued = (transactions||[]).filter(function(t){return String(t.itemId)===String(itemId)&&t.type!=="return";}).reduce(function(s,t){return s+(Number(t.qty)||0);},0);
+const ret = (transactions||[]).filter(function(t){return String(t.itemId)===String(itemId)&&t.type==="return";}).reduce(function(s,t){return s+(Number(t.qty)||0);},0);
+return total-issued+ret;
+} catch(e){return 0;}
+};
+
+const CATS = ["Stationery","Furniture","Electronics","Sports","Lab Equipment","Books","Cleaning","Other"];
+
+const openAddItem = function(item) {
+const isEdit = !!item;
+setModal(<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:24,maxWidth:380,width:"100%"}}>
+<div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+<p style={{fontWeight:700,fontSize:15,color:T.text}}>{isEdit?"✏️ Edit":"➕ Add"} Item</p>
+<button onClick={function(){setModal(null);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>✕</button>
+</div>
+<input id="i_nm" defaultValue={item&&item.name||""} placeholder="Item Name *" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10,boxSizing:"border-box"}}/>
+<select id="i_ct" defaultValue={item&&item.category||"Stationery"} style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
+{CATS.map(function(cat){return <option key={cat} value={cat}>{cat}</option>;})}
+</select>
+<input id="i_qt" type="number" defaultValue={item&&item.totalQty||""} placeholder="Total Quantity *" min="0" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:16,boxSizing:"border-box"}}/>
+<div style={{display:"flex",gap:8}}>
+<button onClick={function(){
+const name=(document.getElementById("i_nm").value||"").trim();
+const cat=document.getElementById("i_ct").value;
+const qty=parseInt(document.getElementById("i_qt").value);
+if(!name){toast("Name required","error");return;}
+if(isNaN(qty)||qty<0){toast("Valid quantity required","error");return;}
+if(isEdit){saveItems((items||[]).map(function(i){return String(i.id)===String(item.id)?Object.assign({},i,{name:name,category:cat,totalQty:qty}):i;}));toast("Updated!","success");}
+else{saveItems([...(items||[]),{id:genId(),name:name,category:cat,totalQty:qty,createdAt:new Date().toISOString()}]);toast("Item added!","success");}
+setModal(null);
+}} style={{flex:1,padding:10,background:T.green,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{isEdit?"💾 Update":"➕ Add"}
+</button>
+<button onClick={function(){setModal(null);}} style={{padding:"10px 16px",background:"none",border:"1px solid "+T.border,borderRadius:8,color:T.textMuted,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>Cancel</button>
+</div>
+</div>);
+};
+
+const openIssue = function(item) {
+const sys=calcStock(item.id);
+setModal(<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:24,maxWidth:380,width:"100%"}}>
+<div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+<p style={{fontWeight:700,fontSize:15,color:T.text}}>📤 Issue / Return</p>
+<button onClick={function(){setModal(null);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>✕</button>
+</div>
+<p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>{item.name} | Available: <b style={{color:sys>0?T.green:T.red}}>{sys}</b></p>
+<select id="t_tp" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
+<option value="issue">📤 Issue</option>
+<option value="return">📥 Return</option>
+</select>
+<input id="t_to" placeholder="Issued to (Name)" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10,boxSizing:"border-box"}}/>
+<select id="t_tt" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
+<option value="student">👨‍🎓 Student</option>
+<option value="staff">👔 Staff</option>
+<option value="other">📋 Other</option>
+</select>
+<input id="t_qt" type="number" min="1" placeholder="Quantity *" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:16,boxSizing:"border-box"}}/>
+<button onClick={function(){
+const type=document.getElementById("t_tp").value;
+const to=(document.getElementById("t_to").value||"").trim();
+const toType=document.getElementById("t_tt").value;
+const qty=parseInt(document.getElementById("t_qt").value);
+if(!to){toast("Recipient required","error");return;}
+if(isNaN(qty)||qty<1){toast("Valid quantity required","error");return;}
+if(type==="issue"&&qty>sys){toast("Not enough stock!","error");return;}
+saveTrans([...(transactions||[]),{id:genId(),itemId:item.id,itemName:item.name,type:type,issuedTo:to,issuedToType:toType,qty:qty,date:new Date().toISOString().slice(0,10),createdAt:new Date().toISOString()}]);
+toast((type==="issue"?"📤 Issued ":"📥 Returned ")+qty+" "+item.name,"success");
+setModal(null);
+}} style={{width:"100%",padding:11,background:T.accent,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:14}}>Confirm</button>
+</div>);
+};
+
+if (!loaded) return <div style={{textAlign:"center",padding:40,color:T.textMuted}}>Loading...</div>;
+
+return (
+<div className="fadeUp">
+<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+<div>
+<h2 style={{fontSize:20,fontWeight:800,color:T.text}}>📦 Inventory & Stock</h2>
+<p style={{fontSize:12,color:T.textMuted}}>Manage items and verify stock</p>
+</div>
+{isPrincipal&&tab==="items"&&<button onClick={function(){openAddItem(null);}} style={{padding:"9px 16px",background:T.accent,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>➕ Add Item</button>}
+</div>
+<div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+{[["items","📦 Items"],["trans","📤 Transactions"],["verify","🔍 Verify"],["history","📅 History"]].map(function(t){
+return <button key={t[0]} onClick={function(){setTab(t[0]);}} style={{padding:"7px 14px",borderRadius:20,border:"none",fontFamily:"Outfit,sans-serif",fontWeight:600,fontSize:12,cursor:"pointer",background:tab===t[0]?T.accent:"rgba(255,255,255,0.06)",color:tab===t[0]?"#fff":T.textMuted}}>{t[1]}</button>;
+})}
+</div>
+{tab==="items"&&(
+<div style={{display:"grid",gap:10}}>
+{(items||[]).length===0&&<div style={{textAlign:"center",padding:40,color:T.textMuted,background:T.surface,borderRadius:12}}><p style={{fontSize:32}}>📦</p><p style={{marginTop:8}}>No items yet.</p></div>}
+{(items||[]).map(function(item){
+const sys=calcStock(item.id);
+const pct=item.totalQty>0?Math.min(100,Math.round((sys/item.totalQty)*100)):0;
+return <div key={item.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14}}>
+<div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+<div><p style={{fontWeight:700,color:T.text,fontSize:14}}>{item.name}</p><p style={{fontSize:11,color:T.textMuted}}>📁 {item.category}</p></div>
+<div style={{textAlign:"right"}}><p style={{fontSize:22,fontWeight:800,color:sys>0?T.green:T.red}}>{sys}</p><p style={{fontSize:10,color:T.textMuted}}>of {item.totalQty}</p></div>
+</div>
+<div style={{height:4,background:T.surface,borderRadius:2,marginBottom:10}}>
+<div style={{height:"100%",width:pct+"%",background:pct>50?T.green:pct>20?T.yellow:T.red,borderRadius:2}}/>
+</div>
+<div style={{display:"flex",gap:6}}>
+<button onClick={function(){openIssue(item);}} style={{padding:"6px 12px",background:T.accent+"20",border:"1px solid "+T.accent+"50",borderRadius:8,color:T.accent,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>📤 Issue/Return</button>
+{isPrincipal&&<button onClick={function(){openAddItem(item);}} style={{padding:"6px 10px",background:T.yellow+"20",border:"1px solid "+T.yellow+"50",borderRadius:8,color:T.yellow,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>✏️</button>}
+{isPrincipal&&<button onClick={function(){if(window.confirm("Delete "+item.name+"?")){saveItems((items||[]).filter(function(i){return i.id!==item.id;}));saveTrans((transactions||[]).filter(function(t){return t.itemId!==item.id;}));toast("Deleted","success");}}} style={{padding:"6px 10px",background:T.red+"20",border:"1px solid "+T.red+"50",borderRadius:8,color:T.red,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>🗑️</button>}
+</div>
+</div>;
+})}
+</div>
+)}
+{tab==="trans"&&(
+<div style={{display:"grid",gap:8}}>
+{(transactions||[]).length===0&&<div style={{textAlign:"center",padding:40,color:T.textMuted,background:T.surface,borderRadius:12}}><p style={{fontSize:32}}>📤</p><p style={{marginTop:8}}>No transactions yet.</p></div>}
+{[...(transactions||[])].reverse().map(function(t){
+return <div key={t.id} style={{background:T.card,border:"1px solid "+(t.type==="return"?T.green:T.accent)+"40",borderRadius:10,padding:12}}>
+<div style={{display:"flex",justifyContent:"space-between"}}>
+<div><p style={{fontWeight:700,color:T.text,fontSize:13}}>{t.type==="return"?"📥":"📤"} {t.itemName}</p><p style={{fontSize:11,color:T.textMuted,marginTop:3}}>{t.issuedTo} ({t.issuedToType}) • {t.date}</p></div>
+<div style={{textAlign:"right"}}><p style={{fontWeight:800,fontSize:16,color:t.type==="return"?T.green:T.yellow}}>{t.type==="return"?"+":"-"}{t.qty}</p><p style={{fontSize:10,color:T.textMuted}}>{t.type}</p></div>
+</div>
+</div>;
+})}
+</div>
+)}
+{tab==="verify"&&(
+<div>
+<div style={{background:T.accent+"15",border:"1px solid "+T.accent+"30",borderRadius:10,padding:12,marginBottom:14}}>
+<p style={{fontSize:12,color:T.accent,fontWeight:600}}>💡 Enter actual physical count. Difference calculated automatically.</p>
+</div>
+{(items||[]).length===0&&<div style={{textAlign:"center",padding:40,color:T.textMuted,background:T.surface,borderRadius:12}}><p>No items to verify.</p></div>}
+{(items||[]).map(function(item){
+const sys=calcStock(item.id);
+const av=verifyQtys[item.id];
+const actual=av!==""&&av!==undefined?parseInt(av):null;
+const diff=actual!==null&&!isNaN(actual)?sys-actual:null;
+const status=diff===null?null:diff===0?"Matched":diff>0?"Missing":"Extra";
+const sc=status==="Matched"?T.green:status==="Missing"?T.red:"#F5A623";
+return <div key={item.id} style={{background:T.card,border:"1px solid "+(status?sc:T.border)+"40",borderRadius:12,padding:14,marginBottom:10}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<div><p style={{fontWeight:700,color:T.text,fontSize:14}}>{item.name}</p><p style={{fontSize:11,color:T.textMuted}}>System: <b style={{color:T.accent}}>{sys}</b></p></div>
+{status&&<div style={{background:sc+"20",border:"1px solid "+sc+"40",borderRadius:8,padding:"4px 10px",textAlign:"center"}}><p style={{fontSize:11,fontWeight:700,color:sc}}>{status}</p>{diff!==0&&<p style={{fontSize:10,color:sc}}>{Math.abs(diff)} {diff>0?"missing":"extra"}</p>}</div>}
+</div>
+<input type="number" min="0" value={verifyQtys[item.id]||""} placeholder={"Actual count (system: "+sys+")"}
+onChange={function(e){setVerifyQtys(function(p){const n=Object.assign({},p);n[item.id]=e.target.value;return n;});}}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"9px",color:T.text,fontFamily:"Outfit,sans-serif",fontSize:13,boxSizing:"border-box"}}/>
+</div>;
+})}
+{(items||[]).length>0&&<button onClick={function(){
+const results=(items||[]).map(function(item){
+const sys=calcStock(item.id);
+const raw=verifyQtys[item.id];
+const actual=raw!==undefined&&raw!==""?parseInt(raw):sys;
+const diff=sys-(isNaN(actual)?sys:actual);
+return {itemId:item.id,itemName:item.name,systemQty:sys,actualQty:isNaN(actual)?sys:actual,difference:diff,status:diff===0?"Matched":diff>0?"Missing":"Extra"};
+});
+saveVerif([...(verifications||[]),{id:genId(),date:new Date().toISOString(),results:results,verifiedBy:loggedInUser&&loggedInUser.name||role}]);
+const issues=results.filter(function(r){return r.difference!==0;});
+if(issues.length>0){toast("⚠️ "+issues.length+" mismatch found!","error");}else{toast("✅ All matched!","success");}
+}} style={{width:"100%",padding:13,background:T.green,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif",marginTop:8}}>🔍 Run Verification</button>}
+</div>
+)}
+{tab==="history"&&(
+<div style={{display:"grid",gap:10}}>
+{(verifications||[]).length===0&&<div style={{textAlign:"center",padding:40,color:T.textMuted,background:T.surface,borderRadius:12}}><p style={{fontSize:32}}>📅</p><p style={{marginTop:8}}>No verifications yet.</p></div>}
+{[...(verifications||[])].reverse().map(function(v){
+const ok=(v.results||[]).filter(function(r){return r.status==="Matched";}).length;
+const issues=(v.results||[]).filter(function(r){return r.status!=="Matched";}).length;
+return <div key={v.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<div><p style={{fontWeight:700,color:T.text,fontSize:13}}>📅 {new Date(v.date).toLocaleDateString("en-IN")}</p><p style={{fontSize:11,color:T.textMuted}}>By: {v.verifiedBy}</p></div>
+<div style={{display:"flex",gap:6}}>
+<span style={{fontSize:11,background:T.green+"20",color:T.green,borderRadius:6,padding:"3px 8px",fontWeight:600}}>{ok} OK</span>
+{issues>0&&<span style={{fontSize:11,background:T.red+"20",color:T.red,borderRadius:6,padding:"3px 8px",fontWeight:600}}>{issues} issues</span>}
+</div>
+</div>
+{(v.results||[]).filter(function(r){return r.status!=="Matched";}).map(function(r){
+return <div key={r.itemId} style={{display:"flex",justifyContent:"space-between",background:T.surface,borderRadius:6,padding:"5px 10px",marginBottom:4}}>
+<p style={{fontSize:12,color:T.text}}>{r.itemName}</p>
+<p style={{fontSize:12,fontWeight:600,color:r.status==="Missing"?T.red:"#F5A623"}}>{r.status}: {Math.abs(r.difference)}</p>
+</div>;
+})}
+{issues===0&&<p style={{fontSize:12,color:T.green,textAlign:"center"}}>✅ All matched</p>}
+</div>;
+})}
+</div>
+)}
+</div>
+);
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(App));
 </script>
