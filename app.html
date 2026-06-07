@@ -2498,7 +2498,7 @@ color: isActive ? "#fff" : T.text}}>
 </p>
 <p style={{margin:0, fontSize:10,
 color: isActive ? "rgba(255,255,255,0.75)" : T.textMuted}}>
-{childRec?.class || "—"} {isActive ? "• Active ✓" : "• Tap to switch"}
+{childRec?.class || "—"}{childRec?.rollNo ? " • #"+childRec.rollNo : ""} {isActive ? "• Active ✓" : "• Tap to switch"}
 </p>
 </div>
 </button>
@@ -18105,7 +18105,7 @@ const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1)
 const daysInMonth    = new Date(viewYear, viewMonth+1, 0).getDate();
 const firstDayOfMonth= new Date(viewYear, viewMonth, 1).getDay();
 const getDateKey = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-const isWeekend  = (y,m,d) => { const day=new Date(y,m,d).getDay(); return day===0||day===6; };
+const isWeekend  = (y,m,d) => { const day=new Date(y,m,d).getDay(); return day===0; };
 const todayKey   = getDateKey(now.getFullYear(), now.getMonth(), now.getDate());
 // ── School events ──
 const myEvents = (schoolEvents||[]).filter(e => !e.schoolId || sameId(e.schoolId, mySchoolId));
@@ -24344,7 +24344,7 @@ return log ? { inTime: log.inTime || "", outTime: log.outTime || "" } : null;
 };
 const isWeekend = (y, m, d) => {
 const day = new Date(y, m, d).getDay();
-return day === 0 || day === 6;
+return day === 0;
 };
 const getMonthlySummary = (personType, personId) => {
 const counts = { present:0, absent:0, late:0, half_day:0, on_duty:0, holiday:0, unmarked:0 };
