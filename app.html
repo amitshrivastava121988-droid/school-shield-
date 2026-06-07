@@ -773,6 +773,8 @@ const isGlobal = GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || k
 const canWrite = fbPath && (isGlobal || window.currentSchoolId);
 if (window.__isDemoMode) {
 // Demo mode: no Firebase write
+} else if (window.__isDemoMode) {
+// Demo: no Firebase write
 } else if (canWrite && window.firebaseReady && navigator.onLine) {
 try {
 window.db.ref(fbPath).set(jsonStr);
@@ -4191,7 +4193,7 @@ return map[type] || "🔔";
 }
 // ─── STUDENTS SECTION ─────────────────────────────────────────────────────────
 function StudentsSection({ ctx }) {
-const { l, role, students, setStudents, teachers, toast, setModal, marks, remarks, userAccounts, setUserAccounts, currentSchool, attendanceLogs, setAttendanceLogs, houseNames, setHouseNames, saveHouseNames, setAlerts, classNames, fees, setFees, loggedInUser, pickups, setPickups, leaves } = ctx;
+const { l, role, students, setStudents, teachers, toast, setModal, marks, remarks, userAccounts, setUserAccounts, currentSchool, attendanceLogs, setAttendanceLogs, houseNames, setHouseNames, saveHouseNames, setAlerts, classNames, fees, setFees, feeStructure, loggedInUser, pickups, setPickups, leaves } = ctx;
 const CLASSES = classNames || DEFAULT_CLASSES;
 const [search, setSearch] = useState("");
 const [selectedClass, setSelectedClass] = useState(null); // null = show class tiles
@@ -4647,7 +4649,21 @@ style={{background:T.red+"20",border:"1px solid "+T.red,color:T.red,borderRadius
 <Btn onClick={()=>openReport(s)} color={T.accent} small>{l("viewReport")}</Btn>
 <Btn onClick={()=>openAttendance(s)} color={T.green} small>📅 Attendance</Btn>
 <Btn onClick={()=>setModal(<StudentPickupModal student={s} pickups={pickups} setPickups={setPickups} setAlerts={setAlerts} toast={toast} onClose={()=>setModal(null)} />)} color="#D946EF" small>🚗 Pickup</Btn>
-{(role==="principal"||role==="founder"||role==="accountant") && <Btn onClick={()=>openQuickFees(s)} color="#0ECB81" small>💳 Add Fee</Btn>}
+{(role==="principal"||role==="founder"||role==="accountant"||canEditFees) && (function() {
+var sFees2 = (fees||[]).filter(function(f){return f.studentName===s.name&&!f.isDiscount;});
+var sStr2 = (feeStructure||[]).find(function(fs){return fs.class===s.class&&(!fs.schoolId||sameId(fs.schoolId,mySchoolId));});
+var sTotal2 = sStr2?(Number(sStr2.total)||0):sFees2.reduce(function(sm,f){return sm+(Number(f.amount)||0);},0);
+var sPaid2 = sFees2.filter(function(f){return f.paid||f.status==="paid";}).reduce(function(sm,f){return sm+(Number(f.paidAmount)||Number(f.amount)||0);},0);
+var sDisc2 = (fees||[]).filter(function(f){return f.studentName===s.name&&f.isDiscount;}).reduce(function(sm,f){return sm+(Number(f.discount)||0);},0);
+var sDue2 = Math.max(0,sTotal2-sPaid2-sDisc2);
+var sOD2 = sFees2.some(function(f){return !f.paid&&f.dueDate&&new Date(f.dueDate)<new Date();});
+var btnColor2 = sOD2?T.red:sDue2>0?T.yellow:sTotal2>0?T.green:"#0ECB81";
+var btnLabel2 = sTotal2>0?((sOD2?"⚠️":sDue2>0?"⏳":"✅")+" ₹"+sPaid2.toLocaleString()+"/"+sTotal2.toLocaleString()):"💳 Fees";
+return React.createElement(Btn,{onClick:function(){
+ctx.setActiveSection&&ctx.setActiveSection("fees");
+setTimeout(function(){if(window.__setFeeStudent)window.__setFeeStudent(s);},400);
+},color:btnColor2,small:true},btnLabel2);
+})()}
 {/* Edit/Delete/PANIC only for principal, vice_principal, not teacher/reception */}
 {!isViewOnly && role!=="teacher" && <Btn onClick={()=>openEdit(s)} color={T.yellow} small>{l("edit")}</Btn>}
 {canDelete && !isViewOnly && role!=="teacher" && <Btn onClick={()=>deleteStudent(s.id)} color={T.red} small>{l("delete")}</Btn>}
@@ -6646,7 +6662,7 @@ background:T.surface,padding:"6px 10px",borderRadius:6}}>
 );
 }
 // ─── FEE INSTALLMENT MODAL ────────────────────────────────────────────────────
-function FeeInstallmentModal({ student, students, loggedInUser, onSave, onClose, feeStructure }) {
+function FeeInstallmentModal({ student, students, loggedInUser, onSave, onClose, feeStructure, existingFees }) {
 const mySchoolId = loggedInUser?.schoolId||null;
 const curYearM = new Date().getFullYear();
 const sessionM = curYearM+"-"+String(curYearM+1).slice(2);
@@ -6664,6 +6680,13 @@ const [admissionItems, setAdmissionItems] = React.useState([{id:Date.now(),type:
 const [installments, setInstallments] = React.useState(3);
 const [installmentRows, setInstallmentRows] = React.useState([]);
 const [customMode, setCustomMode] = React.useState(false);
+const [discountType, setDiscountType] = React.useState("None");
+const [discountAmt, setDiscountAmt] = React.useState("");
+const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Custom"];
+const sameIdM2=(a,b)=>String(a)===String(b);
+const stuExist = (existingFees||[]).filter(f=>f.studentName===student.name&&(!f.schoolId||sameIdM2(f.schoolId,mySchoolId))&&!f.isDiscount);
+const alreadyTotal = stuExist.reduce((s,f)=>s+(Number(f.amount)||0),0);
+const discountAmount = discountType==="None"?0:discountType==="RTE (Free)"?(parseFloat(totalFee)||0):(parseFloat(discountAmt)||0);
 const feeTypes = ["Tuition Fee","Admission Fee","Transport Fee","Uniform Fee","Exam Fee","Development Fee","Computer Fee","Sports Fee","Library Fee","Other"];
 const admissionTotal = admissionItems.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
 const addAdmissionItem = ()=>setAdmissionItems(p=>[...p,{id:Date.now(),type:"Admission Fee",amount:""}]);
@@ -6672,7 +6695,7 @@ const updateAdmissionItem = (id,key,val)=>setAdmissionItems(p=>p.map(i=>i.id===i
 React.useEffect(()=>{
 const total = parseFloat(totalFee)||0;
 const adm = admissionTotal;
-const remaining = total - adm;
+const remaining = total - adm - discountAmount - alreadyTotal;
 if (remaining<=0||installments<=0) { setInstallmentRows([]); return; }
 const perInst = Math.floor(remaining/installments);
 const lastInst = remaining - perInst*(installments-1);
@@ -6694,6 +6717,13 @@ setInstallmentRows(p=>p.map((r,i)=>i===idx?{...r,[key]:val}:r));
 const handleSave = ()=>{
 const records = [];
 const total=parseFloat(totalFee)||0;
+if (discountAmount>0 && discountType!=="None") {
+records.push({id:genId(),schoolId:mySchoolId,studentName:student.name,studentId:student.id,
+month:"Discount",amount:0,type:discountType,discount:discountAmount,
+paid:true,status:"paid",paidAmount:0,dueDate:"",isDiscount:true,
+feeItems:[{type:discountType,amount:discountAmount}],
+addedBy:loggedInUser?.name||"",date:new Date().toISOString().slice(0,10)});
+}
 admissionItems.forEach(item=>{
 const amt = parseFloat(item.amount)||0;
 if (amt>0) records.push({
@@ -6719,7 +6749,7 @@ if (records.length===0) return;
 onSave(records);
 onClose();
 };
-const remaining = (parseFloat(totalFee)||0)-admissionTotal;
+const remaining = Math.max(0,(parseFloat(totalFee)||0)-admissionTotal-discountAmount-alreadyTotal);
 return (
 <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:9999,
 display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
@@ -6778,6 +6808,21 @@ padding:"8px 10px",color:"#e53636",cursor:"pointer",fontSize:13,fontFamily:"Outf
 Total Admission: ₹{admissionTotal.toLocaleString()}
 </p>
 )}
+</div>
+{/* Discount Section */}
+<div style={{marginBottom:10,background:"#A78BFA10",border:"1px solid #A78BFA30",borderRadius:10,padding:10}}>
+<p style={{fontSize:11,color:"#A78BFA",fontWeight:700,marginBottom:6}}>🎁 Discount / Concession</p>
+<select value={discountType} onChange={e=>setDiscountType(e.target.value)}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",marginBottom:6}}>
+{DISC_TYPES.map(d=><option key={d} value={d}>{d}</option>)}
+</select>
+{discountType!=="None"&&discountType!=="RTE (Free)"&&(
+<input type="number" value={discountAmt} onChange={e=>setDiscountAmt(e.target.value)}
+placeholder="Discount amount (Rs.)"
+style={{width:"100%",background:T.surface,border:"1px solid #A78BFA60",borderRadius:8,
+padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}}/>
+)}
+{discountAmount>0&&<p style={{fontSize:10,color:"#A78BFA",marginTop:4,fontWeight:700}}>Applied: Rs.{discountAmount.toLocaleString()}</p>}
 </div>
 {/* Remaining + Installments */}
 {(parseFloat(totalFee)||0)>0 && (
@@ -8084,6 +8129,10 @@ return { name, records, totalPaid, totalDue, hasDue };
 if (isParent) return <ParentFeesView ctx={ctx} />;
 // ── Selected student ke liye detail view (Parent jaisa) ──
 const [selectedStudent, setSelectedStudent] = React.useState(null);
+React.useEffect(() => {
+window.__setFeeStudent = function(s) { setSelectedStudent(s); };
+return function() { window.__setFeeStudent = null; };
+}, []);
 const [expandedClass, setExpandedClass] = React.useState(null);
 const [miscCharges, setMiscCharges] = React.useState(() => {
 try { return JSON.parse(localStorage.getItem("ss_miscCharges_"+(loggedInUser?.schoolId||""))||"{}"); } catch { return {}; }
@@ -8109,12 +8158,15 @@ const stu = selectedStudent;
 const curYear = new Date().getFullYear();
 const session = curYear+"-"+String(curYear+1).slice(2);
 const classStr = feeStructure.find(fs=>fs.class===stu.class&&(!fs.schoolId||sameId(fs.schoolId,mySchoolId))&&(fs.session===session||!fs.session));
-const totalRecordAmount = stuFees.reduce((s,f)=>s+(f.amount||0),0);
-const totalAnnual = totalRecordAmount > 0 ? totalRecordAmount : (classStr ? (classStr.total||0) : 0);
-const totalPaid = stuFees.filter(f=>f.paid).reduce((s,f)=>s+(f.paidAmount||f.amount||0),0);
-const advanceDeposit = Math.max(0, totalPaid - totalRecordAmount);
-const totalDue = Math.max(0, totalAnnual - totalPaid);
-const pct = totalAnnual>0?Math.round((totalPaid/totalAnnual)*100):0;
+const totalRecordAmount = stuFees.filter(f=>!f.isDiscount).reduce((s,f)=>s+(Number(f.amount)||0),0);
+const structureAnnual = classStr ? (Number(classStr.total)||0) : 0;
+const totalAnnual = structureAnnual > 0 ? structureAnnual : totalRecordAmount;
+const totalPaid = stuFees.filter(f=>(f.paid||f.status==="paid")&&!f.isDiscount).reduce((s,f)=>s+(Number(f.paidAmount)||Number(f.amount)||0),0);
+const totalDiscount = stuFees.filter(f=>f.isDiscount).reduce((s,f)=>s+(Number(f.discount)||0),0);
+const netDue = Math.max(0, totalAnnual - totalDiscount);
+const advanceDeposit = totalPaid > netDue ? totalPaid - netDue : 0;
+const totalDue = Math.max(0, netDue - totalPaid);
+const pct = totalAnnual>0?Math.min(100,Math.round(((totalPaid+totalDiscount)/totalAnnual)*100)):0;
 const r=54, circ=2*Math.PI*r;
 return (
 <div className="fadeUp">
@@ -8145,16 +8197,23 @@ strokeLinecap="round" transform="rotate(-90 65 65)" style={{transition:"stroke-d
 </div>
 </div>
 <div style={{flex:1,display:"grid",gap:8}}>
-{[["💰 Total","₹"+totalAnnual.toLocaleString(),T.text],
+{[["💰 Total (Annual)","₹"+totalAnnual.toLocaleString(),T.text],
 ["✅ Paid","₹"+totalPaid.toLocaleString(),T.green],
 ["⏳ Remaining","₹"+totalDue.toLocaleString(),totalDue>0?T.red:T.green]
-].map(([l,v,c])=>(
+].map(([l,v,cl])=>(
 <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
 background:T.surface,padding:"8px 12px",borderRadius:8}}>
 <span style={{fontSize:12,color:T.textMuted}}>{l}</span>
-<span style={{fontWeight:800,color:c,fontSize:14}}>{v}</span>
+<span style={{fontWeight:800,color:cl,fontSize:14}}>{v}</span>
 </div>
 ))}
+{totalDiscount>0 && (
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+background:"#A78BFA15",border:"1px solid #A78BFA40",padding:"8px 12px",borderRadius:8}}>
+<span style={{fontSize:12,color:"#A78BFA"}}>🎁 Discount</span>
+<span style={{fontWeight:800,color:"#A78BFA",fontSize:14}}>₹{totalDiscount.toLocaleString()}</span>
+</div>
+)}
 {advanceDeposit > 0 && (
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
 background:T.accent+"15",border:"1px solid "+T.accent+"40",padding:"8px 12px",borderRadius:8}}>
@@ -8170,21 +8229,26 @@ background:T.accent+"15",border:"1px solid "+T.accent+"40",padding:"8px 12px",bo
 <p style={{fontWeight:700,color:T.text,fontSize:14}}>📋 Fee Records</p>
 {canEditFees && (
 <div style={{display:"flex",gap:6}}>
-<Btn onClick={()=>setModal(<FeeInstallmentModal student={stu} students={students} loggedInUser={loggedInUser} feeStructure={feeStructure} onSave={(recs)=>{setFees(p=>[...p,...recs]);toast("✅ Installments add ho gayi!","success");}} onClose={()=>setModal(null)} />)} color={T.purple} small>📆 Installments</Btn>
+<Btn onClick={()=>setModal(<FeeInstallmentModal student={stu} students={students} loggedInUser={loggedInUser} feeStructure={feeStructure} existingFees={fees} onSave={(recs)=>{setFees(p=>[...p,...recs]);toast("Installments added!","success");}} onClose={()=>setModal(null)} />)} color={T.purple} small>📆 Installments</Btn>
 <Btn onClick={()=>setModal(<FeeAddModal students={students} loggedInUser={loggedInUser} onSave={(d)=>setFees(p=>[...p,d])} onClose={()=>setModal(null)} defaultStudent={stu.name} />)} color={T.accent} small>+ Add</Btn>
 </div>
 )}
 </div>
 <div style={{display:"grid",gap:8}}>
 {stuFees.length===0 && <p style={{color:T.textMuted,textAlign:"center",padding:20}}>Koi fee record nahi.</p>}
-{stuFees.map(f=>(
-<Card key={f.id} style={{padding:"12px 14px",border:"1px solid "+(f.paid?T.green+"40":T.red+"40")}}>
+{stuFees.map(f=>{
+const isOD=!f.paid&&!f.isDiscount&&f.dueDate&&new Date(f.dueDate)<new Date();
+const odDays=isOD?Math.floor((new Date()-new Date(f.dueDate))/(864e5)):0;
+return (<Card key={f.id} style={{padding:"12px 14px",
+border:"1px solid "+(f.isDiscount?"#A78BFA40":f.paid?T.green+"40":isOD?T.red+"60":T.yellow+"40"),
+background:f.isDiscount?"#A78BFA08":f.paid?T.green+"06":isOD?T.red+"06":"transparent"}}>
 <Row>
 <div style={{flex:1}}>
 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4}}>
-<div style={{width:8,height:8,borderRadius:"50%",background:f.paid?T.green:T.red}}/>
-<p style={{fontWeight:700,color:T.text,fontSize:14}}>{f.month}</p>
-<Badge color={f.paid?T.green:T.red} style={{fontSize:9}}>{f.paid?"Paid":"Due"}</Badge>
+<div style={{width:8,height:8,borderRadius:"50%",flexShrink:0,background:f.isDiscount?"#A78BFA":f.paid?T.green:isOD?T.red:T.yellow}}/>
+<p style={{fontWeight:700,color:T.text,fontSize:14,textDecoration:f.paid&&!f.isDiscount?"line-through":"none",opacity:f.paid&&!f.isDiscount?0.6:1}}>{f.month}</p>
+{f.isDiscount?<Badge color="#A78BFA" style={{fontSize:9}}>🎁 {f.type}</Badge>:<Badge color={f.paid?T.green:isOD?T.red:T.yellow} style={{fontSize:9}}>{f.paid?"✅ Paid":isOD?"⚠️ OVERDUE":"⏳ Due"}</Badge>}
+{isOD&&<span style={{fontSize:9,color:T.red,fontWeight:700}}>({odDays}d late)</span>}
 </div>
 {f.dueDate && <p style={{fontSize:11,color:T.textMuted,marginLeft:14}}>📅 Due: {f.dueDate}</p>}
 {(f.feeItems||[]).map((item,i)=>(
@@ -8235,7 +8299,8 @@ fontFamily:"Outfit,sans-serif",opacity:!hasPhone?0.4:1}}>
 </div>
 </Row>
 </Card>
-))}
+);
+})}
 </div>
 {/* Fee Slip Download */}
 <div style={{marginTop:14}}>
