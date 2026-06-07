@@ -152,6 +152,8 @@ xhr.onerror = function() { reject(new Error("Network error")); };
 xhr.send(formData);
 });
 };
+// ── Auto-trigger demo if coming from landing page ──
+
 (function migrateCache() {
 const MIGRATED_KEY = "ss_cache_migrated_v5"; // v27: schoolList path fix
 if (localStorage.getItem(MIGRATED_KEY)) return;
@@ -2217,7 +2219,6 @@ teacher: [
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
-{key:"inventory",icon:"📦",label:"Inventory"},
 ],
 parent: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"mychild",icon:"👶",label:"myChild"},
@@ -6715,17 +6716,11 @@ const [installmentRows, setInstallmentRows] = React.useState([]);
 const [customMode, setCustomMode] = React.useState(false);
 const [discountType, setDiscountType] = React.useState("None");
 const [discountAmt, setDiscountAmt] = React.useState("");
-const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Admission Fee Waiver","Custom"];
+const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Custom"];
 const sameIdM2=(a,b)=>String(a)===String(b);
 const stuExist = (existingFees||[]).filter(f=>f.studentName===student.name&&(!f.schoolId||sameIdM2(f.schoolId,mySchoolId))&&!f.isDiscount);
 const alreadyTotal = stuExist.reduce((s,f)=>s+(Number(f.amount)||0),0);
-// Admission Fee Waiver: auto-detect admission fee from structure
-const admissionFeeInStructure = (structureEntry&&structureEntry.items||[]).find(i=>i.type==="Admission Fee");
-const admissionFeeAmt = admissionFeeInStructure ? (Number(admissionFeeInStructure.amount)||0) : 0;
-const discountAmount = discountType==="None"?0
-:discountType==="RTE (Free)"?(parseFloat(totalFee)||0)
-:discountType==="Admission Fee Waiver"?admissionFeeAmt
-:(parseFloat(discountAmt)||0);
+const discountAmount = discountType==="None"?0:discountType==="RTE (Free)"?(parseFloat(totalFee)||0):(parseFloat(discountAmt)||0);
 const feeTypes = ["Tuition Fee","Admission Fee","Transport Fee","Uniform Fee","Exam Fee","Development Fee","Computer Fee","Sports Fee","Library Fee","Other"];
 const admissionTotal = admissionItems.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
 const addAdmissionItem = ()=>setAdmissionItems(p=>[...p,{id:Date.now(),type:"Admission Fee",amount:""}]);
@@ -6809,20 +6804,6 @@ placeholder={structureTotal>0?"Structure se auto-fill: "+structureTotal:"e.g. 50
 style={{width:"100%",background:T.surface,border:"1px solid "+(structureTotal>0?T.green+"60":T.border),borderRadius:8,
 padding:"11px 12px",color:T.text,fontSize:15,fontWeight:700,boxSizing:"border-box",
 fontFamily:"Outfit,sans-serif"}}/>
-{/* Fee Structure Breakdown */}
-{structureEntry && (structureEntry.items||[]).length>0 && (
-<div style={{marginTop:8,background:T.surface,border:"1px solid "+T.border,borderRadius:8,overflow:"hidden"}}>
-<p style={{fontSize:10,color:T.textMuted,padding:"6px 10px",borderBottom:"1px solid "+T.border,fontWeight:600}}>📋 Fee Structure Breakdown (Reference)</p>
-{(structureEntry.items||[]).map((item,i)=>(
-<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-padding:"6px 10px",borderBottom:i<(structureEntry.items.length-1)?"1px solid "+T.border+"60":"none",
-background:item.type==="Admission Fee"?"rgba(245,166,35,0.05)":"transparent"}}>
-<span style={{fontSize:11,color:T.text}}>{item.type==="Admission Fee"?"🎓":item.type==="Tuition Fee"?"📚":item.type==="Transport Fee"?"🚌":"💳"} {item.type}</span>
-<span style={{fontSize:11,fontWeight:700,color:item.type==="Admission Fee"?T.yellow:T.text}}>₹{(Number(item.amount)||0).toLocaleString()}</span>
-</div>
-))}
-</div>
-)}
 </div>
 {/* Admission Items — multiple fees at admission time */}
 <div style={{marginBottom:12}}>
@@ -6869,17 +6850,11 @@ Total Admission: ₹{admissionTotal.toLocaleString()}
 style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",marginBottom:6}}>
 {DISC_TYPES.map(d=><option key={d} value={d}>{d}</option>)}
 </select>
-{discountType!=="None"&&discountType!=="RTE (Free)"&&discountType!=="Admission Fee Waiver"&&(
+{discountType!=="None"&&discountType!=="RTE (Free)"&&(
 <input type="number" value={discountAmt} onChange={e=>setDiscountAmt(e.target.value)}
 placeholder="Discount amount (Rs.)"
 style={{width:"100%",background:T.surface,border:"1px solid #A78BFA60",borderRadius:8,
 padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}}/>
-)}
-{discountType==="Admission Fee Waiver" && (
-<div style={{background:T.yellow+"15",border:"1px solid "+T.yellow+"30",borderRadius:8,padding:"8px",marginTop:4}}>
-<p style={{fontSize:11,color:T.yellow,fontWeight:600}}>🎓 Auto: ₹{admissionFeeAmt.toLocaleString()} minus hogi</p>
-<p style={{fontSize:10,color:T.textMuted,marginTop:2}}>{admissionFeeAmt>0?"Structure se admission fee automatically waive hogi":"Structure mein admission fee set nahi hai"}</p>
-</div>
 )}
 {discountAmount>0&&<p style={{fontSize:10,color:"#A78BFA",marginTop:4,fontWeight:700}}>Applied: Rs.{discountAmount.toLocaleString()}</p>}
 </div>
@@ -7650,7 +7625,7 @@ Paid
 );
 }
 function ParentFeesView({ ctx }) {
-const { fees, role, loggedInUser, currentSchool, students, toast } = ctx;
+const { fees, role, loggedInUser, currentSchool, students, toast, feeStructure } = ctx;
 const mySchoolId = loggedInUser?.schoolId || null;
 const parentChildName = loggedInUser?.studentName || "";
 const myChild = students.find(s => s.name === parentChildName && (!s.schoolId || sameId(s.schoolId, mySchoolId)));
@@ -17003,9 +16978,14 @@ Total: ₹{rows.filter(r=>r.description.trim()&&parseFloat(r.amount)>0).reduce((
 );
 }
 function ExpensesSection({ ctx }) {
-const { expenses, setExpenses, fees, role, currentSchool, toast, setModal, loggedInUser } = ctx;
+const { expenses, setExpenses, fees, role, currentSchool, toast, setModal, loggedInUser, teachers, employees } = ctx;
 const schoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const _emp = loggedInUser?.vpPermissions||loggedInUser?.staffPermissions||loggedInUser?.accountantPermissions||loggedInUser?.coordinatorPermissions||[];
+// Build salary name suggestions from teachers + employees
+const salarySuggestions = [
+...(teachers||[]).filter(t=>!t.schoolId||sameId(t.schoolId,schoolId)).map(t=>t.name).filter(Boolean),
+...(employees||[]).filter(e=>!e.schoolId||sameId(e.schoolId,schoolId)).map(e=>e.name).filter(Boolean),
+].filter((v,i,a)=>a.indexOf(v)===i);
 const canEdit = ["principal","founder","superadmin"].includes(role) ||
 (role==="accountant" && hasPermEdit(_emp,"expenses")) ||
 (role==="vice_principal" && hasPermEdit(_emp,"expenses")) ||
@@ -17016,7 +16996,9 @@ const [plPeriod, setPlPeriod] = useState("monthly");
 const [filterCat, setFilterCat] = useState("all");
 const [filterType, setFilterType] = useState("all");
 const [filterDate, setFilterDate] = useState("");
-const [selectedEntry, setSelectedEntry] = useState(null); // for detail popup
+const [dateFrom, setDateFrom] = useState("");
+const [dateTo, setDateTo] = useState("");
+const [selectedEntry, setSelectedEntry] = useState(null);
 const myExpenses = expenses.filter(e => e.schoolId && sameId(e.schoolId, schoolId));
 const addedByMeta = { addedById: loggedInUser?.id||null, addedByName: loggedInUser?.name||"", addedByRole: role };
 // ── Date helpers ──
@@ -17091,7 +17073,9 @@ toast("✅ Entry updated!", "success");
 const listItems = myExpenses.filter(e =>
 (filterCat === "all" || e.category === filterCat) &&
 (filterType === "all" || e.type === filterType) &&
-(!filterDate || e.date === filterDate)
+(!filterDate || e.date === filterDate) &&
+(!dateFrom || e.date >= dateFrom) &&
+(!dateTo || e.date <= dateTo)
 ).sort((a,b) => new Date(b.date) - new Date(a.date));
 return (
 <div className="fadeUp">
@@ -17110,7 +17094,7 @@ style={{padding:"9px 18px", background: view===k ? T.accent : T.card, border:`1p
 style={{padding:"9px 18px", background:"#6c5ce7", border:"none", borderRadius:10, color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
 📥 Bulk Entry
 </button>
-<button onClick={()=>setModal(<ExpenseFormModal onClose={()=>setModal(null)} schoolId={schoolId} allExpenses={myExpenses} onSave={(data)=>{ setExpenses(p=>[...p,{id:Date.now(),...data,schoolId,...addedByMeta}]); setModal(null); toast("Entry added!","success"); }} />)}
+<button onClick={()=>setModal(<ExpenseFormModal onClose={()=>setModal(null)} schoolId={schoolId} allExpenses={myExpenses} nameSuggestions={salarySuggestions} onSave={(data)=>{ setExpenses(p=>[...p,{id:Date.now(),...data,schoolId,...addedByMeta}]); setModal(null); toast("Entry added!","success"); }} />)}
 style={{padding:"9px 18px", background:"#0ECB81", border:"none", borderRadius:10, color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
 + Add Entry
 </button>
@@ -17207,27 +17191,51 @@ style={{display:"flex", justifyContent:"space-between", alignItems:"center", pad
 {view === "list" && (
 <div>
 {/* Filters */}
-<div style={{display:"flex", gap:8, marginBottom:16, flexWrap:"wrap", alignItems:"center"}}>
+<div style={{display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center"}}>
 <select value={filterType} onChange={e=>setFilterType(e.target.value)}
-style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:8, padding:"8px 12px", color:T.text, fontSize:13, fontFamily:"Outfit,sans-serif"}}>
+style={{background:T.card, border:"1px solid "+T.border, borderRadius:8, padding:"8px 10px", color:T.text, fontSize:12, fontFamily:"Outfit,sans-serif"}}>
 <option value="all">All Types</option>
-<option value="expense">Expenses Only</option>
-<option value="income">Income Only</option>
+<option value="expense">Expenses</option>
+<option value="income">Income</option>
 </select>
 <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
-style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:8, padding:"8px 12px", color:T.text, fontSize:13, fontFamily:"Outfit,sans-serif"}}>
+style={{background:T.card, border:"1px solid "+T.border, borderRadius:8, padding:"8px 10px", color:T.text, fontSize:12, fontFamily:"Outfit,sans-serif"}}>
 <option value="all">All Categories</option>
 {EXPENSE_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}
 </select>
-<input type="date" value={filterDate} onChange={e=>setFilterDate(e.target.value)}
-title="Filter by date"
-style={{background:T.card, border:`1px solid ${filterDate?T.accent:T.border}`, borderRadius:8, padding:"8px 12px", color:filterDate?T.accent:T.text, fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none"}} />
-{filterDate && (
-<button onClick={()=>setFilterDate("")}
-style={{background:"#F7555520",border:"1px solid #F75555",color:"#F75555",borderRadius:8,padding:"7px 12px",cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif"}}>
+</div>
+{/* Date Range */}
+<div style={{display:"flex", gap:8, marginBottom:12, flexWrap:"wrap", alignItems:"center"}}>
+<div style={{display:"flex", alignItems:"center", gap:6, background:T.card, border:"1px solid "+T.border, borderRadius:8, padding:"6px 10px"}}>
+<span style={{color:T.textMuted, fontSize:11, whiteSpace:"nowrap"}}>From:</span>
+<input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+style={{background:"none", border:"none", color:dateFrom?T.accent:T.text, fontSize:12, outline:"none", fontFamily:"Outfit,sans-serif"}}/>
+</div>
+<div style={{display:"flex", alignItems:"center", gap:6, background:T.card, border:"1px solid "+T.border, borderRadius:8, padding:"6px 10px"}}>
+<span style={{color:T.textMuted, fontSize:11, whiteSpace:"nowrap"}}>To:</span>
+<input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+style={{background:"none", border:"none", color:dateTo?T.accent:T.text, fontSize:12, outline:"none", fontFamily:"Outfit,sans-serif"}}/>
+</div>
+{(dateFrom||dateTo) && (
+<button onClick={()=>{setDateFrom("");setDateTo("");}}
+style={{background:"#F7555520",border:"1px solid #F75555",color:"#F75555",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif"}}>
 ✕ Clear
 </button>
 )}
+<button onClick={()=>{
+const win = window.open("","","width=800,height=700");
+if (!win) { alert("Allow popups"); return; }
+const safe = v => String(v==null?"":v).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+const rows = listItems.map(e=>`<tr><td>${safe(e.date)}</td><td>${safe(e.name)}</td><td>${safe(e.category)}</td><td style="color:${e.type==="income"?"green":"red"};font-weight:700">${e.type==="income"?"+":"-"}Rs.${Number(e.amount).toLocaleString("en-IN")}</td><td>${safe(e.note||"")}</td></tr>`).join("");
+const totInc = listItems.filter(e=>e.type==="income").reduce((s,e)=>s+(Number(e.amount)||0),0);
+const totExp = listItems.filter(e=>e.type!=="income").reduce((s,e)=>s+(Number(e.amount)||0),0);
+const period = (dateFrom||"Start")+" to "+(dateTo||"Today");
+win.document.write("<!DOCTYPE html><html><head><title>All Entries</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}td,th{padding:7px;border:1px solid #ddd;font-size:12px}th{background:#f0f0f0}.no-print{text-align:center;margin-top:16px}@media print{.no-print{display:none}}</style></head><body><h2 style='text-align:center'>"+safe(currentSchool?.name||"School")+" — All Entries</h2><p style='text-align:center;color:#666;font-size:12px'>Period: "+period+"</p><p style='text-align:center;font-size:12px'>Income: <span style='color:green'>Rs."+totInc.toLocaleString("en-IN")+"</span> | Expense: <span style='color:red'>Rs."+totExp.toLocaleString("en-IN")+"</span> | Net: <span style='color:"+(totInc-totExp>=0?"green":"red")+"'>Rs."+(totInc-totExp).toLocaleString("en-IN")+"</span></p><table><tr><th>Date</th><th>Name</th><th>Category</th><th>Amount</th><th>Note</th></tr>"+rows+"</table><div class='no-print'><button onclick='window.print()'>Print / Save PDF</button><button onclick='window.close()'>Close</button></div></body></html>");
+win.document.close();
+}}
+style={{marginLeft:"auto",padding:"8px 14px",background:T.green,border:"none",borderRadius:8,color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+📥 Download
+</button>
 </div>
 {/* Table */}
 <div style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:16, overflow:"hidden"}}>
@@ -17300,26 +17308,34 @@ const schoolName = currentSchool?.name || "School";
 const win = window.open("","","width=800,height=700");
 if (!win) { alert("Allow popups to print"); return; }
 const safe = v => String(v==null?"":v).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
-const incRows = plIncome.map(e=>`<tr><td>${safe(e.name)}</td><td style="text-align:right;color:green">+₹${Number(e.amount).toLocaleString("en-IN")}</td></tr>`).join("");
-const expRows = plExpenses.map(e=>`<tr><td>${safe(e.name)}</td><td style="text-align:right;color:red">-₹${Number(e.amount).toLocaleString("en-IN")}</td></tr>`).join("");
-win.document.write(`<!DOCTYPE html><html><head><title>Income & Expenses Report</title>
-<style>body{font-family:Arial,sans-serif;padding:30px;color:#000}h1{text-align:center}h2{font-size:15px}table{width:100%;border-collapse:collapse;margin-bottom:16px}td,th{padding:8px 10px;border:1px solid #ccc;font-size:13px}th{background:#f0f0f0}.net{font-size:20px;font-weight:bold;text-align:center;padding:16px;border:2px solid ${netPL>=0?"green":"red"};color:${netPL>=0?"green":"red"};border-radius:8px;margin:16px 0}.no-print{text-align:center;margin-top:20px}button{padding:10px 24px;font-size:14px;cursor:pointer;margin:4px}@media print{.no-print{display:none}}</style>
-</head><body>
-<h1>${safe(schoolName)}</h1>
-<h2 style="text-align:center">Income & Expenses Report — ${FREQ_LABELS[plPeriod]||plPeriod}</h2>
-<div class="net">${netPL>=0?"▲ NET PROFIT":"▼ NET LOSS"}: ₹${Math.abs(netPL).toLocaleString("en-IN")}</div>
-<h2>📈 Income</h2>
-<table><tr><th>Description</th><th>Amount</th></tr>${incRows||"<tr><td colspan=2 style='text-align:center;color:#999'>No income entries</td></tr>"}
-<tr><th>Total Income</th><th style="color:green">₹${totalIncome.toLocaleString("en-IN")}</th></tr></table>
-<h2>📉 Expenses</h2>
-<table><tr><th>Description</th><th>Amount</th></tr>${expRows||"<tr><td colspan=2 style='text-align:center;color:#999'>No expense entries</td></tr>"}
-<tr><th>Total Expense</th><th style="color:red">₹${totalExpense.toLocaleString("en-IN")}</th></tr></table>
-<p style="font-size:11px;color:#999;text-align:center">Generated on ${new Date().toLocaleDateString("en-IN")} · SchoolShield</p>
-<div class="no-print"><button onclick="window.print()">🖨️ Print / Save PDF</button><button onclick="window.close()">✕ Close</button></div>
-</body></html>`);
+// Grouped income rows
+let incRows = feeIncome>0?"<tr><td>Fees Collected</td><td style='text-align:right;color:green'>Rs."+feeIncome.toLocaleString("en-IN")+"</td></tr>":"";
+const incGrouped = {};
+plIncome.forEach(e=>{const k=e.category||"other";if(!incGrouped[k])incGrouped[k]={label:e.category,total:0};incGrouped[k].total+=Number(e.amount)||0;});
+Object.values(incGrouped).forEach(g=>{incRows+="<tr><td>"+safe(g.label)+"</td><td style='text-align:right;color:green'>Rs."+g.total.toLocaleString("en-IN")+"</td></tr>";});
+// Grouped expense rows (category wise)
+let expRows = "";
+catBreakdown.forEach(cat=>{expRows+="<tr><td>"+safe(cat.icon+" "+cat.label)+"</td><td style='text-align:right;color:red'>-Rs."+cat.total.toLocaleString("en-IN")+"</td></tr>";});
+win.document.write("<!DOCTYPE html><html><head><title>P&L Report</title><style>body{font-family:Arial,sans-serif;padding:30px;color:#000}h1,h2{text-align:center}table{width:100%;border-collapse:collapse;margin-bottom:16px}td,th{padding:8px 10px;border:1px solid #ccc;font-size:13px}th{background:#f0f0f0}.net{font-size:18px;font-weight:bold;text-align:center;padding:12px;border:2px solid "+(netPL>=0?"green":"red")+";color:"+(netPL>=0?"green":"red")+";border-radius:8px;margin:12px 0}.bs{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:16px}.no-print{text-align:center;margin-top:16px}@media print{.no-print{display:none}}</style></head><body>"+
+"<h1>"+safe(schoolName)+"</h1>"+
+"<h2>P&L Report — "+safe(FREQ_LABELS[plPeriod]||plPeriod)+"</h2>"+
+"<p style='text-align:center;color:#666;font-size:12px'>"+plStart.toLocaleDateString("en-IN")+" to "+plEnd.toLocaleDateString("en-IN")+"</p>"+
+"<div class='net'>"+(netPL>=0?"▲ NET PROFIT":"▼ NET LOSS")+": Rs."+Math.abs(netPL).toLocaleString("en-IN")+"</div>"+
+"<h3>Income (Grouped)</h3>"+
+"<table><tr><th>Category</th><th>Amount</th></tr>"+incRows+"<tr style='background:#e8f5e9'><th>Total Income</th><th style='color:green'>Rs."+totalIncome.toLocaleString("en-IN")+"</th></tr></table>"+
+"<h3>Expenses (Category Wise)</h3>"+
+"<table><tr><th>Category</th><th>Amount</th></tr>"+expRows+"<tr style='background:#ffebee'><th>Total Expense</th><th style='color:red'>Rs."+totalExpense.toLocaleString("en-IN")+"</th></tr></table>"+
+"<h3 style='text-align:center;margin-top:20px'>Balance Sheet — "+safe(FREQ_LABELS[plPeriod])+"</h3>"+
+"<table><tr><th style='color:green;background:#e8f5e9'>Income Side</th><th style='color:red;background:#ffebee'>Expense Side</th></tr>"+
+"<tr><td>Fees: Rs."+feeIncome.toLocaleString("en-IN")+"</td><td>"+catBreakdown.map(c=>safe(c.label)+": Rs."+c.total.toLocaleString("en-IN")).join("<br>")+"</td></tr>"+
+"<tr><td style='font-weight:700;color:green'>Total: Rs."+totalIncome.toLocaleString("en-IN")+"</td><td style='font-weight:700;color:red'>Total: Rs."+totalExpense.toLocaleString("en-IN")+"</td></tr>"+
+"<tr><td colspan='2' style='text-align:center;font-weight:800;font-size:16px;color:"+(netPL>=0?"green":"red")+"'>NET "+(netPL>=0?"PROFIT":"LOSS")+": Rs."+Math.abs(netPL).toLocaleString("en-IN")+"</td></tr></table>"+
+"<p style='font-size:11px;color:#999;text-align:center'>Generated on "+new Date().toLocaleDateString("en-IN")+" · SchoolShield</p>"+
+"<div class='no-print'><button onclick='window.print()'>Print / Save PDF</button><button onclick='window.close()'>Close</button></div>"+
+"</body></html>");
 win.document.close();
 }} style={{marginLeft:"auto",padding:"8px 16px",background:"#4F8EF7",border:"none",borderRadius:8,color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-🖨️ Print Report
+🖨️ Download Report
 </button>
 </div>
 {/* P&L Summary Card */}
@@ -17331,45 +17347,107 @@ win.document.close();
 <p style={{fontSize:36, fontWeight:900, color: netPL>=0?"#0ECB81":"#F75555"}}>{netPL>=0?"▲":"▼"} {fmt(Math.abs(netPL))}</p>
 <p style={{color:T.textMuted, fontSize:12, marginTop:8}}>{netPL>=0?"School is profitable this period 🎉":"Expenses exceed income this period ⚠️"}</p>
 </div>
-{/* Income vs Expense split */}
+{/* Income vs Expense split — Grouped with tap to expand */}
 <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20}}>
+{/* INCOME grouped */}
 <div style={{background:T.card, border:"1px solid #0ECB8130", borderRadius:16, padding:18}}>
 <p style={{color:"#0ECB81", fontWeight:800, fontSize:13, marginBottom:12}}>📈 INCOME</p>
-<div style={{marginBottom:8}}>
-<div style={{display:"flex", justifyContent:"space-between"}}>
-<span style={{color:T.textMuted, fontSize:12}}>🎓 Fees Collected</span>
-<span style={{color:T.text, fontWeight:700, fontSize:12}}>{fmt(feeIncome)}</span>
+{/* Fees — single group, tap to expand */}
+{feeIncome > 0 && (
+<div>
+<div onClick={()=>setSelectedEntry(selectedEntry==="pl_fees"?null:"pl_fees")}
+style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6, cursor:"pointer", padding:"4px 0", borderBottom:"1px solid #0ECB8120"}}>
+<span style={{color:T.text, fontSize:12, fontWeight:600}}>🎓 Fees</span>
+<div style={{display:"flex", alignItems:"center", gap:4}}>
+<span style={{color:"#0ECB81", fontWeight:700, fontSize:12}}>{fmt(feeIncome)}</span>
+<span style={{color:T.textMuted, fontSize:10}}>{selectedEntry==="pl_fees"?"▲":"▼"}</span>
 </div>
 </div>
-{plIncome.map(e => (
-<div key={e.id} onClick={()=>setSelectedEntry(e)}
-style={{display:"flex", justifyContent:"space-between", marginBottom:6, cursor:"pointer", borderRadius:6, padding:"3px 4px"}}
-onMouseEnter={ev=>ev.currentTarget.style.background=T.surface}
-onMouseLeave={ev=>ev.currentTarget.style.background=""}>
-<span style={{color:T.textMuted, fontSize:12}}>💰 {e.name}</span>
-<span style={{color:T.text, fontWeight:700, fontSize:12}}>{fmt(e.amount)}</span>
+{selectedEntry==="pl_fees" && (
+<div style={{marginBottom:6}}>
+{(fees||[]).filter(f=>{
+if(!f.paidDate&&!f.date) return false;
+const d=new Date(f.paidDate||f.date);
+return d>=plStart&&d<=plEnd&&(f.paid||f.status==="paid");
+}).map(f=>(
+<div key={f.id} style={{display:"flex", justifyContent:"space-between", padding:"3px 6px", background:T.surface, borderRadius:4, marginBottom:2}}>
+<span style={{color:T.textMuted, fontSize:10}}>{f.studentName} ({f.month||"—"}) • {f.paidDate||f.date||"—"}</span>
+<span style={{color:"#0ECB81", fontSize:10, fontWeight:600}}>{fmt(f.paidAmount||f.amount||0)}</span>
 </div>
 ))}
-<div style={{borderTop:`1px solid #0ECB8130`, paddingTop:10, marginTop:8}}>
+</div>
+)}
+</div>
+)}
+{/* Other income grouped by category */}
+{(()=>{
+const grouped = {};
+plIncome.forEach(e=>{
+const k=e.category||"other";
+if(!grouped[k]) grouped[k]={label:e.name,items:[],total:0};
+grouped[k].items.push(e);
+grouped[k].total+=Number(e.amount)||0;
+});
+return Object.entries(grouped).map(([k,g])=>{
+const isOpen = selectedEntry==="pl_inc_"+k;
+const catInfo = INCOME_CATEGORIES.find(x=>x.key===k)||{icon:"💰",label:k};
+return (
+<div key={k}>
+<div onClick={()=>setSelectedEntry(isOpen?null:"pl_inc_"+k)}
+style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,cursor:"pointer",padding:"4px 0",borderBottom:"1px solid #0ECB8120"}}>
+<span style={{color:T.text,fontSize:12,fontWeight:600}}>{catInfo.icon} {catInfo.label}</span>
+<div style={{display:"flex",alignItems:"center",gap:4}}>
+<span style={{color:"#0ECB81",fontWeight:700,fontSize:12}}>{fmt(g.total)}</span>
+<span style={{color:T.textMuted,fontSize:10}}>{isOpen?"▲":"▼"}</span>
+</div>
+</div>
+{isOpen && g.items.map(e=>(
+<div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"3px 6px",background:T.surface,borderRadius:4,marginBottom:2}}>
+<span style={{color:T.textMuted,fontSize:10}}>{e.name} • {e.date||"—"}</span>
+<span style={{color:"#0ECB81",fontSize:10,fontWeight:600}}>{fmt(e.amount)}</span>
+</div>
+))}
+</div>
+);
+});
+})()}
+<div style={{borderTop:"1px solid #0ECB8130", paddingTop:8, marginTop:6}}>
 <div style={{display:"flex", justifyContent:"space-between"}}>
-<span style={{color:"#0ECB81", fontWeight:800, fontSize:13}}>Total</span>
-<span style={{color:"#0ECB81", fontWeight:900, fontSize:15}}>{fmt(totalIncome)}</span>
+<span style={{color:"#0ECB81", fontWeight:800, fontSize:12}}>Total</span>
+<span style={{color:"#0ECB81", fontWeight:900, fontSize:14}}>{fmt(totalIncome)}</span>
 </div>
 </div>
 </div>
+{/* EXPENSES grouped by category, tap to expand */}
 <div style={{background:T.card, border:"1px solid #F7555530", borderRadius:16, padding:18}}>
 <p style={{color:"#F75555", fontWeight:800, fontSize:13, marginBottom:12}}>📉 EXPENSES</p>
-{catBreakdown.map(cat => (
-<div key={cat.key} style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
-<span style={{color:T.textMuted, fontSize:12}}>{cat.icon} {cat.label}</span>
-<span style={{color:T.text, fontWeight:700, fontSize:12}}>{fmt(cat.total)}</span>
+{catBreakdown.map(cat => {
+const isOpen = selectedEntry==="pl_exp_"+cat.key;
+const items = plExpenses.filter(e=>e.category===cat.key);
+return (
+<div key={cat.key}>
+<div onClick={()=>setSelectedEntry(isOpen?null:"pl_exp_"+cat.key)}
+style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,cursor:"pointer",padding:"4px 0",borderBottom:"1px solid #F7555520"}}>
+<span style={{color:T.text,fontSize:12,fontWeight:600}}>{cat.icon} {cat.label}</span>
+<div style={{display:"flex",alignItems:"center",gap:4}}>
+<span style={{color:"#F75555",fontWeight:700,fontSize:12}}>{fmt(cat.total)}</span>
+<span style={{color:T.textMuted,fontSize:10}}>{isOpen?"▲":"▼"}</span>
+</div>
+</div>
+{isOpen && items.map(e=>(
+<div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"3px 6px",background:T.surface,borderRadius:4,marginBottom:2}}>
+<span style={{color:T.textMuted,fontSize:10}}>{e.name} • {e.date||"—"}</span>
+<span style={{color:"#F75555",fontSize:10,fontWeight:600}}>-{fmt(e.amount)}</span>
 </div>
 ))}
+</div>
+);
+})}
 {catBreakdown.length === 0 && <p style={{color:T.textMuted, fontSize:12}}>No expenses</p>}
-<div style={{borderTop:`1px solid #F7555530`, paddingTop:10, marginTop:8}}>
+<div style={{borderTop:"1px solid #F7555530", paddingTop:8, marginTop:6}}>
 <div style={{display:"flex", justifyContent:"space-between"}}>
-<span style={{color:"#F75555", fontWeight:800, fontSize:13}}>Total</span>
-<span style={{color:"#F75555", fontWeight:900, fontSize:15}}>{fmt(totalExpense)}</span>
+<span style={{color:"#F75555", fontWeight:800, fontSize:12}}>Total</span>
+<span style={{color:"#F75555", fontWeight:900, fontSize:14}}>{fmt(totalExpense)}</span>
 </div>
 </div>
 </div>
@@ -17442,10 +17520,11 @@ onDelete={(id)=>{ deleteEntry(id); setSelectedEntry(null); }}
 );
 }
 // ─── EXPENSE FORM MODAL ───────────────────────────────────────────────────────
-function ExpenseFormModal({ onClose, schoolId, onSave, existing, allExpenses }) {
+function ExpenseFormModal({ onClose, schoolId, onSave, existing, allExpenses, nameSuggestions }) {
 const [d, setD] = useState(existing ? {...existing, amount: String(existing.amount)} : { name:"", category:"salary", amount:"", date: new Date().toISOString().split("T")[0], frequency:"monthly", type:"expense", note:"" });
 const [saving, setSaving] = useState(false);
 const [dupWarn, setDupWarn] = useState("");
+const [showSug, setShowSug] = useState(false);
 const set = (k,v) => { setD(p=>({...p,[k]:v})); setDupWarn(""); };
 const handleSave = async () => {
 if (!d.name.trim() || !d.amount || !d.date) { alert("Name, Amount aur Date zaroori hai!"); return; }
@@ -17493,8 +17572,20 @@ style={{flex:1, padding:"10px", background: d.type===v?(v==="expense"?"#F75555":
 </div>
 <div>
 <label style={{color:T.textMuted, fontSize:12, display:"block", marginBottom:4}}>Name / Description *</label>
-<input value={d.name} onChange={e=>set("name",e.target.value)} placeholder="e.g. May Teacher Salary"
-style={{width:"100%", background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:"10px 12px", color:T.text, fontSize:13, outline:"none", boxSizing:"border-box"}} />
+<input value={d.name} onChange={e=>{ set("name",e.target.value); setShowSug(true); }} onFocus={()=>setShowSug(true)} onBlur={()=>setTimeout(()=>setShowSug(false),200)} placeholder="e.g. May Teacher Salary"
+style={{width:"100%", background:T.surface, border:"1px solid "+T.border, borderRadius:8, padding:"10px 12px", color:T.text, fontSize:13, outline:"none", boxSizing:"border-box"}} />
+{showSug && (d.category==="salary"||d.category==="teacher_salary") && nameSuggestions && nameSuggestions.length>0 && (()=>{
+const q = d.name.toLowerCase();
+const filtered = nameSuggestions.filter(n=>n.toLowerCase().includes(q)).slice(0,6);
+if (!filtered.length) return null;
+return <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,marginTop:2,maxHeight:160,overflowY:"auto",zIndex:999,position:"relative"}}>
+{filtered.map(n=><div key={n} onMouseDown={()=>{set("name",n);setShowSug(false);}}
+style={{padding:"8px 12px",cursor:"pointer",fontSize:13,color:T.text,borderBottom:"1px solid "+T.border+"40"}}
+onMouseEnter={ev=>ev.target.style.background=T.surface} onMouseLeave={ev=>ev.target.style.background=""}>
+{n}
+</div>)}
+</div>;
+})()}
 </div>
 <div>
 <label style={{color:T.textMuted, fontSize:12, display:"block", marginBottom:4}}>Category *</label>
@@ -24370,7 +24461,7 @@ return log ? { inTime: log.inTime || "", outTime: log.outTime || "" } : null;
 };
 const isWeekend = (y, m, d) => {
 const day = new Date(y, m, d).getDay();
-return day === 0;
+return day === 0 || day === 6;
 };
 const getMonthlySummary = (personType, personId) => {
 const counts = { present:0, absent:0, late:0, half_day:0, on_duty:0, holiday:0, unmarked:0 };
@@ -30221,7 +30312,6 @@ const [verifications, setVerifications] = React.useState([]);
 const [tab, setTab] = React.useState("items");
 const [verifyQtys, setVerifyQtys] = React.useState({});
 const [loaded, setLoaded] = React.useState(false);
-
 React.useEffect(() => {
 if (!mySchoolId) { setLoaded(true); return; }
 const LI = "ss_inv_"+mySchoolId+"_items";
@@ -30244,7 +30334,6 @@ try { const d=snap.val(); const arr=d?Object.values(d):[]; setVerifications(arr)
 });
 } catch(e) {}
 }, [mySchoolId]);
-
 const saveItems = function(arr) {
 setItems(arr);
 try { localStorage.setItem("ss_inv_"+mySchoolId+"_items",JSON.stringify(arr)); } catch(e) {}
@@ -30260,7 +30349,6 @@ setVerifications(arr);
 try { localStorage.setItem("ss_inv_"+mySchoolId+"_verif",JSON.stringify(arr)); } catch(e) {}
 if (!window.__isDemoMode && FB_BASE && window.firebaseReady) try { const o={}; arr.forEach(function(v){if(v.id)o[String(v.id)]=v;}); window.db.ref(FB_BASE+"/verifications").set(o); } catch(e) {}
 };
-
 const calcStock = function(itemId) {
 try {
 const item = (items||[]).find(function(i){return String(i.id)===String(itemId);});
@@ -30270,15 +30358,13 @@ const ret = (transactions||[]).filter(function(t){return String(t.itemId)===Stri
 return total-issued+ret;
 } catch(e){return 0;}
 };
-
 const CATS = ["Stationery","Furniture","Electronics","Sports","Lab Equipment","Books","Cleaning","Other"];
-
 const openAddItem = function(item) {
 const isEdit = !!item;
 setModal(<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:24,maxWidth:380,width:"100%"}}>
 <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
-<p style={{fontWeight:700,fontSize:15,color:T.text}}>{isEdit?"✏️ Edit":"➕ Add"} Item</p>
-<button onClick={function(){setModal(null);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>✕</button>
+<p style={{fontWeight:700,fontSize:15,color:T.text}}>{isEdit?"Edit":"Add"} Item</p>
+<button onClick={function(){setModal(null);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>x</button>
 </div>
 <input id="i_nm" defaultValue={item&&item.name||""} placeholder="Item Name *" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10,boxSizing:"border-box"}}/>
 <select id="i_ct" defaultValue={item&&item.category||"Stationery"} style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
@@ -30296,30 +30382,29 @@ if(isEdit){saveItems((items||[]).map(function(i){return String(i.id)===String(it
 else{saveItems([...(items||[]),{id:genId(),name:name,category:cat,totalQty:qty,createdAt:new Date().toISOString()}]);toast("Item added!","success");}
 setModal(null);
 }} style={{flex:1,padding:10,background:T.green,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-{isEdit?"💾 Update":"➕ Add"}
+{isEdit?"Save":"Add"}
 </button>
 <button onClick={function(){setModal(null);}} style={{padding:"10px 16px",background:"none",border:"1px solid "+T.border,borderRadius:8,color:T.textMuted,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>Cancel</button>
 </div>
 </div>);
 };
-
 const openIssue = function(item) {
 const sys=calcStock(item.id);
 setModal(<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:24,maxWidth:380,width:"100%"}}>
 <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
-<p style={{fontWeight:700,fontSize:15,color:T.text}}>📤 Issue / Return</p>
-<button onClick={function(){setModal(null);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>✕</button>
+<p style={{fontWeight:700,fontSize:15,color:T.text}}>Issue / Return</p>
+<button onClick={function(){setModal(null);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>x</button>
 </div>
 <p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>{item.name} | Available: <b style={{color:sys>0?T.green:T.red}}>{sys}</b></p>
 <select id="t_tp" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
-<option value="issue">📤 Issue</option>
-<option value="return">📥 Return</option>
+<option value="issue">Issue (Give Out)</option>
+<option value="return">Return (Take Back)</option>
 </select>
 <input id="t_to" placeholder="Issued to (Name)" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10,boxSizing:"border-box"}}/>
 <select id="t_tt" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
-<option value="student">👨‍🎓 Student</option>
-<option value="staff">👔 Staff</option>
-<option value="other">📋 Other</option>
+<option value="student">Student</option>
+<option value="staff">Staff</option>
+<option value="other">Other</option>
 </select>
 <input id="t_qt" type="number" min="1" placeholder="Quantity *" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:16,boxSizing:"border-box"}}/>
 <button onClick={function(){
@@ -30331,25 +30416,23 @@ if(!to){toast("Recipient required","error");return;}
 if(isNaN(qty)||qty<1){toast("Valid quantity required","error");return;}
 if(type==="issue"&&qty>sys){toast("Not enough stock!","error");return;}
 saveTrans([...(transactions||[]),{id:genId(),itemId:item.id,itemName:item.name,type:type,issuedTo:to,issuedToType:toType,qty:qty,date:new Date().toISOString().slice(0,10),createdAt:new Date().toISOString()}]);
-toast((type==="issue"?"📤 Issued ":"📥 Returned ")+qty+" "+item.name,"success");
+toast((type==="issue"?"Issued ":"Returned ")+qty+" "+item.name,"success");
 setModal(null);
 }} style={{width:"100%",padding:11,background:T.accent,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:14}}>Confirm</button>
 </div>);
 };
-
 if (!loaded) return <div style={{textAlign:"center",padding:40,color:T.textMuted}}>Loading...</div>;
-
 return (
 <div className="fadeUp">
 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
 <div>
-<h2 style={{fontSize:20,fontWeight:800,color:T.text}}>📦 Inventory & Stock</h2>
+<h2 style={{fontSize:20,fontWeight:800,color:T.text}}>Inventory & Stock</h2>
 <p style={{fontSize:12,color:T.textMuted}}>Manage items and verify stock</p>
 </div>
-{isPrincipal&&tab==="items"&&<button onClick={function(){openAddItem(null);}} style={{padding:"9px 16px",background:T.accent,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>➕ Add Item</button>}
+{isPrincipal&&tab==="items"&&<button onClick={function(){openAddItem(null);}} style={{padding:"9px 16px",background:T.accent,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>+ Add Item</button>}
 </div>
 <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-{[["items","📦 Items"],["trans","📤 Transactions"],["verify","🔍 Verify"],["history","📅 History"]].map(function(t){
+{[["items","Items"],["trans","Transactions"],["verify","Verify Stock"],["history","History"]].map(function(t){
 return <button key={t[0]} onClick={function(){setTab(t[0]);}} style={{padding:"7px 14px",borderRadius:20,border:"none",fontFamily:"Outfit,sans-serif",fontWeight:600,fontSize:12,cursor:"pointer",background:tab===t[0]?T.accent:"rgba(255,255,255,0.06)",color:tab===t[0]?"#fff":T.textMuted}}>{t[1]}</button>;
 })}
 </div>
@@ -30361,16 +30444,16 @@ const sys=calcStock(item.id);
 const pct=item.totalQty>0?Math.min(100,Math.round((sys/item.totalQty)*100)):0;
 return <div key={item.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14}}>
 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-<div><p style={{fontWeight:700,color:T.text,fontSize:14}}>{item.name}</p><p style={{fontSize:11,color:T.textMuted}}>📁 {item.category}</p></div>
+<div><p style={{fontWeight:700,color:T.text,fontSize:14}}>{item.name}</p><p style={{fontSize:11,color:T.textMuted}}>{item.category}</p></div>
 <div style={{textAlign:"right"}}><p style={{fontSize:22,fontWeight:800,color:sys>0?T.green:T.red}}>{sys}</p><p style={{fontSize:10,color:T.textMuted}}>of {item.totalQty}</p></div>
 </div>
 <div style={{height:4,background:T.surface,borderRadius:2,marginBottom:10}}>
 <div style={{height:"100%",width:pct+"%",background:pct>50?T.green:pct>20?T.yellow:T.red,borderRadius:2}}/>
 </div>
 <div style={{display:"flex",gap:6}}>
-<button onClick={function(){openIssue(item);}} style={{padding:"6px 12px",background:T.accent+"20",border:"1px solid "+T.accent+"50",borderRadius:8,color:T.accent,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>📤 Issue/Return</button>
-{isPrincipal&&<button onClick={function(){openAddItem(item);}} style={{padding:"6px 10px",background:T.yellow+"20",border:"1px solid "+T.yellow+"50",borderRadius:8,color:T.yellow,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>✏️</button>}
-{isPrincipal&&<button onClick={function(){if(window.confirm("Delete "+item.name+"?")){saveItems((items||[]).filter(function(i){return i.id!==item.id;}));saveTrans((transactions||[]).filter(function(t){return t.itemId!==item.id;}));toast("Deleted","success");}}} style={{padding:"6px 10px",background:T.red+"20",border:"1px solid "+T.red+"50",borderRadius:8,color:T.red,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>🗑️</button>}
+<button onClick={function(){openIssue(item);}} style={{padding:"6px 12px",background:T.accent+"20",border:"1px solid "+T.accent+"50",borderRadius:8,color:T.accent,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>Issue/Return</button>
+{isPrincipal&&<button onClick={function(){openAddItem(item);}} style={{padding:"6px 10px",background:T.yellow+"20",border:"1px solid "+T.yellow+"50",borderRadius:8,color:T.yellow,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>Edit</button>}
+{isPrincipal&&<button onClick={function(){if(window.confirm("Delete?+")){saveItems((items||[]).filter(function(i){return i.id!==item.id;}));saveTrans((transactions||[]).filter(function(t){return t.itemId!==item.id;}));toast("Deleted","success");}}} style={{padding:"6px 10px",background:T.red+"20",border:"1px solid "+T.red+"50",borderRadius:8,color:T.red,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>Del</button>}
 </div>
 </div>;
 })}
@@ -30382,7 +30465,7 @@ return <div key={item.id} style={{background:T.card,border:"1px solid "+T.border
 {[...(transactions||[])].reverse().map(function(t){
 return <div key={t.id} style={{background:T.card,border:"1px solid "+(t.type==="return"?T.green:T.accent)+"40",borderRadius:10,padding:12}}>
 <div style={{display:"flex",justifyContent:"space-between"}}>
-<div><p style={{fontWeight:700,color:T.text,fontSize:13}}>{t.type==="return"?"📥":"📤"} {t.itemName}</p><p style={{fontSize:11,color:T.textMuted,marginTop:3}}>{t.issuedTo} ({t.issuedToType}) • {t.date}</p></div>
+<div><p style={{fontWeight:700,color:T.text,fontSize:13}}>{t.itemName}</p><p style={{fontSize:11,color:T.textMuted,marginTop:3}}>{t.issuedTo} ({t.issuedToType}) - {t.date}</p></div>
 <div style={{textAlign:"right"}}><p style={{fontWeight:800,fontSize:16,color:t.type==="return"?T.green:T.yellow}}>{t.type==="return"?"+":"-"}{t.qty}</p><p style={{fontSize:10,color:T.textMuted}}>{t.type}</p></div>
 </div>
 </div>;
@@ -30392,7 +30475,7 @@ return <div key={t.id} style={{background:T.card,border:"1px solid "+(t.type==="
 {tab==="verify"&&(
 <div>
 <div style={{background:T.accent+"15",border:"1px solid "+T.accent+"30",borderRadius:10,padding:12,marginBottom:14}}>
-<p style={{fontSize:12,color:T.accent,fontWeight:600}}>💡 Enter actual physical count. Difference calculated automatically.</p>
+<p style={{fontSize:12,color:T.accent,fontWeight:600}}>Enter actual physical count. Difference calculated automatically.</p>
 </div>
 {(items||[]).length===0&&<div style={{textAlign:"center",padding:40,color:T.textMuted,background:T.surface,borderRadius:12}}><p>No items to verify.</p></div>}
 {(items||[]).map(function(item){
@@ -30422,8 +30505,8 @@ return {itemId:item.id,itemName:item.name,systemQty:sys,actualQty:isNaN(actual)?
 });
 saveVerif([...(verifications||[]),{id:genId(),date:new Date().toISOString(),results:results,verifiedBy:loggedInUser&&loggedInUser.name||role}]);
 const issues=results.filter(function(r){return r.difference!==0;});
-if(issues.length>0){toast("⚠️ "+issues.length+" mismatch found!","error");}else{toast("✅ All matched!","success");}
-}} style={{width:"100%",padding:13,background:T.green,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif",marginTop:8}}>🔍 Run Verification</button>}
+if(issues.length>0){toast(issues.length+" mismatch found!","error");}else{toast("All matched!","success");}
+}} style={{width:"100%",padding:13,background:T.green,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif",marginTop:8}}>Run Verification</button>}
 </div>
 )}
 {tab==="history"&&(
@@ -30434,19 +30517,13 @@ const ok=(v.results||[]).filter(function(r){return r.status==="Matched";}).lengt
 const issues=(v.results||[]).filter(function(r){return r.status!=="Matched";}).length;
 return <div key={v.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-<div><p style={{fontWeight:700,color:T.text,fontSize:13}}>📅 {new Date(v.date).toLocaleDateString("en-IN")}</p><p style={{fontSize:11,color:T.textMuted}}>By: {v.verifiedBy}</p></div>
+<div><p style={{fontWeight:700,color:T.text,fontSize:13}}>{new Date(v.date).toLocaleDateString("en-IN")}</p><p style={{fontSize:11,color:T.textMuted}}>By: {v.verifiedBy}</p></div>
 <div style={{display:"flex",gap:6}}>
 <span style={{fontSize:11,background:T.green+"20",color:T.green,borderRadius:6,padding:"3px 8px",fontWeight:600}}>{ok} OK</span>
 {issues>0&&<span style={{fontSize:11,background:T.red+"20",color:T.red,borderRadius:6,padding:"3px 8px",fontWeight:600}}>{issues} issues</span>}
 </div>
 </div>
-{(v.results||[]).filter(function(r){return r.status!=="Matched";}).map(function(r){
-return <div key={r.itemId} style={{display:"flex",justifyContent:"space-between",background:T.surface,borderRadius:6,padding:"5px 10px",marginBottom:4}}>
-<p style={{fontSize:12,color:T.text}}>{r.itemName}</p>
-<p style={{fontSize:12,fontWeight:600,color:r.status==="Missing"?T.red:"#F5A623"}}>{r.status}: {Math.abs(r.difference)}</p>
-</div>;
-})}
-{issues===0&&<p style={{fontSize:12,color:T.green,textAlign:"center"}}>✅ All matched</p>}
+{issues===0&&<p style={{fontSize:12,color:T.green,textAlign:"center"}}>All matched</p>}
 </div>;
 })}
 </div>
