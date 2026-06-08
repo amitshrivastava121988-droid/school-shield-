@@ -25569,7 +25569,7 @@ return (
 <span style={{ fontSize:12, color:T.textMuted }}>{exam.results.length} students</span>
 </div>
 {exam.results.length === 0 && <p style={{ padding:24, textAlign:"center", color:T.textMuted, fontSize:13 }}>No marks yet</p>}
-{exam.results.map((r, i) => {
+{(isParent ? exam.results.filter(function(r){ return parentChild && (r.studentName===parentChild.name || r.studentId===parentChild.id); }) : exam.results).map((r, i) => {
 const pct   = getPercent(r.marks, exam.subjects, exam.totalMarks);
 const grade = getGrade(pct);
 const total = getTotal(r.marks, exam.subjects);
