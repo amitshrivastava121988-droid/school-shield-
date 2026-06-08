@@ -3146,8 +3146,8 @@ return updated;
 toast("✅ Attendance saved!", "success");
 onClose();
 };
-const handleBarcodeScan = () => {
-const code = barcodeInput.trim();
+const handleBarcodeScan = (codeOverride) => {
+const code = (codeOverride || barcodeInput).trim();
 if (!code) return;
 const allPersons = [
 ...students.map(s => ({...s, type:"student"})),
@@ -3158,9 +3158,9 @@ if (found) {
 if (found.type === "student") setStudentAtt(p => ({...p, [found.id]:"present"}));
 else setTeacherAtt(p => ({...p, [found.id]:"present"}));
 setBarcodeLog(prev => [{name:found.name, time:new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}), type:found.type}, ...prev.slice(0,9)]);
-toast(`✅ ${found.name} — Present!`, "success");
+toast("✅ " + found.name + " — Present!", "success");
 } else {
-toast(`⚠️ ID "${code}" nahi mila!`, "error");
+toast("⚠️ ID " + code + " nahi mila!", "error");
 }
 setBarcodeInput("");
 };
@@ -3227,21 +3227,23 @@ return (
 </div>
 <button onClick={onClose} style={{background:"none",border:"none",color:T.textMuted,cursor:"pointer",fontSize:20}}>✕</button>
 </div>
-<div style={{marginTop:12, background:"#0F1117", borderRadius:10, padding:"10px 12px"}}>
-<p style={{fontSize:11, color:T.textMuted, marginBottom:6, fontWeight:600}}>📷 Student ID / Roll No / Name scan karo:</p>
+<div style={{marginTop:12}}>
+<BarcodeCamera onScan={handleBarcodeScan} T={T} />
+<div style={{background:"#0F1117", borderRadius:10, padding:"10px 12px", marginTop:8}}>
+<p style={{fontSize:11, color:T.textMuted, marginBottom:6, fontWeight:600}}>📝 Manual — ID / Roll No / Name:</p>
 <div style={{display:"flex", gap:8}}>
 <input
 value={barcodeInput}
 onChange={e=>setBarcodeInput(e.target.value)}
 onKeyDown={e=>e.key==="Enter"&&handleBarcodeScan()}
-placeholder="Scan or manually type..."
-autoFocus
-style={{flex:1, background:"#161B26", border:`1px solid ${T.green}50`, borderRadius:8, padding:"8px 12px", color:T.text, fontFamily:"Outfit,sans-serif", fontSize:13, outline:"none"}}
+placeholder="Roll No ya ID type karo..."
+style={{flex:1, background:"#161B26", border:"1px solid "+T.green+"50", borderRadius:8, padding:"8px 12px", color:T.text, fontFamily:"Outfit,sans-serif", fontSize:13, outline:"none"}}
 />
-<button onClick={handleBarcodeScan}
+<button onClick={()=>handleBarcodeScan()}
 style={{padding:"8px 14px", borderRadius:8, border:"none", background:T.green, color:"#fff", fontFamily:"Outfit,sans-serif", fontWeight:700, fontSize:13, cursor:"pointer"}}>✓</button>
 </div>
-<p style={{fontSize:10, color:T.textMuted, marginTop:6}}>💡 Physical barcode scanner connect karo — auto scan hoga (Enter press hoti hai scan par)</p>
+<p style={{fontSize:10, color:T.textMuted, marginTop:6}}>💡 Physical scanner bhi yahan kaam karega</p>
+</div>
 </div>
 <div style={{marginTop:8, display:"flex", justifyContent:"space-between"}}>
 <span style={{fontSize:11, color:T.green, fontWeight:600}}>✅ Marked: {markedS + markedT} / {students.length + teachers.length}</span>
@@ -17965,6 +17967,110 @@ Cancel
 );
 }
 // ─── TEACHER CLASS ATTENDANCE ────────────────────────────────────────────────
+// ── BARCODE CAMERA COMPONENT ─────────────────────────────────────────────────
+function BarcodeCamera({ onScan, T }) {
+const [cameraOn, setCameraOn] = React.useState(false);
+const [error, setError] = React.useState("");
+const videoRef = React.useRef(null);
+const streamRef = React.useRef(null);
+const scannerRef = React.useRef(null);
+
+const startCamera = () => {
+setError("");
+setCameraOn(true);
+};
+
+const stopCamera = () => {
+setCameraOn(false);
+if (streamRef.current) {
+streamRef.current.getTracks().forEach(function(t){ t.stop(); });
+streamRef.current = null;
+}
+if (scannerRef.current) {
+try { scannerRef.current.stop(); } catch(e){}
+scannerRef.current = null;
+}
+};
+
+React.useEffect(function() {
+if (!cameraOn) return;
+var stopped = false;
+function loadZxing() {
+if (!window.ZXing) {
+var script = document.createElement("script");
+script.src = "https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.20.0/zxing.min.js";
+script.onload = startScanning;
+script.onerror = function(){ setError("Scanner library load nahi hui. Internet check karo."); };
+document.head.appendChild(script);
+} else {
+startScanning();
+}
+}
+function startScanning() {
+if (stopped) return;
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+.then(function(stream) {
+if (stopped) { stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+streamRef.current = stream;
+if (videoRef.current) videoRef.current.srcObject = stream;
+try {
+var hints = new Map();
+var formats = [
+window.ZXing.BarcodeFormat.QR_CODE,
+window.ZXing.BarcodeFormat.CODE_128,
+window.ZXing.BarcodeFormat.CODE_39,
+window.ZXing.BarcodeFormat.EAN_13,
+window.ZXing.BarcodeFormat.DATA_MATRIX
+];
+hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+var reader = new window.ZXing.BrowserMultiFormatReader(hints);
+scannerRef.current = reader;
+reader.decodeFromVideoElement(videoRef.current, function(result, err) {
+if (stopped) return;
+if (result) {
+onScan(result.getText());
+}
+});
+} catch(e) { setError("Scanner error: " + e.message); }
+})
+.catch(function(e) { setError("Camera permission denied ya available nahi hai."); });
+}
+loadZxing();
+return function() {
+stopped = true;
+stopCamera();
+};
+}, [cameraOn]);
+
+return (
+React.createElement("div", {style:{marginBottom:12}},
+!cameraOn ? (
+React.createElement("button", {
+onClick: startCamera,
+style:{width:"100%", padding:"13px", borderRadius:12, border:"none",
+background:"linear-gradient(135deg,#4F8EF7,#A78BFA)",
+color:"#fff", fontWeight:800, fontSize:15, cursor:"pointer",
+fontFamily:"Outfit,sans-serif", display:"flex", alignItems:"center",
+justifyContent:"center", gap:8}
+}, "📷 Camera se Barcode / QR Scan karo")
+) : (
+React.createElement("div", {style:{background:T.card, border:"2px solid #4F8EF7", borderRadius:14, overflow:"hidden", marginBottom:8}},
+React.createElement("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"#4F8EF730"}},
+React.createElement("p", {style:{color:"#4F8EF7", fontWeight:700, fontSize:13}}, "📷 Camera Active — Barcode ke saamne rakho"),
+React.createElement("button", {onClick:stopCamera, style:{background:"#FF4D4F20", border:"none", color:"#FF4D4F", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontWeight:700}}, "✕ Band karo")
+),
+error ? (
+React.createElement("p", {style:{padding:12, color:"#FF4D4F", fontSize:12}}, "⚠️ " + error)
+) : (
+React.createElement("video", {ref:videoRef, autoPlay:true, playsInline:true, muted:true,
+style:{width:"100%", maxHeight:220, objectFit:"cover", display:"block"}})
+)
+)
+)
+)
+);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 function TeacherClassAttendance({ loggedInUser, students, attendanceLogs, setAttendanceLogs, toast, mySchoolId, lang="en" }) {
 const todayKey = getTodayKey();
 const assignedClass = loggedInUser?.assignedClass || "";
@@ -18024,8 +18130,8 @@ return updated;
 toast(`✅ ${assignedClass || "Class"} ki attendance save ho gayi! (${presentCount}P / ${absentCount}A)`, "success");
 setMode(null);
 };
-const handleBarcodeScan = () => {
-const code = barcodeInput.trim();
+const handleBarcodeScan = (codeOverride) => {
+const code = (codeOverride || barcodeInput).trim();
 if (!code) return;
 const found = classStudents.find(s =>
 String(s.id) === code || s.rollNo === code || (s.name||"").toLowerCase() === (code||"").toLowerCase()
@@ -18034,9 +18140,9 @@ if (found) {
 setStudentAtt(p => ({ ...p, [found.id]: "present" }));
 const now = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 setBarcodeLog(prev => [{ name: found.name, time: now, rollNo: found.rollNo }, ...prev.slice(0, 14)]);
-toast(`✅ ${found.name} — Present!`, "success");
+toast("✅ " + found.name + " — Present!", "success");
 } else {
-toast(`⚠️ ID "${code}" nahi mila!`, "error");
+toast("⚠️ ID " + code + " nahi mila!", "error");
 }
 setBarcodeInput("");
 setTimeout(() => barcodeRef.current?.focus(), 100);
@@ -18232,23 +18338,26 @@ return (
 <p style={{fontSize:11, color:T.textMuted}}>{assignedClass} • {presentCount} present</p>
 </div>
 </div>
-<div style={{background:T.card, border:`1px solid ${T.green}40`, borderRadius:14, padding:16, marginBottom:12}}>
-<p style={{fontSize:12, color:T.textMuted, marginBottom:8, fontWeight:600}}>{lang==="hi" ? "छात्र का ID / Roll No / Barcode स्कैन करें:" : "Scan student's ID / Roll No / Barcode:"}</p>
+<BarcodeCamera onScan={handleBarcodeScan} T={T} />
+<div style={{background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:16, marginBottom:12}}>
+<p style={{fontSize:11, color:T.textMuted, marginBottom:8, fontWeight:600}}>📝 Manual Entry — ID / Roll No type karo:</p>
 <div style={{display:"flex", gap:8}}>
 <input
 ref={barcodeRef}
-autoFocus
 value={barcodeInput}
-onChange={e => setBarcodeInput(e.target.value)}
+onChange={e => {
+  const val = e.target.value;
+  setBarcodeInput(val);
+}}
 onKeyDown={e => { if(e.key==="Enter") handleBarcodeScan(); }}
-placeholder="Scan ya type karo..."
-style={{flex:1, background:T.surface, border:`1px solid ${T.border}`, borderRadius:9,
+placeholder="Roll No ya Student ID..."
+style={{flex:1, background:T.surface, border:"1px solid "+T.border, borderRadius:9,
 padding:"11px 14px", color:T.text, fontSize:14, outline:"none", fontFamily:"Outfit,sans-serif"}} />
-<button onClick={handleBarcodeScan}
+<button onClick={()=>handleBarcodeScan()}
 style={{padding:"11px 18px", borderRadius:9, border:"none",
 background:T.green, color:"#fff", fontFamily:"Outfit,sans-serif", fontSize:14, fontWeight:800, cursor:"pointer"}}>✓</button>
 </div>
-<p style={{fontSize:10, color:T.textMuted, marginTop:6}}>💡 Scanner se scan karo ya Roll No type karke Enter dabaao</p>
+<p style={{fontSize:10, color:T.textMuted, marginTop:6}}>💡 Physical scanner connect hai toh auto-scan hoga</p>
 </div>
 <div style={{display:"flex", gap:6, marginBottom:12}}>
 {[{l:"Present",v:presentCount,c:T.green},{l:"Absent",v:absentCount,c:T.red},{l:"Total",v:classStudents.length,c:T.textMuted}].map(x=>(
@@ -21400,6 +21509,102 @@ return (
 );
 }
 // ─── ID CARD MODAL ────────────────────────────────────────────────────────────
+// ── INLINE QR CODE GENERATOR (no external API needed) ────────────────────────
+function generateQRDataURL(text, size) {
+size = size || 80;
+// QR Code generator - pure JS implementation
+// Using a simple approach: encode as URL and draw with canvas
+var canvas = document.createElement("canvas");
+canvas.width = size; canvas.height = size;
+var ctx = canvas.getContext("2d");
+// White background
+ctx.fillStyle = "#ffffff";
+ctx.fillRect(0, 0, size, size);
+// Use qrcode-generator library loaded inline
+if (window._qrGen) {
+try {
+var qr = window._qrGen(0, "M");
+qr.addData(text);
+qr.make();
+var cells = qr.getModuleCount();
+var cellSize = Math.floor((size - 8) / cells);
+var offset = Math.floor((size - cells * cellSize) / 2);
+ctx.fillStyle = "#000000";
+for (var r = 0; r < cells; r++) {
+for (var c = 0; c < cells; c++) {
+if (qr.isDark(r, c)) {
+ctx.fillRect(offset + c * cellSize, offset + r * cellSize, cellSize, cellSize);
+}
+}
+}
+return canvas.toDataURL("image/png");
+} catch(e) { return null; }
+}
+return null;
+}
+function loadQRLib(cb) {
+if (window._qrGen) { cb(); return; }
+var s = document.createElement("script");
+s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+s.onload = function() {
+// qrcodejs loaded - use different approach
+window._qrLibLoaded = true;
+cb();
+};
+s.onerror = function() { cb(); };
+document.head.appendChild(s);
+}
+function QRImage({ value, size }) {
+size = size || 80;
+var [src, setSrc] = React.useState("");
+React.useEffect(function() {
+if (!value) return;
+// Try inline generation first
+var dataUrl = null;
+function tryGenerate() {
+try {
+var QRCode = window.QRCode;
+if (QRCode) {
+var div = document.createElement("div");
+new QRCode(div, {
+text: value,
+width: size, height: size,
+colorDark: "#000000", colorLight: "#ffffff",
+correctLevel: QRCode.CorrectLevel.M
+});
+setTimeout(function() {
+var img = div.querySelector("img");
+var canvas = div.querySelector("canvas");
+if (img && img.src) { setSrc(img.src); }
+else if (canvas) { setSrc(canvas.toDataURL()); }
+}, 200);
+return;
+}
+} catch(e) {}
+// Fallback to API
+setSrc("https://api.qrserver.com/v1/create-qr-code/?size=" + size + "x" + size + "&data=" + encodeURIComponent(value) + "&bgcolor=ffffff&color=000000&margin=4");
+}
+if (window.QRCode) {
+tryGenerate();
+} else {
+var s = document.createElement("script");
+s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+s.onload = tryGenerate;
+s.onerror = function() {
+setSrc("https://api.qrserver.com/v1/create-qr-code/?size=" + size + "x" + size + "&data=" + encodeURIComponent(value) + "&bgcolor=ffffff&color=000000&margin=4");
+};
+document.head.appendChild(s);
+}
+}, [value, size]);
+if (!src) return React.createElement("div", {
+style:{width:size,height:size,background:"#f0f0f0",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#999"}
+}, "QR...");
+return React.createElement("img", {
+src: src, alt: "QR",
+style:{width:size,height:size,borderRadius:6,display:"block"}
+});
+}
+// ─────────────────────────────────────────────────────────────────────────────
 function IdCard({ l, student, onClose, setStudents, currentSchool, personType }) {
 const fileRef = useRef(null);
 const [cardPhoto, setCardPhoto] = useState(student.photoUrl || null);
@@ -21421,61 +21626,51 @@ if (setStudents) setStudents(function(p) { return p.map(function(s) { return s.i
 }).catch(function(err) { console.warn("Cloudinary ID card photo failed:", err); });
 };
 const downloadCard = () => {
-const cardEl = cardRef.current;
-if (!cardEl) return;
-const printWin = window.open("","_blank","width=400,height=600");
-printWin.document.write(`
-<!DOCTYPE html><html><head><title>ID Card - ${student.name}</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet"/>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#08090E;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Outfit',sans-serif;}
-.card{background:linear-gradient(145deg,#0d1b3e,#1a2d5a);border:2px solid #4F8EF7;border-radius:20px;padding:28px 24px;width:300px;text-align:center;color:#E8EEF8;}
-.school-header{background:linear-gradient(90deg,#4F8EF766,#A78BFA44);border-radius:10px;padding:10px;margin-bottom:16px;}
-.school-logo{font-size:28px;margin-bottom:4px;}
-.school-name{font-size:13px;font-weight:800;color:#4F8EF7;letter-spacing:0.5px;}
-.school-addr{font-size:10px;color:#9AA3B8;margin-top:2px;}
-.photo-wrap{width:88px;height:88px;border-radius:50%;border:3px solid #4F8EF7;margin:0 auto 12px;overflow:hidden;background:#161B26;display:flex;align-items:center;justify-content:center;font-size:52px;}
-.photo-wrap img{width:100%;height:100%;object-fit:cover;}
-.person-name{font-size:20px;font-weight:800;margin-bottom:4px;}
-.person-sub{font-size:13px;color:#9AA3B8;}
-.badge{background:#4F8EF720;border:1px solid #4F8EF760;border-radius:8px;padding:8px 20px;margin:12px auto;display:inline-block;}
-.badge-label{font-size:11px;color:#9AA3B8;letter-spacing:1px;}
-.badge-val{font-size:22px;font-weight:900;color:#4F8EF7;}
-.footer{border-top:1px solid #1F2A3F;margin-top:14px;padding-top:12px;}
-.footer p{font-size:11px;color:#9AA3B8;margin-top:3px;}
-.role-tag{background:#0ECB8122;color:#0ECB81;border:1px solid #0ECB8144;border-radius:20px;padding:3px 14px;font-size:11px;font-weight:700;display:inline-block;margin-top:6px;}
-@media print{body{background:#08090E;}@page{margin:0;size:300px 520px;}}
-</style><body>
-<div class="card">
-<div class="school-header">
-<div class="school-logo">🛡️</div>
-<div class="school-name">${schoolName.toUpperCase()}</div>
-<div class="school-addr">📍 ${schoolAddress}</div>
-</div>
-<div class="photo-wrap">${cardPhoto ? `<img src="${cardPhoto}" />` : (student.photo||"👤")}</div>
-<div class="person-name">${student.name}</div>
-<div class="person-sub">${student.subject||student.class||""} ${student.assignedRoute?"• "+student.assignedRoute:""}</div>
-<span class="role-tag">${(personType||"STUDENT").toUpperCase()}</span>
-<div class="badge">
-<div class="badge-label">${personType==="student"?"ROLL NO":personType==="driver"?"BUS NO":"EMP ID"}</div>
-<div class="badge-val">${student.rollNo||student.busNo||student.id||"—"}</div>
-</div>
-${student.bloodGroup && student.bloodGroup !== "Unknown" ? `<div style="background:#F7555520;border:1px solid #F7555540;border-radius:8px;padding:5px 14px;margin:4px auto;display:inline-block"><div style="font-size:10px;color:#9AA3B8;letter-spacing:1px">BLOOD GROUP</div><div style="font-size:18px;font-weight:900;color:#F75555">${student.bloodGroup}</div></div>` : ""}
-<div class="footer">
-<p>📞 ${student.parentPhone||student.phone||schoolPhone}</p>
-<p style="font-size:10px;margin-top:4px;">${schoolName} • ${schoolAddress}</p>
-<p style="font-size:10px;margin-top:2px;">📞 School: ${schoolPhone}</p>
-</div>
-</div>
-<' + 'script>setTimeout(()=>{window.print();},600);<' + '/script>
-</body></html>
-`);
+const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=88x88&data=" + encodeURIComponent(idValue) + "&bgcolor=ffffff&color=000000&margin=4";
+const bloodHtml = (student.bloodGroup && student.bloodGroup !== "Unknown") ? '<div style="background:#F7555520;border:1px solid #F7555540;border-radius:8px;padding:5px 14px;margin:6px auto;display:inline-block"><div style="font-size:10px;color:#9AA3B8;letter-spacing:1px">BLOOD GROUP</div><div style="font-size:18px;font-weight:900;color:#F75555">'+student.bloodGroup+'</div></div>' : "";
+const photoHtml = cardPhoto ? '<img src="'+cardPhoto+'" style="width:100%;height:100%;object-fit:cover;" />' : '<span style="font-size:52px">'+(student.photo||"👤")+'</span>';
+const printWin = window.open("","_blank","width=420,height=680");
+printWin.document.write('<!DOCTYPE html><html><head><title>ID Card - '+student.name+'</title>'
++'<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet"/>'
++'<style>'
++'*{margin:0;padding:0;box-sizing:border-box;}'
++'html,body{width:100%;height:100%;background:#08090E;display:flex;align-items:center;justify-content:center;font-family:Outfit,sans-serif;}'
++'.card{background:linear-gradient(145deg,#0d1b3e,#1a2d5a);border:2px solid #4F8EF7;border-radius:20px;padding:24px 20px;width:300px;text-align:center;color:#E8EEF8;}'
++'.sh{background:linear-gradient(90deg,#4F8EF766,#A78BFA44);border-radius:10px;padding:10px;margin-bottom:14px;}'
++'.sn{font-size:12px;font-weight:800;color:#4F8EF7;letter-spacing:0.5px;}'
++'.sa{font-size:10px;color:#9AA3B8;margin-top:2px;}'
++'.pw{width:80px;height:80px;border-radius:50%;border:3px solid #4F8EF7;margin:0 auto 10px;overflow:hidden;background:#161B26;display:flex;align-items:center;justify-content:center;}'
++'.pn{font-size:18px;font-weight:800;margin-bottom:3px;}'
++'.ps{font-size:12px;color:#9AA3B8;}'
++'.rt{background:#0ECB8122;color:#0ECB81;border:1px solid #0ECB8144;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;display:inline-block;margin:6px 0;}'
++'.badge{background:#4F8EF720;border:1px solid #4F8EF760;border-radius:8px;padding:7px 16px;margin:6px auto;display:inline-block;}'
++'.bl{font-size:10px;color:#9AA3B8;letter-spacing:1px;}'
++'.bv{font-size:18px;font-weight:900;color:#4F8EF7;}'
++'.qrwrap{margin:8px auto;display:flex;flex-direction:column;align-items:center;}'
++'.qrl{font-size:9px;color:#9AA3B8;margin-top:3px;letter-spacing:0.5px;}'
++'.footer{border-top:1px solid #1F2A3F;margin-top:10px;padding-top:10px;}'
++'.footer p{font-size:10px;color:#9AA3B8;margin-top:3px;}'
++'@media print{html,body{background:#08090E;}@page{margin:0;size:320px 560px;}}'
++'</style></head><body>'
++'<div class="card">'
++'<div class="sh"><div style="font-size:24px">🛡️</div><div class="sn">'+schoolName.toUpperCase()+'</div><div class="sa">📍 '+schoolAddress+'</div></div>'
++'<div class="pw">'+photoHtml+'</div>'
++'<div class="pn">'+student.name+'</div>'
++'<div class="ps">'+(student.subject||student.class||"")+(student.assignedRoute?" • "+student.assignedRoute:"")+'</div>'
++'<span class="rt">'+(personType||"STUDENT").toUpperCase()+'</span>'
++'<div class="badge"><div class="bl">'+(personType==="student"?"ROLL NO":personType==="driver"?"BUS NO":"EMP ID")+'</div><div class="bv">'+(student.rollNo||student.busNo||student.id||"—")+'</div></div>'
++bloodHtml
++'<div class="qrwrap"><img id="qrimg" src="'+qrUrl+'" width="88" height="88" style="border-radius:6px;background:#fff;display:block;" /><div class="qrl">SCAN FOR ATTENDANCE</div></div>'
++'<div class="footer"><p>📞 '+(student.parentPhone||student.phone||schoolPhone)+'</p><p>'+schoolName+' • '+schoolAddress+'</p><p>📞 School: '+schoolPhone+'</p></div>'
++'</div>'
++'<script>var img=document.getElementById("qrimg");if(img){img.onload=function(){setTimeout(function(){window.print();},400);};img.onerror=function(){setTimeout(function(){window.print();},400);};}else{setTimeout(function(){window.print();},800);}<\/script>'
++'</body></html>');
 printWin.document.close();
 };
 const roleLabel = personType === "teacher" ? "TEACHER" : personType === "driver" ? "DRIVER" : "STUDENT";
 const idValue = student.rollNo || student.busNo || student.employeeId || ("EMP-"+String(student.id).slice(-6));
 const idLabel = personType === "student" ? "ROLL NO" : personType === "driver" ? "BUS NO" : "EMP ID";
+
 const personDetail = student.subject ? `${student.subject}` : student.class ? student.class : student.assignedRoute || "";
 return (
 <ModalBox title={l("viewIdCard")} onClose={onClose} wide>
@@ -21554,6 +21749,11 @@ fontFamily:"'Outfit',sans-serif"
 <p style={{fontWeight:900,fontSize:18,color:"#F75555"}}>{student.bloodGroup}</p>
 </div>
 )}
+{/* QR Code */}
+<div style={{margin:"8px auto 4px",display:"flex",flexDirection:"column",alignItems:"center"}}>
+<QRImage value={idValue} size={80} />
+<p style={{fontSize:9,color:"#9AA3B8",marginTop:3,letterSpacing:0.5}}>SCAN FOR ATTENDANCE</p>
+</div>
 {/* Footer */}
 <div style={{borderTop:`1px solid #1F2A3F`,paddingTop:10,marginTop:8}}>
 <p style={{fontSize:11,color:"#9AA3B8"}}>📞 {student.parentPhone||student.phone||schoolPhone}</p>
