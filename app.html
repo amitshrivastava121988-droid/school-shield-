@@ -4217,7 +4217,7 @@ if (a.forUserId && user?.id) return String(a.forUserId) === String(user.id);
 if (a.forTeacherId && user?.teacherId) return String(a.forTeacherId) === String(user.teacherId);
 if (DRIVER_ALERT_TYPES.includes(a.type)) return userRole === "driver";
 if (["fee_due","fee_paid","fee_overdue","fee_duesoon"].includes(a.type)) return ["parent","accountant"].includes(userRole);
-if (["fee_overdue_summary"].includes(a.type)) return ["principal","founder","vice_principal","accountant"].includes(userRole);
+if (["fee_overdue_summary"].includes(a.type)) return false;
 if (a.type === "tc_requested") return ["accountant","principal","vice_principal","founder"].includes(userRole);
 if (a.type === "tc_approved")  return userRole === "parent";
 if (a.type === "leave_request" || a.type === "leave_approved_action") return ["principal","vice_principal","founder"].includes(userRole);
