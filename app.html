@@ -3771,7 +3771,8 @@ const dueSoonByClass={};
 fees.filter(f=>!f.paid&&!f.isDiscount&&f.amount>0&&f.dueDate).forEach(f=>{
 const due=new Date(f.dueDate); due.setHours(0,0,0,0);
 const diff=Math.round((due-now)/(1000*60*60*24));
-const cls = f.studentClass||f.class||"Unknown";
+const stuMatch = students.find(function(s){return s.name===f.studentName;});
+const cls = f.studentClass||f.class||(stuMatch&&stuMatch.class)||"Unknown";
 if(diff<0){
 if(!overdueByClass[cls]) overdueByClass[cls]={total:0,count:0};
 overdueByClass[cls].total+=Number(f.amount)||0;
