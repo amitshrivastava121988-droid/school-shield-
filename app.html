@@ -17973,69 +17973,54 @@ const [cameraOn, setCameraOn] = React.useState(false);
 const [error, setError] = React.useState("");
 const videoRef = React.useRef(null);
 const streamRef = React.useRef(null);
-const scannerRef = React.useRef(null);
-
-const startCamera = () => {
-setError("");
-setCameraOn(true);
-};
+const rafRef = React.useRef(null);
+const lastScan = React.useRef(0);
 
 const stopCamera = () => {
 setCameraOn(false);
+if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
 if (streamRef.current) {
 streamRef.current.getTracks().forEach(function(t){ t.stop(); });
 streamRef.current = null;
-}
-if (scannerRef.current) {
-try { scannerRef.current.stop(); } catch(e){}
-scannerRef.current = null;
 }
 };
 
 React.useEffect(function() {
 if (!cameraOn) return;
 var stopped = false;
-function loadZxing() {
-if (!window.ZXing) {
-var script = document.createElement("script");
-script.src = "https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.20.0/zxing.min.js";
-script.onload = startScanning;
-script.onerror = function(){ setError("Scanner library load nahi hui. Internet check karo."); };
-document.head.appendChild(script);
-} else {
-startScanning();
-}
-}
-function startScanning() {
-if (stopped) return;
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
 .then(function(stream) {
 if (stopped) { stream.getTracks().forEach(function(t){ t.stop(); }); return; }
 streamRef.current = stream;
-if (videoRef.current) videoRef.current.srcObject = stream;
-try {
-var hints = new Map();
-var formats = [
-window.ZXing.BarcodeFormat.QR_CODE,
-window.ZXing.BarcodeFormat.CODE_128,
-window.ZXing.BarcodeFormat.CODE_39,
-window.ZXing.BarcodeFormat.EAN_13,
-window.ZXing.BarcodeFormat.DATA_MATRIX
-];
-hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-var reader = new window.ZXing.BrowserMultiFormatReader(hints);
-scannerRef.current = reader;
-reader.decodeFromVideoElement(videoRef.current, function(result, err) {
+var vid = videoRef.current;
+if (!vid) return;
+vid.srcObject = stream;
+vid.play();
+function tick() {
+if (stopped || !vid || vid.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
+var now = Date.now();
+if (now - lastScan.current < 800) { rafRef.current = requestAnimationFrame(tick); return; }
+if (window.BarcodeDetector) {
+var bd = new window.BarcodeDetector({ formats: ["qr_code","code_128","code_39","ean_13","data_matrix","aztec"] });
+bd.detect(vid).then(function(results) {
 if (stopped) return;
-if (result) {
-onScan(result.getText());
+if (results && results.length > 0) {
+lastScan.current = Date.now();
+onScan(results[0].rawValue);
 }
-});
-} catch(e) { setError("Scanner error: " + e.message); }
+}).catch(function(){});
+} else {
+var canvas = document.createElement("canvas");
+canvas.width = vid.videoWidth || 320;
+canvas.height = vid.videoHeight || 240;
+var ctx = canvas.getContext("2d");
+ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+}
+rafRef.current = requestAnimationFrame(tick);
+}
+rafRef.current = requestAnimationFrame(tick);
 })
-.catch(function(e) { setError("Camera permission denied ya available nahi hai."); });
-}
-loadZxing();
+.catch(function() { if(!stopped) setError("Camera permission do — Settings > Site Settings > Camera"); });
 return function() {
 stopped = true;
 stopCamera();
@@ -18046,24 +18031,24 @@ return (
 React.createElement("div", {style:{marginBottom:12}},
 !cameraOn ? (
 React.createElement("button", {
-onClick: startCamera,
-style:{width:"100%", padding:"13px", borderRadius:12, border:"none",
+onClick: function(){ setError(""); setCameraOn(true); },
+style:{width:"100%", padding:"14px", borderRadius:12, border:"none",
 background:"linear-gradient(135deg,#4F8EF7,#A78BFA)",
 color:"#fff", fontWeight:800, fontSize:15, cursor:"pointer",
 fontFamily:"Outfit,sans-serif", display:"flex", alignItems:"center",
 justifyContent:"center", gap:8}
-}, "📷 Camera se Barcode / QR Scan karo")
+}, "📷 Camera se QR / Barcode Scan karo")
 ) : (
 React.createElement("div", {style:{background:T.card, border:"2px solid #4F8EF7", borderRadius:14, overflow:"hidden", marginBottom:8}},
 React.createElement("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:"#4F8EF730"}},
-React.createElement("p", {style:{color:"#4F8EF7", fontWeight:700, fontSize:13}}, "📷 Camera Active — Barcode ke saamne rakho"),
+React.createElement("p", {style:{color:"#4F8EF7", fontWeight:700, fontSize:13}}, "📷 Camera Active — QR / Barcode ke saamne rakho"),
 React.createElement("button", {onClick:stopCamera, style:{background:"#FF4D4F20", border:"none", color:"#FF4D4F", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontWeight:700}}, "✕ Band karo")
 ),
 error ? (
 React.createElement("p", {style:{padding:12, color:"#FF4D4F", fontSize:12}}, "⚠️ " + error)
 ) : (
 React.createElement("video", {ref:videoRef, autoPlay:true, playsInline:true, muted:true,
-style:{width:"100%", maxHeight:220, objectFit:"cover", display:"block"}})
+style:{width:"100%", maxHeight:240, objectFit:"cover", display:"block"}})
 )
 )
 )
