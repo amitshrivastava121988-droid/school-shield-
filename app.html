@@ -251,53 +251,7 @@ if(t%10===0&&mi<msgs.length){el.innerHTML=msgs[mi]+'<br><span style="font-size:1
 if(t>90){clearInterval(iv);el.innerHTML='Please reload — or check your internet connection<br><button onclick="location.reload()" style="margin-top:8px;padding:8px 20px;background:#4F8EF7;border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer">🔄 Reload</button>';}
 },5000);
 </script>
-<div id="ss-ai-btn" onclick="toggleAI()" style="display:none;position:fixed;bottom:158px;right:24px;z-index:3000;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#0ECB81,#059669);box-shadow:0 4px 16px rgba(14,203,129,0.5);cursor:pointer;font-size:20px;align-items:center;justify-content:center;">🤖</div>
-<div id="ss-ai-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;height:80vh;background:#161B26;border-radius:20px 20px 0 0;border:1px solid #1F2A3F;flex-direction:column;max-width:480px;margin:0 auto;"><div style="background:linear-gradient(135deg,#0ECB81,#059669);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-radius:20px 20px 0 0;flex-shrink:0;"><div style="display:flex;align-items:center;gap:8px;"><span>🤖</span><div><p style="font-weight:800;color:#fff;font-size:14px;margin:0;">SchoolShield AI</p><p style="font-size:10px;color:rgba(255,255,255,0.8);margin:0;">Powered by Gemini</p></div></div><button onclick="toggleAI()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:700;">X</button></div><div id="ss-ai-msgs" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;"><div style="display:flex;"><div style="max-width:85%;background:#1A2133;border-radius:16px 16px 16px 4px;padding:10px 14px;"><p style="font-size:13px;color:#E8EEF8;margin:0;">Hi! Main SchoolShield AI hoon. Kuch bhi poochho!</p></div></div></div><div style="padding:8px 10px;border-top:1px solid rgba(255,255,255,0.1);display:flex;gap:6px;overflow-x:auto;flex-shrink:0;"><button onclick="ssAIAsk('Absent today')" style="background:#1A2133;border:1px solid #1F2A3F;border-radius:20px;padding:5px 12px;font-size:11px;color:#8899AA;cursor:pointer;white-space:nowrap;">Absent today</button><button onclick="ssAIAsk('Pending fees')" style="background:#1A2133;border:1px solid #1F2A3F;border-radius:20px;padding:5px 12px;font-size:11px;color:#8899AA;cursor:pointer;white-space:nowrap;">Pending fees</button><button onclick="ssAIAsk('Total students')" style="background:#1A2133;border:1px solid #1F2A3F;border-radius:20px;padding:5px 12px;font-size:11px;color:#8899AA;cursor:pointer;white-space:nowrap;">Total students</button></div><div style="padding:10px 12px;border-top:1px solid rgba(255,255,255,0.1);display:flex;gap:8px;flex-shrink:0;"><input id="ss-ai-inp" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter')ssAISend()" style="flex:1;background:#1A2133;border:1px solid #1F2A3F;border-radius:12px;padding:10px 14px;color:#E8EEF8;font-size:13px;outline:none;"/><button onclick="ssAISend()" style="background:#0ECB81;border:none;border-radius:12px;padding:10px 18px;color:#fff;font-weight:700;cursor:pointer;">Send</button></div></div>
-<script type="text/javascript">(function(){var isOpen=false;window.toggleAI=function(){isOpen=!isOpen;var p=document.getElementById('ss-ai-panel');p.style.display=isOpen?'flex':'none';};window.ssAIAsk=function(q){document.getElementById('ss-ai-inp').value=q;window.ssAISend();};function addMsg(t,isU){var m=document.getElementById('ss-ai-msgs');var d=document.createElement('div');d.style.cssText='display:flex;justify-content:'+(isU?'flex-end':'flex-start');var b=document.createElement('div');b.style.cssText='max-width:85%;background:'+(isU?'#0ECB81':'#1A2133')+';border-radius:'+(isU?'16px 16px 4px 16px':'16px 16px 16px 4px')+';padding:10px 14px;';var p=document.createElement('p');p.style.cssText='font-size:13px;color:'+(isU?'#fff':'#E8EEF8')+';white-space:pre-wrap;line-height:1.6;margin:0;';p.textContent=t;b.appendChild(p);d.appendChild(b);m.appendChild(d);m.scrollTop=m.scrollHeight;return b;}window.ssAISend=function(){var inp=document.getElementById('ss-ai-inp');var q=inp.value.trim();if(!q)return;inp.value='';addMsg(q,true);var bub=addMsg('Thinking...',false);var gkey='';try{var si=localStorage.getItem('ss_supportInfo');if(si){var info=JSON.parse(si);gkey=info.geminiKey||'';}}catch(e){}if(!gkey){bub.querySelector('p').textContent='Gemini API key nahi hai. Super Admin > Support Settings mein daalo.';return;}var ctx='School management system.';try{if(window.__ssAICtx)ctx=window.__ssAICtx();}catch(e){}fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key='+gkey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:ctx+' Q: '+q}]}],generationConfig:{maxOutputTokens:400,temperature:0.3}})}).then(function(r){return r.json();}).then(function(d){var txt='No response.';try{if(d.candidates&&d.candidates[0].content.parts[0].text)txt=d.candidates[0].content.parts[0].text;else if(d.error)txt='Error: '+d.error.message;}catch(e){}bub.querySelector('p').textContent=txt;document.getElementById('ss-ai-msgs').scrollTop=999999;}).catch(function(){bub.querySelector('p').textContent='Network error.';});};setInterval(function(){
-var btn=document.getElementById('ss-ai-btn');
-if(!btn)return;
-var roles=['principal','vice_principal','coordinator','reception','accountant','superadmin','founder'];
-var role='';
-try{
-var u=window.__vpUser||window.__staffUser||window.__receptionUser||window.__accountantUser||window.__coordinatorUser||window.__founderUser||window.__transportHeadUser;
-if(u&&u.role) role=u.role;
-}catch(e){}
-// Also check superadmin/principal via currentSchoolId being null (superadmin) or set
-if(!role && window.currentSchoolId) role='principal';
-if(!role && window.__isDemoMode) role='principal';
-if(role && roles.indexOf(role)>=0) btn.style.display='flex';
-else if(!role) btn.style.display='flex'; // show when logged in regardless
-},500);
-// Build context based on role
-window.__ssAICtx=function(){
-var role=window.__currentRole||'';
-var sid=window.currentSchoolId||'';
-// Super Admin - cross school data
-if(role==='superadmin'){
-try{
-var schools=JSON.parse(localStorage.getItem('ss_cache_schools')||'[]');
-var accounts=JSON.parse(localStorage.getItem('ss_cache_userAccounts')||'[]');
-var paid=schools.filter(function(s){return s.paid;}).length;
-return 'You are SchoolShield AI for Super Admin. Total schools: '+schools.length+', Paid: '+paid+', Free: '+(schools.length-paid)+'. Total accounts: '+accounts.length+'. Answer questions about the SchoolShield platform and all schools. Be concise.';
-}catch(e){return 'SchoolShield Super Admin assistant.';}
-}
-// Principal/Staff - own school only
-try{
-var students=JSON.parse(localStorage.getItem('ss_cache_'+sid+'_students')||'[]');
-var fees=JSON.parse(localStorage.getItem('ss_cache_'+sid+'_fees')||'[]');
-var teachers=JSON.parse(localStorage.getItem('ss_cache_'+sid+'_teachers')||'[]');
-var buses=JSON.parse(localStorage.getItem('ss_cache_'+sid+'_buses')||'[]');
-var cm={};students.forEach(function(s){cm[s.class]=(cm[s.class]||0)+1;});
-var col=fees.filter(function(f){return f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(Number(f.paidAmount||f.amount)||0);},0);
-var pen=fees.filter(function(f){return !f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(Number(f.amount)||0);},0);
-var today=new Date().toISOString().slice(0,10);
-return 'You are SchoolShield AI for school (role: '+role+'). Students: '+students.length+'. Classes: '+Object.entries(cm).map(function(e){return e[0]+':'+e[1];}).join(',')+'. Teachers: '+teachers.length+'. Fee collected: Rs.'+col.toLocaleString('en-IN')+', pending: Rs.'+pen.toLocaleString('en-IN')+'. Buses: '+buses.length+'. Answer only about this school data. Be concise. Reply in same language as user.';
-}catch(e){return 'School management assistant.';}
-};
-})();</script>
-
 <script></script>
-
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
 // ─── UNIQUE ID GENERATOR ──────────────────────────────────────────────────────
@@ -1038,7 +992,6 @@ return (
 <Field label="📧 Email Address" k="email" placeholder="e.g. support@yourschool.in" type="email" />
 <Field label="🕐 Support Hours" k="hours" placeholder="e.g. Mon-Sat, 9AM-6PM" />
 <Field label="❓ FAQ/Help URL (optional)" k="faqUrl" placeholder="https://..." />
-<Field label="🔑 Gemini API Key (AI Chat)" k="geminiKey" placeholder="AIzaSy..." />
 <button onClick={save} style={{
 width:"100%",padding:"13px",
 background:saved?"#0ECB81":"#4F8EF7",
@@ -1752,36 +1705,29 @@ const id = Date.now();
 setToasts(p => [...p, {id, msg, type}]);
 setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3500);
 };
-const callAI = (prompt) => {
+const callAI = async (prompt) => {
 if (!navigator.onLine) {
 setAiResult("⚠️ AI feature requires internet. Please connect and try again.");
 return;
 }
 setAiLoading(true); setAiResult("");
-var gkey = "";
-try { var si = localStorage.getItem("ss_supportInfo"); if(si){var info=JSON.parse(si);gkey=info.geminiKey||"";} } catch(e){}
-if (!gkey) {
-setAiLoading(false);
-setAiResult("⚠️ Gemini API key set nahi hai. Super Admin > Support Settings mein daalo.");
-return;
-}
-fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key="+gkey, {
+try {
+const res = await fetch("https://api.anthropic.com/v1/messages", {
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body: JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:800,temperature:0.7}})
-}).then(function(res){ return res.json(); }).then(function(data){
-var text = "Generated content";
-try {
-if(data.candidates&&data.candidates[0].content.parts[0].text)
-text = data.candidates[0].content.parts[0].text;
-else if(data.error) text = "Error: "+data.error.message;
-} catch(e){}
-setAiResult(text);
-setAiLoading(false);
-}).catch(function(){
-setAiResult("AI generation failed. Check internet connection.");
-setAiLoading(false);
+body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] })
 });
+const data = await res.json();
+const text = data.content?.map(c=>c.text||"").join("") || "Generated content";
+setAiResult(text);
+} catch(e) {
+if (!navigator.onLine) {
+setAiResult("⚠️ Offline hain. AI internet ke bina kaam nahi karta.");
+} else {
+setAiResult("AI generation failed. Please check API key.");
+}
+}
+setAiLoading(false);
 };
 const schoolActive = currentSchool?.active !== false;
 const graceDays = (() => {
@@ -6511,7 +6457,7 @@ return (
 }
 function NoticeForm({ l, onSave, onClose, callAI, aiLoading, aiResult, setAiResult }) {
 const [d, setD] = useState({ title:"", body:"", forRole:["all"] });
-const generateAI = () => callAI("Write a professional school notice for: \""+d.title+"\". Keep it under 100 words, formal tone.");
+const generateAI = () => callAI(`Write a professional school notice for: "${d.title}". Keep it under 100 words, formal tone.`);
 useEffect(() => { if (aiResult) setD(p=>({...p, body:aiResult})); }, [aiResult]);
 const ALL_ROLES = ["all","student","teacher","parent","driver","vice_principal","staff","reception","accountant","librarian"];
 const ROLE_LABELS = { all:"All", student:"Student", teacher:"Teacher", parent:"Parent", driver:"Driver", vice_principal:"Vice Principal", staff:"Staff", reception:"Reception", accountant:"Accountant", librarian:"Librarian" };
@@ -6550,7 +6496,7 @@ fontFamily:"Outfit,sans-serif", fontSize:12, fontWeight: selected?700:500, curso
 <textarea value={d.body} onChange={e=>setD(p=>({...p,body:e.target.value}))} rows={4} style={{width:"100%", background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:"8px 12px", color:T.text, fontSize:13, outline:"none", resize:"none"}} />
 </FormField>
 <Btn onClick={generateAI} color={T.purple} full style={{marginBottom:12}} disabled={aiLoading}>
-{aiLoading ? "✨ "+l("aiGenerating") : "✨ "+l("aiNotice")}
+{aiLoading ? `✨ ${l("aiGenerating")}` : `✨ ${l("aiNotice")}`}
 </Btn>
 <div style={{display:"flex", gap:8}}>
 <Btn onClick={()=>{ onSave({...d, forRole: d.forRole.join(",")}); onClose(); setAiResult(""); }} color={T.accent} full>{l("save")}</Btn>
@@ -6788,7 +6734,7 @@ const [installmentRows, setInstallmentRows] = React.useState([]);
 const [customMode, setCustomMode] = React.useState(false);
 const [discountType, setDiscountType] = React.useState("None");
 const [discountAmt, setDiscountAmt] = React.useState("");
-const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Custom"];
+const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Old Student Admission Fee Waiver","Custom"];
 const sameIdM2=(a,b)=>String(a)===String(b);
 const stuExist = (existingFees||[]).filter(f=>f.studentName===student.name&&(!f.schoolId||sameIdM2(f.schoolId,mySchoolId))&&!f.isDiscount);
 const alreadyTotal = stuExist.reduce((s,f)=>s+(Number(f.amount)||0),0);
@@ -6877,6 +6823,21 @@ style={{width:"100%",background:T.surface,border:"1px solid "+(structureTotal>0?
 padding:"11px 12px",color:T.text,fontSize:15,fontWeight:700,boxSizing:"border-box",
 fontFamily:"Outfit,sans-serif"}}/>
 </div>
+{structureEntry && (structureEntry.items||[]).length>0 && (
+<div style={{background:T.green+"10",border:"1px solid "+T.green+"30",borderRadius:8,padding:"8px 12px",marginBottom:12}}>
+<p style={{fontSize:10,color:T.green,fontWeight:700,marginBottom:5}}>{"📊 Fee Structure — "+structureEntry.session}</p>
+{(structureEntry.items||[]).map((it,i)=>(
+<div key={i} style={{display:"flex",justifyContent:"space-between",padding:"3px 0"}}>
+<span style={{fontSize:11,color:T.textMuted}}>{it.type}</span>
+<span style={{fontSize:11,fontWeight:700,color:T.text}}>{"₹"+(it.amount||0).toLocaleString()}</span>
+</div>
+))}
+<div style={{display:"flex",justifyContent:"space-between",marginTop:5,paddingTop:5,borderTop:"1px solid "+T.border}}>
+<span style={{fontSize:11,fontWeight:700,color:T.green}}>Total</span>
+<span style={{fontSize:12,fontWeight:800,color:T.green}}>{"₹"+structureTotal.toLocaleString()}</span>
+</div>
+</div>
+)}
 {/* Admission Items — multiple fees at admission time */}
 <div style={{marginBottom:12}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
