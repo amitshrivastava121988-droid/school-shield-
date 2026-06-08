@@ -1652,30 +1652,7 @@ setAlerts(prev => [...(prev||[]), ...newAlerts]);
 try { localStorage.setItem(ALERT_KEY, "1"); } catch {}
 }
 }
-// ── PRINCIPAL / ACCOUNTANT / VP: check all unpaid overdue fees ──
-if (["principal","founder","vice_principal","accountant"].includes(role)) {
-const allOverdue = fees.filter(f =>
-!f.paid && f.dueDate && f.dueDate < todayStr &&
-(!f.schoolId || String(f.schoolId) === String(mySchoolId))
-);
-if (allOverdue.length > 0) {
-const alertId = `fee_overdue_summary_${todayStr}_${mySchoolId}`;
-const alreadyExists = alerts.some(a => a.id === alertId);
-if (!alreadyExists) {
-const totalPending = allOverdue.reduce((s,f) => s + (Number(f.amount)||0) - (Number(f.paidAmount)||0), 0);
-setAlerts(prev => [...(prev||[]), {
-id: alertId, schoolId: mySchoolId,
-type: "fee_overdue_summary",
-title: "🔴 Overdue Fees Summary",
-message: `${allOverdue.length} student${allOverdue.length===1?"":"s"} have overdue fees totalling ₹${totalPending.toLocaleString("en-IN")}.`,
-forRole: "principal",
-read: false, ts: Date.now(),
-dashboardDate: today.toLocaleDateString("en-IN"),
-}]);
-try { localStorage.setItem(ALERT_KEY, "1"); } catch {}
-}
-}
-}
+
 }, [loggedInUser?.id, role]);
 // ─────────────────────────────────────────────────────────────────────────────
 useEffect(() => {
