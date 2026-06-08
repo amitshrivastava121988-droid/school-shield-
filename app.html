@@ -1536,6 +1536,31 @@ const [gallery, setGallery] = usePersist("gallery", initGallery);
 const [chats, setChats] = usePersist("chats", initChats);
 const [discounts, setDiscounts] = usePersist("discounts", initDiscounts);
 const [onlineClasses, setOnlineClasses] = usePersist("onlineClasses", initOnlineClasses);
+const [greetings, setGreetings] = usePersist("greetings", []);
+const [greetingsSentLog, setGreetingsSentLog] = usePersist("greetingsSentLog", []);
+// Greeting settings as individual values to avoid usePersist object corruption
+const [gs_birthday, setGs_birthday] = usePersist("gs_birthday", true);
+const [gs_festival, setGs_festival] = usePersist("gs_festival", true);
+const [gs_parents, setGs_parents] = usePersist("gs_parents", true);
+const [gs_teachers, setGs_teachers] = usePersist("gs_teachers", true);
+const [gs_branding, setGs_branding] = usePersist("gs_branding", true);
+const [gs_lang, setGs_lang] = usePersist("gs_lang", "en");
+const greetingSettings = {
+  birthdayEnabled: gs_birthday, festivalEnabled: gs_festival,
+  audienceParents: gs_parents, audienceTeachers: gs_teachers,
+  brandingEnabled: gs_branding, defaultLang: gs_lang,
+  audienceStudents: false, plan: "free"
+};
+const setGreetingSettings = function(updater) {
+  var prev = greetingSettings;
+  var next = typeof updater === "function" ? updater(prev) : updater;
+  if (next.birthdayEnabled !== prev.birthdayEnabled) setGs_birthday(next.birthdayEnabled);
+  if (next.festivalEnabled !== prev.festivalEnabled) setGs_festival(next.festivalEnabled);
+  if (next.audienceParents !== prev.audienceParents) setGs_parents(next.audienceParents);
+  if (next.audienceTeachers !== prev.audienceTeachers) setGs_teachers(next.audienceTeachers);
+  if (next.brandingEnabled !== prev.brandingEnabled) setGs_branding(next.brandingEnabled);
+  if (next.defaultLang !== prev.defaultLang) setGs_lang(next.defaultLang);
+};
 const [userAccounts, setUserAccounts] = usePersist("userAccounts", initUserAccounts);
 const [attendanceLogs, setAttendanceLogs] = usePersist("attendanceLogs", {});
 const [library, setLibrary] = usePersist("library", {
@@ -1796,7 +1821,7 @@ if (!role) return <LoginScreen lang={lang} setLang={setLang} l={l} setRole={setR
 if (role !== "superadmin" && role !== "founder" && !schoolActive) {
 return <SubscriptionExpiredScreen l={l} lang={lang} setLang={setLang} setRole={setRole} />;
 }
-const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, principalFeedbacks, setPrincipalFeedbacks, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection, onlineClasses, setOnlineClasses, employees, saveEmployees };
+const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, principalFeedbacks, setPrincipalFeedbacks, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection, onlineClasses, setOnlineClasses, employees, saveEmployees, greetings, setGreetings, greetingsSentLog, setGreetingsSentLog, greetingSettings, setGreetingSettings, setGs_birthday, setGs_festival, setGs_parents, setGs_teachers, setGs_branding, setGs_lang };
 return (
 <div key={themeMode} style={{display:"flex", flexDirection:"column", height:"100vh", background:T.bg, transition:"background 0.3s"}}>
 {/* TopBar */}
@@ -8928,9 +8953,11 @@ if (n.schoolId && mySchoolId && !sameId(n.schoolId, mySchoolId)) return false;
 const tr = n.target_roles || (n.forRole ? n.forRole.split(",").map(r=>r.trim()) : ["all"]);
 return tr.includes("all") || tr.includes(role);
 });
+const greetingAlerts = (ctx.alerts||[]).filter(function(a){ return a.type==="greeting"; });
 const TABS = [
-{ key:"alerts",  icon:"🛡️", label:"Alerts",  color:"#F75555" },
-{ key:"notices", icon:"📢", label:"Notices", color:"#06B6D4", count: myNotices.length },
+{ key:"alerts",   icon:"🛡️", label:"Alerts",   color:"#F75555" },
+{ key:"notices",  icon:"📢", label:"Notices",  color:"#06B6D4", count: myNotices.length },
+{ key:"greetings",icon:"🎉", label:"Greetings", color:"#A78BFA", count: greetingAlerts.filter(function(a){return !a.read;}).length },
 ];
 return (
 <div className="fadeUp">
@@ -8943,10 +8970,10 @@ return (
 style={{
 display:"flex",alignItems:"center",gap:6,padding:"10px 20px",
 borderRadius:12,cursor:"pointer",flex:1,justifyContent:"center",
-border:`2px solid ${isActive ? tab.color : T.border}`,
-background: isActive ? `${tab.color}18` : T.surface,
+border:"2px solid "+(isActive ? tab.color : T.border),
+background: isActive ? tab.color+"18" : T.surface,
 color: isActive ? tab.color : T.textMuted,
-fontFamily:"'Outfit',sans-serif",fontWeight:isActive?700:500,fontSize:14,
+fontFamily:"Outfit,sans-serif",fontWeight:isActive?700:500,fontSize:14,
 transition:"all 0.15s",
 }}>
 <span style={{fontSize:18}}>{tab.icon}</span>
@@ -8963,8 +8990,264 @@ fontSize:10,fontWeight:700,padding:"1px 7px",marginLeft:2}}>
 </div>
 {/* Colored divider */}
 <div style={{height:2,background:activeTab==="alerts"?"#F75555":"#06B6D4",borderRadius:2,marginBottom:18,transition:"background 0.2s"}} />
-{activeTab === "alerts"  && <SafetySection ctx={ctx} />}
-{activeTab === "notices" && <FilteredNoticesSection ctx={ctx} />}
+{activeTab === "alerts"   && <SafetySection ctx={ctx} />}
+{activeTab === "notices"  && <FilteredNoticesSection ctx={ctx} />}
+{activeTab === "greetings" && <GreetingsInlineSection ctx={ctx} greetingAlerts={greetingAlerts} />}
+</div>
+);
+}
+// ─── GREETINGS INLINE SECTION ────────────────────────────────────────────────
+function GreetingsInlineSection({ ctx, greetingAlerts }) {
+const { greetings, setGreetings, greetingsSentLog, setGreetingsSentLog,
+  greetingSettings, setGreetingSettings, currentSchool, setAlerts,
+  toast, role, loggedInUser, students, teachers } = ctx;
+const mySchoolId = loggedInUser ? loggedInUser.schoolId : null;
+const schoolName = currentSchool ? (currentSchool.name || "School") : "School";
+const todayStr = new Date().toISOString().split("T")[0];
+const [showSettings, setShowSettings] = React.useState(false);
+const [showAdd, setShowAdd] = React.useState(false);
+const [newG, setNewG] = React.useState({name:"",emoji:"🎉",message:"",date:"",time:"09:00"});
+const canManage = ["principal","founder","superadmin","vice_principal"].includes(role);
+const isSent = function(id) {
+  return (greetingsSentLog||[]).some(function(l){ return l.id===String(id) && l.date===todayStr; });
+};
+const markSent = function(id, name, msg) {
+  setGreetingsSentLog(function(prev){
+    return [{id:String(id),name:name,date:todayStr,msg:msg,sentAt:new Date().toLocaleTimeString("en-IN")},
+    ...(prev||[]).slice(0,99)];
+  });
+  toast("Wish sent — "+name, "success");
+};
+const upcomingG = (greetings||[]).filter(function(g){
+  return g.date >= todayStr && (!g.schoolId || String(g.schoolId)===String(mySchoolId));
+}).sort(function(a,b){ return a.date.localeCompare(b.date); });
+const sentToday = (greetingsSentLog||[]).filter(function(l){ return l.date===todayStr; });
+const bdAlerts = greetingAlerts.filter(function(a){ return a.subtype==="birthday"; });
+return (
+<div className="fadeUp" style={{paddingTop:8}}>
+{/* Greeting Alerts */}
+{greetingAlerts.length > 0 && (
+<div style={{marginBottom:16}}>
+<p style={{fontSize:13,fontWeight:800,color:"#A78BFA",marginBottom:8}}>🔔 Greeting Alerts</p>
+{greetingAlerts.map(function(a,i){
+return (
+<div key={i} style={{background:"#110a2a",border:"1px solid #A78BFA30",borderRadius:10,padding:10,marginBottom:6}}>
+<p style={{fontWeight:700,color:"#E8EEF8",fontSize:12}}>{a.title}</p>
+<p style={{fontSize:11,color:"#9AA3B8",marginTop:2}}>{a.message}</p>
+</div>
+);
+})}
+</div>
+)}
+{/* Settings toggle */}
+{canManage && (
+<button onClick={function(e){e.stopPropagation();setShowSettings(function(p){return !p;});}}
+style={{width:"100%",padding:"10px",borderRadius:10,border:"1px solid #A78BFA40",
+background:"#110a2a",color:"#A78BFA",fontWeight:700,fontSize:12,
+cursor:"pointer",fontFamily:"Outfit,sans-serif",marginBottom:8,textAlign:"left"}}>
+{showSettings ? "▲" : "▼"} {"⚙️ Settings & Controls"}
+</button>
+)}
+{canManage && showSettings && (
+<div style={{background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:10,padding:12,marginBottom:12}}>
+<p style={{fontSize:12,fontWeight:800,color:"#E8EEF8",marginBottom:8}}>Controls</p>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<p style={{fontSize:12,color:"#C5CDE0"}}>🎂 Birthday Auto-Alert</p>
+<button onClick={function(e){e.stopPropagation();setGreetingSettings(function(p){return {festivalEnabled:p.festivalEnabled,birthdayEnabled:!p.birthdayEnabled,audienceStudents:p.audienceStudents,audienceParents:p.audienceParents,audienceTeachers:p.audienceTeachers,brandingEnabled:p.brandingEnabled,plan:p.plan,defaultLang:p.defaultLang};});}}
+style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:greetingSettings.birthdayEnabled?"#0ECB81":"#2A3A5A",position:"relative",flexShrink:0}}>
+<div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:greetingSettings.birthdayEnabled?21:3}}></div>
+</button>
+</div>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<p style={{fontSize:12,color:"#C5CDE0"}}>🎊 Festival Auto-Alert</p>
+<button onClick={function(e){e.stopPropagation();setGreetingSettings(function(p){return {festivalEnabled:!p.festivalEnabled,birthdayEnabled:p.birthdayEnabled,audienceStudents:p.audienceStudents,audienceParents:p.audienceParents,audienceTeachers:p.audienceTeachers,brandingEnabled:p.brandingEnabled,plan:p.plan,defaultLang:p.defaultLang};});}}
+style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:greetingSettings.festivalEnabled?"#0ECB81":"#2A3A5A",position:"relative",flexShrink:0}}>
+<div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:greetingSettings.festivalEnabled?21:3}}></div>
+</button>
+</div>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<p style={{fontSize:12,color:"#C5CDE0"}}>🏷️ Powered by SchoolShield</p>
+<button onClick={function(e){e.stopPropagation();setGreetingSettings(function(p){return {festivalEnabled:p.festivalEnabled,birthdayEnabled:p.birthdayEnabled,audienceStudents:p.audienceStudents,audienceParents:p.audienceParents,audienceTeachers:p.audienceTeachers,brandingEnabled:!p.brandingEnabled,plan:p.plan,defaultLang:p.defaultLang};});}}
+style={{width:40,height:22,borderRadius:11,border:"none",cursor:"pointer",background:greetingSettings.brandingEnabled?"#0ECB81":"#2A3A5A",position:"relative",flexShrink:0}}>
+<div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:greetingSettings.brandingEnabled?21:3}}></div>
+</button>
+</div>
+<p style={{fontSize:12,fontWeight:800,color:"#E8EEF8",marginTop:10,marginBottom:6}}>👥 Send To</p>
+<div style={{display:"flex",gap:6}}>
+
+<button onClick={function(e){e.stopPropagation();setGreetingSettings(function(p){return {festivalEnabled:p.festivalEnabled,birthdayEnabled:p.birthdayEnabled,audienceStudents:p.audienceStudents,audienceParents:!p.audienceParents,audienceTeachers:p.audienceTeachers,brandingEnabled:p.brandingEnabled,plan:p.plan,defaultLang:p.defaultLang};});}}
+style={{flex:1,padding:"6px 4px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:11,fontWeight:700,background:greetingSettings.audienceParents?"#4F8EF730":"#1F2A3F",color:greetingSettings.audienceParents?"#4F8EF7":"#6B7A99"}}>Parents</button>
+<button onClick={function(e){e.stopPropagation();setGreetingSettings(function(p){return {festivalEnabled:p.festivalEnabled,birthdayEnabled:p.birthdayEnabled,audienceStudents:p.audienceStudents,audienceParents:p.audienceParents,audienceTeachers:!p.audienceTeachers,brandingEnabled:p.brandingEnabled,plan:p.plan,defaultLang:p.defaultLang};});}}
+style={{flex:1,padding:"6px 4px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:11,fontWeight:700,background:greetingSettings.audienceTeachers?"#4F8EF730":"#1F2A3F",color:greetingSettings.audienceTeachers?"#4F8EF7":"#6B7A99"}}>Teachers</button>
+</div>
+<p style={{fontSize:12,fontWeight:800,color:"#E8EEF8",marginTop:10,marginBottom:6}}>🌐 Language</p>
+<div style={{display:"flex",gap:6}}>
+<button onClick={function(e){e.stopPropagation();setGreetingSettings(function(p){return {festivalEnabled:p.festivalEnabled,birthdayEnabled:p.birthdayEnabled,audienceStudents:p.audienceStudents,audienceParents:p.audienceParents,audienceTeachers:p.audienceTeachers,brandingEnabled:p.brandingEnabled,plan:p.plan,defaultLang:"en"};});}}
+style={{flex:1,padding:"6px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:700,background:greetingSettings.defaultLang==="en"?"#A78BFA":"#1F2A3F",color:greetingSettings.defaultLang==="en"?"#fff":"#6B7A99"}}>English</button>
+<button onClick={function(e){e.stopPropagation();setGreetingSettings(function(p){return {festivalEnabled:p.festivalEnabled,birthdayEnabled:p.birthdayEnabled,audienceStudents:p.audienceStudents,audienceParents:p.audienceParents,audienceTeachers:p.audienceTeachers,brandingEnabled:p.brandingEnabled,plan:p.plan,defaultLang:"hi"};});}}
+style={{flex:1,padding:"6px",borderRadius:8,border:"none",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:700,background:greetingSettings.defaultLang==="hi"?"#A78BFA":"#1F2A3F",color:greetingSettings.defaultLang==="hi"?"#fff":"#6B7A99"}}>Hindi</button>
+</div>
+</div>
+)}
+{/* Birthday wishes */}
+{canManage && bdAlerts.length > 0 && (
+<div style={{marginBottom:14}}>
+<p style={{fontSize:13,fontWeight:800,color:"#F5A623",marginBottom:8}}>🎂 Aaj ke Birthdays</p>
+{bdAlerts.map(function(a,i){
+var sName = a.title.replace("🎂 Birthday Wish — ","");
+var pName = loggedInUser ? (loggedInUser.name || "Principal") : "Principal";
+var line1 = "Dear " + sName + ",";
+var line2 = "Wishing you a very Happy Birthday! 🎂🎉";
+var line3 = "May this special day bring you lots of joy and happiness.";
+var line4 = "— " + pName + " (Principal)";
+var line5 = schoolName || "School";
+var line6 = "Powered by SchoolShield";
+var fullMsg = line1 + "\n\n" + line2 + "\n" + line3 + "\n\n" + line4 + "\n" + line5 + "\n" + line6;
+var waMsg = encodeURIComponent(fullMsg);
+var sRec = (students||[]).find(function(s){ return s.name===sName; });
+var tRec = (teachers||[]).find(function(t){ return t.name===sName; });
+var parentPhone = sRec ? (sRec.parentPhone||sRec.phone||"") : "";
+var recipientPhone = tRec ? (tRec.phone||"") : "";
+var isTeacher = !sRec && !!tRec;
+return (
+<div key={i} style={{background:"#1a1200",border:"1px solid #F5A62330",borderRadius:12,padding:12,marginBottom:10}}>
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+<span style={{fontSize:28}}>🎂</span>
+<div style={{flex:1}}>
+<p style={{fontWeight:800,color:"#E8EEF8",fontSize:13}}>{sName}</p>
+<p style={{fontSize:10,color:"#9AA3B8"}}>{isTeacher ? "Teacher — Aaj birthday hai!" : "Student — Aaj birthday hai!"}</p>
+</div>
+{isSent(a.id||i) && <p style={{fontSize:11,color:"#0ECB81",fontWeight:800}}>✅ Sent</p>}
+</div>
+<div style={{background:"#110800",borderRadius:8,padding:"10px",border:"1px solid #F5A62320",marginBottom:10}}>
+<p style={{fontSize:12,color:"#C5CDE0",lineHeight:1.8,whiteSpace:"pre-line"}}>{fullMsg}</p>
+</div>
+{!isSent(a.id||i) && (
+<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+<button onClick={function(){ markSent(a.id||i, sName, fullMsg); }}
+style={{flex:1,minWidth:110,background:"linear-gradient(135deg,#F5A623,#FF6B35)",border:"none",
+borderRadius:8,padding:"9px 10px",color:"#fff",fontWeight:800,fontSize:11,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+🔔 App Notification
+</button>
+{(isTeacher ? recipientPhone : parentPhone) ? (
+<a href={"https://wa.me/91"+(isTeacher?recipientPhone:parentPhone).replace(/\D/g,"")+"?text="+waMsg}
+target="_blank"
+style={{flex:1,minWidth:110,background:"#25D366",borderRadius:8,padding:"9px 10px",
+color:"#fff",fontWeight:800,fontSize:11,textDecoration:"none",
+display:"flex",alignItems:"center",justifyContent:"center",gap:4,
+fontFamily:"Outfit,sans-serif"}}>
+💬 {isTeacher ? "Teacher WhatsApp" : "Parent WhatsApp"}
+</a>
+) : (
+<p style={{fontSize:10,color:"#6B7A99",alignSelf:"center"}}>Phone nahi hai record mein</p>
+)}
+</div>
+)}
+{isSent(a.id||i) && (isTeacher ? recipientPhone : parentPhone) && (
+<a href={"https://wa.me/91"+(isTeacher?recipientPhone:parentPhone).replace(/\D/g,"")+"?text="+waMsg}
+target="_blank"
+style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+background:"#25D366",borderRadius:8,padding:"8px",color:"#fff",
+fontWeight:800,fontSize:11,textDecoration:"none",marginTop:6,
+fontFamily:"Outfit,sans-serif"}}>
+💬 WhatsApp bhi bhejo
+</a>
+)}
+</div>
+);
+})}
+</div>
+)}
+{/* Festival greetings */}
+{canManage && (
+<div style={{marginBottom:14}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<p style={{fontSize:13,fontWeight:800,color:"#4F8EF7"}}>🎊 Scheduled Greetings</p>
+<button onClick={function(){setShowAdd(function(p){return !p;});}}
+style={{background:"#4F8EF720",border:"1px solid #4F8EF740",borderRadius:8,
+padding:"4px 10px",color:"#4F8EF7",fontSize:11,fontWeight:700,cursor:"pointer",
+fontFamily:"Outfit,sans-serif"}}>
+{showAdd ? "Cancel" : "+ Add"}
+</button>
+</div>
+{showAdd && (
+<div style={{background:"#0F1B35",border:"1px solid #4F8EF740",borderRadius:10,padding:12,marginBottom:10}}>
+{[["Name","text","name","e.g. Diwali"],["Emoji","text","emoji","🎉"],["Date","date","date",""],["Time","time","time",""]].map(function(item){
+return (
+<div key={item[2]} style={{marginBottom:6}}>
+<p style={{fontSize:11,color:"#6B7A99",marginBottom:3}}>{item[0]}</p>
+<input type={item[1]} value={newG[item[2]]} placeholder={item[3]}
+onChange={function(e){ var v=e.target.value; var k=item[2];
+setNewG(function(p){
+  var upd = {...p,[k]:v};
+  if (k==="name" && v && !p.message) {
+    upd.message = greetingSettings.defaultLang==="hi"
+      ? "{SchoolName} ki taraf se aap sabko "+v+" ki shubhkamnayein!"
+      : schoolName+" wishes you a very Happy "+v+"!";
+  }
+  return upd;
+}); }}
+style={{width:"100%",background:"#161B26",border:"1px solid #1F2A3F",borderRadius:6,
+padding:"7px 10px",color:"#E8EEF8",fontSize:12,fontFamily:"Outfit,sans-serif",boxSizing:"border-box",outline:"none"}} />
+</div>
+);
+})}
+<div style={{marginBottom:8}}>
+<p style={{fontSize:11,color:"#6B7A99",marginBottom:3}}>Message</p>
+<textarea rows={2} value={newG.message}
+onChange={function(e){ var v=e.target.value; setNewG(function(p){return {...p,message:v};}); }}
+style={{width:"100%",background:"#161B26",border:"1px solid #1F2A3F",borderRadius:6,
+padding:"7px 10px",color:"#E8EEF8",fontSize:12,fontFamily:"Outfit,sans-serif",
+boxSizing:"border-box",outline:"none",resize:"vertical"}} />
+</div>
+<button onClick={function(){
+if (!newG.name || !newG.date) { toast("Name aur date required!","error"); return; }
+setGreetings(function(prev){ return [...(prev||[]),{...newG,id:Date.now(),schoolId:mySchoolId,createdAt:todayStr}]; });
+setNewG({name:"",emoji:"🎉",message:"",date:"",time:"09:00"});
+setShowAdd(false);
+toast("Greeting saved!","success");
+}}
+style={{width:"100%",padding:"8px",borderRadius:8,border:"none",
+background:"#0ECB81",color:"#fff",fontWeight:800,fontSize:12,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+Save
+</button>
+</div>
+)}
+{upcomingG.length === 0
+? <p style={{color:"#6B7A99",fontSize:12,textAlign:"center",padding:"12px 0"}}>Koi scheduled greeting nahi</p>
+: upcomingG.map(function(g){
+return (
+<div key={g.id} style={{background:"#0F1B35",border:"1px solid #1F2A3F",borderRadius:10,padding:10,marginBottom:6}}>
+<div style={{display:"flex",justifyContent:"space-between"}}>
+<p style={{fontWeight:700,color:"#E8EEF8",fontSize:12}}>{g.emoji+" "+g.name}</p>
+<button onClick={function(){setGreetings(function(prev){return prev.filter(function(x){return x.id!==g.id;});});}}
+style={{background:"none",border:"none",color:"#FF4D4F",cursor:"pointer",fontSize:13}}>🗑️</button>
+</div>
+<p style={{fontSize:10,color:"#9AA3B8"}}>{"📅 "+g.date+" • ⏰ "+g.time}</p>
+</div>
+);
+})
+}
+</div>
+)}
+{/* Sent today */}
+{sentToday.length > 0 && (
+<div>
+<p style={{fontSize:12,fontWeight:800,color:"#0ECB81",marginBottom:6}}>{"📋 Aaj bheji — "+sentToday.length+" wishes"}</p>
+{sentToday.map(function(e,i){
+return (
+<div key={i} style={{background:"#051a0f",border:"1px solid #0ECB8120",borderRadius:8,padding:8,marginBottom:4}}>
+<div style={{display:"flex",justifyContent:"space-between"}}>
+<p style={{fontWeight:700,color:"#E8EEF8",fontSize:11}}>{e.name}</p>
+<p style={{fontSize:10,color:"#0ECB81"}}>{"✅ "+e.sentAt}</p>
+</div>
+</div>
+);
+})}
+</div>
+)}
 </div>
 );
 }
@@ -11237,104 +11520,107 @@ const PERIOD_COLORS = ["#7EC8F7","#F7C87E","#F7A07E","#A8D8A8","#F4A0C0","#B8A8F
 function SearchableDropdown({ value, onChange, options, placeholder }) {
 const [open, setOpen] = React.useState(false);
 const [query, setQuery] = React.useState(value || "");
-const ref = React.useRef(null);
-React.useEffect(() => { setQuery(value || ""); }, [value]);
-const filtered = query.trim() === ""
-? options
-: options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
-const select = (opt) => {
-onChange(opt);
-setQuery(opt);
-setOpen(false);
-};
-React.useEffect(() => {
-if (!open) return;
-const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-document.addEventListener("mousedown", handler);
-document.addEventListener("touchstart", handler);
-return () => { document.removeEventListener("mousedown", handler); document.removeEventListener("touchstart", handler); };
-}, [open]);
-const inputStyle = {width:"100%",background:T.surface,border:"1px solid "+(open?T.accent:T.border),borderRadius:open&&filtered.length>0?"8px 8px 0 0":8,padding:"9px 36px 9px 12px",color:T.text,fontSize:13,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"};
 const inputRef = React.useRef(null);
-const [dropPos, setDropPos] = React.useState({top:0,left:0,width:0});
-const updatePos = () => {
-if (inputRef.current) {
-const r = inputRef.current.getBoundingClientRect();
-setDropPos({ top: r.bottom + window.scrollY, left: r.left + window.scrollX, width: r.width });
-}
+const dropRef = React.useRef(null);
+const [dropStyle, setDropStyle] = React.useState({});
+React.useEffect(function(){ setQuery(value || ""); }, [value]);
+const filtered = query.trim() === ""
+  ? options
+  : options.filter(function(o){ return o.toLowerCase().includes(query.toLowerCase()); });
+const select = function(opt) {
+  onChange(opt); setQuery(opt); setOpen(false);
 };
+const calcPos = function() {
+  if (!inputRef.current) return;
+  var r = inputRef.current.getBoundingClientRect();
+  var spaceBelow = window.innerHeight - r.bottom;
+  var spaceAbove = r.top;
+  var maxH = Math.min(220, spaceBelow > 150 ? spaceBelow - 16 : spaceAbove - 16);
+  var showAbove = spaceBelow < 150 && spaceAbove > spaceBelow;
+  setDropStyle({
+    position:"fixed",
+    left: r.left,
+    width: r.width,
+    zIndex: 999999,
+    top: showAbove ? "auto" : r.bottom + 2,
+    bottom: showAbove ? (window.innerHeight - r.top + 2) : "auto",
+    maxHeight: Math.max(maxH, 100),
+    background: T.card,
+    border: "1px solid "+T.accent,
+    borderRadius: 10,
+    overflowY: "auto",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+    WebkitOverflowScrolling: "touch"
+  });
+};
+React.useEffect(function() {
+  if (!open) return;
+  calcPos();
+  var handler = function(e) {
+    if (inputRef.current && inputRef.current.contains(e.target)) return;
+    if (dropRef.current && dropRef.current.contains(e.target)) return;
+    setOpen(false);
+  };
+  document.addEventListener("mousedown", handler);
+  document.addEventListener("touchstart", handler);
+  return function() {
+    document.removeEventListener("mousedown", handler);
+    document.removeEventListener("touchstart", handler);
+  };
+}, [open]);
 return (
-<div ref={ref} style={{position:"relative", width:"100%"}}>
+<div style={{position:"relative", width:"100%"}}>
 <div style={{position:"relative"}}>
 <input
 ref={inputRef}
 value={query}
-onChange={e=>{ setQuery(e.target.value); onChange(e.target.value); setOpen(true); updatePos(); }}
-onFocus={()=>{ setOpen(true); updatePos(); }}
+onChange={function(e){ setQuery(e.target.value); onChange(e.target.value); if(!open){setOpen(true); setTimeout(calcPos,10);} }}
+onFocus={function(){ setOpen(true); setTimeout(calcPos,10); }}
 placeholder={placeholder}
 autoComplete="off"
-style={inputStyle}
+style={{width:"100%",background:T.surface,border:"1px solid "+(open?T.accent:T.border),
+borderRadius:8,padding:"9px 36px 9px 12px",color:T.text,fontSize:13,outline:"none",
+fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}}
 />
-<span
-onClick={()=>{ setOpen(o=>{ if(!o) updatePos(); return !o; }); }}
-style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:T.textMuted,fontSize:11,userSelect:"none"}}
->{open?"▲":"▼"}</span>
+<span onClick={function(){ if(open){setOpen(false);}else{setOpen(true);setTimeout(calcPos,10);} }}
+style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+cursor:"pointer",color:T.textMuted,fontSize:11,userSelect:"none"}}>
+{open?"▲":"▼"}
+</span>
 </div>
 {open && filtered.length > 0 && window.document.body && ReactDOM.createPortal(
-<div style={{
-position:"absolute",
-top: dropPos.top,
-left: dropPos.left,
-width: dropPos.width,
-zIndex:999999,
-background:T.card,
-border:"1px solid "+T.accent,
-borderRadius:8,
-maxHeight:200,
-overflowY:"auto",
-boxShadow:"0 8px 24px rgba(0,0,0,0.5)"
-}}>
-{(() => {
-let _touchStartY = 0;
-let _touchStartX = 0;
-let _didScroll = false;
-return filtered.map((opt,i) => (
-<div
-key={i}
-onMouseDown={e=>{ e.preventDefault(); e.stopPropagation(); select(opt); }}
-onTouchStart={e=>{
-_touchStartY = e.touches[0].clientY;
-_touchStartX = e.touches[0].clientX;
-_didScroll = false;
-}}
-onTouchMove={e=>{
-const dy = Math.abs(e.touches[0].clientY - _touchStartY);
-const dx = Math.abs(e.touches[0].clientX - _touchStartX);
-if (dy > 5 || dx > 5) _didScroll = true;
-}}
-onTouchEnd={e=>{
-if (!_didScroll) { e.preventDefault(); e.stopPropagation(); select(opt); }
-}}
+<div ref={dropRef} style={dropStyle}>
+{filtered.map(function(opt,i){
+var touchStartY = 0;
+var didScroll = false;
+return (
+<div key={i}
+onMouseDown={function(e){ e.preventDefault(); select(opt); }}
+onTouchStart={function(e){ touchStartY = e.touches[0].clientY; didScroll = false; }}
+onTouchMove={function(e){ if(Math.abs(e.touches[0].clientY - touchStartY) > 8) didScroll = true; }}
+onTouchEnd={function(e){ if(!didScroll){ e.preventDefault(); select(opt); } }}
 style={{
-padding:"11px 14px", fontSize:13, color: opt===value ? T.accent : T.text,
-background: opt===value ? T.accent+"15" : "transparent",
-cursor:"pointer", fontFamily:"Outfit,sans-serif",
-borderBottom: i<filtered.length-1 ? "1px solid "+T.border : "none",
-fontWeight: opt===value ? 700 : 400,
-userSelect:"none", touchAction:"pan-y"
-}}
->{opt}</div>
-));
-})()}
+padding:"12px 14px",fontSize:13,
+color:opt===value?T.accent:T.text,
+background:opt===value?T.accent+"18":"transparent",
+cursor:"pointer",fontFamily:"Outfit,sans-serif",
+borderBottom:i<filtered.length-1?"1px solid "+T.border:"none",
+fontWeight:opt===value?700:400,
+userSelect:"none"
+}}>
+{opt}
+</div>
+);
+})}
 </div>,
 document.body
 )}
 {open && filtered.length === 0 && query.trim() !== "" && (
 <div style={{
-position:"absolute", top:"100%", left:0, right:0, zIndex:9999,
-background:T.card, border:"1px solid "+T.border, borderTop:"none",
-borderRadius:"0 0 8px 8px", padding:"10px 14px",
-color:T.textMuted, fontSize:12, fontFamily:"Outfit,sans-serif"
+position:"absolute",top:"100%",left:0,right:0,zIndex:9999,
+background:T.card,border:"1px solid "+T.border,
+borderRadius:8,padding:"10px 14px",
+color:T.textMuted,fontSize:12,fontFamily:"Outfit,sans-serif"
 }}>No match found — press Save to use as custom</div>
 )}
 </div>
@@ -26193,7 +26479,7 @@ return (
 <p style={{fontSize:10, color:T.textMuted}}>{sheet.fileName}</p>
 </div>
 <a href={sheet.dataUrl} download={sheet.fileName} style={{fontSize:11, color:T.green, textDecoration:"none", fontWeight:700, borderRadius:6, padding:"3px 8px", background:T.green+"20"}}>⬇️</a>
-{isPrincipal && <button onClick={()=>{ setShowUpload(stu.id || stu.name); setUploadFile(null); uploadRef.current?.click(); }} style={{fontSize:11, color:T.yellow, background:T.yellow+"15", border:"1px solid "+T.yellow+"40", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>↺ Replace</button>}
+{isPrincipal && <button onClick={()=>{ setShowUpload(stu.id || stu.name); setUploadFile(null); if(uploadRef.current){uploadRef.current.value=""; uploadRef.current.click();} }} style={{fontSize:11, color:T.yellow, background:T.yellow+"15", border:"1px solid "+T.yellow+"40", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>↺ Replace</button>}
 </div>
 ) : isPrincipal ? (
 <div>
@@ -26205,7 +26491,7 @@ return (
 <button onClick={()=>{setShowUpload(null);setUploadFile(null);}} style={{background:"none", border:"1px solid "+T.border, borderRadius:7, padding:"5px 10px", color:T.textMuted, cursor:"pointer", fontSize:11}}>✕</button>
 </div>
 ) : (
-<button onClick={()=>{ setShowUpload(stu.id || stu.name); setUploadFile(null); uploadRef.current?.click(); }}
+<button onClick={()=>{ setShowUpload(stu.id || stu.name); setUploadFile(null); if(uploadRef.current){uploadRef.current.value=""; uploadRef.current.click();} }}
 style={{background:T.accent+"15", border:"1px dashed "+T.accent+"60", borderRadius:8, padding:"7px 14px", color:T.accent, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:12, fontWeight:600, width:"100%"}}>
 📤 Answer Sheet Upload Karo
 </button>
