@@ -992,6 +992,33 @@ return (
 <Field label="📧 Email Address" k="email" placeholder="e.g. support@yourschool.in" type="email" />
 <Field label="🕐 Support Hours" k="hours" placeholder="e.g. Mon-Sat, 9AM-6PM" />
 <Field label="❓ FAQ/Help URL (optional)" k="faqUrl" placeholder="https://..." />
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🤖 Active AI Provider</p>
+<select value={info.aiProvider||"groq"} onChange={e=>setInfo(p=>({...p,aiProvider:e.target.value}))}
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}}>
+<option value="groq">Groq (Llama3) — Fast & Free</option>
+<option value="gemini">Google Gemini</option>
+<option value="claude">Claude (Anthropic) — Best Quality</option>
+</select>
+</div>
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🟢 Groq API Key</p>
+<input type="password" value={info.groqApiKey||""} onChange={e=>setInfo(p=>({...p,groqApiKey:e.target.value}))} placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+<p style={{fontSize:11,color:"#6B7A99",marginTop:4}}>groq.com se milegi — Free tier available</p>
+</div>
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🔵 Google Gemini API Key</p>
+<input type="password" value={info.geminiApiKey||""} onChange={e=>setInfo(p=>({...p,geminiApiKey:e.target.value}))} placeholder="AIzaSy_xxxxxxxxxxxxxxxxxxxx"
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+<p style={{fontSize:11,color:"#6B7A99",marginTop:4}}>aistudio.google.com se milegi — Free tier available</p>
+</div>
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🟣 Claude (Anthropic) API Key</p>
+<input type="password" value={info.claudeApiKey||""} onChange={e=>setInfo(p=>({...p,claudeApiKey:e.target.value}))} placeholder="sk-ant-xxxxxxxxxxxxxxxxxxxx"
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+<p style={{fontSize:11,color:"#6B7A99",marginTop:4}}>console.anthropic.com se milegi</p>
+</div>
 <button onClick={save} style={{
 width:"100%",padding:"13px",
 background:saved?"#0ECB81":"#4F8EF7",
@@ -1689,13 +1716,41 @@ return;
 }
 setAiLoading(true); setAiResult("");
 try {
-const res = await fetch("https://api.anthropic.com/v1/messages", {
+const supportRaw = localStorage.getItem("ss_supportInfo");
+const supportData = supportRaw ? JSON.parse(supportRaw) : {};
+const provider = supportData.aiProvider || "groq";
+let text = "";
+if (provider === "groq") {
+const key = supportData.groqApiKey || "";
+if (!key) { setAiResult("⚠️ Groq API key nahi mili. Support Settings mein daalo."); setAiLoading(false); return; }
+const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
 method:"POST",
-headers:{"Content-Type":"application/json"},
-body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] })
+headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+body: JSON.stringify({ model:"llama3-8b-8192", max_tokens:1000, messages:[{role:"user",content:prompt}] })
 });
 const data = await res.json();
-const text = data.content?.map(c=>c.text||"").join("") || "Generated content";
+text = data.choices?.[0]?.message?.content || "Generated content";
+} else if (provider === "gemini") {
+const key = supportData.geminiApiKey || "";
+if (!key) { setAiResult("⚠️ Gemini API key nahi mili. Support Settings mein daalo."); setAiLoading(false); return; }
+const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+key, {
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body: JSON.stringify({ contents:[{ parts:[{text:prompt}] }] })
+});
+const data = await res.json();
+text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Generated content";
+} else if (provider === "claude") {
+const key = supportData.claudeApiKey || "";
+if (!key) { setAiResult("⚠️ Claude API key nahi mili. Support Settings mein daalo."); setAiLoading(false); return; }
+const res = await fetch("https://api.anthropic.com/v1/messages", {
+method:"POST",
+headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
+body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:1000, messages:[{role:"user",content:prompt}] })
+});
+const data = await res.json();
+text = data.content?.map(function(c){return c.text||"";}).join("") || "Generated content";
+}
 setAiResult(text);
 } catch(e) {
 if (!navigator.onLine) {
