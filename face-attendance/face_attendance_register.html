@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SchoolShield — Face Registration</title>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;}
+.header{background:#1e293b;padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #334155;}
+.header h1{font-size:18px;font-weight:700;color:#fff;}
+.header span{font-size:12px;color:#94a3b8;}
+.container{padding:20px;max-width:480px;margin:0 auto;}
+.card{background:#1e293b;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid #334155;}
+.card h2{font-size:15px;font-weight:700;color:#fff;margin-bottom:12px;}
+select,input{width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px 14px;color:#e2e8f0;font-size:14px;font-family:inherit;margin-bottom:10px;outline:none;}
+select:focus,input:focus{border-color:#3b82f6;}
+.btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.2s;}
+.btn-blue{background:#3b82f6;color:#fff;}
+.btn-green{background:#10b981;color:#fff;}
+.btn-red{background:#ef4444;color:#fff;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-outline{background:none;border:1px solid #334155;color:#94a3b8;}
+#video-container{position:relative;border-radius:12px;overflow:hidden;background:#000;margin-bottom:12px;}
+video{width:100%;display:block;border-radius:12px;}
+canvas{position:absolute;top:0;left:0;}
+.status{padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:10px;text-align:center;}
+.status.info{background:#1e40af33;color:#60a5fa;border:1px solid #1e40af55;}
+.status.success{background:#065f4633;color:#34d399;border:1px solid #065f4655;}
+.status.error{background:#7f1d1d33;color:#f87171;border:1px solid #7f1d1d55;}
+.status.warning{background:#78350f33;color:#fbbf24;border:1px solid #78350f55;}
+.person-card{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#0f172a;border-radius:10px;margin-bottom:8px;border:1px solid #334155;}
+.avatar{width:40px;height:40px;border-radius:50%;background:#1e40af;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;}
+.person-info{flex:1;}
+.person-name{font-size:13px;font-weight:700;color:#fff;}
+.person-sub{font-size:11px;color:#64748b;}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
+.badge-green{background:#065f4633;color:#34d399;border:1px solid #065f4655;}
+.badge-yellow{background:#78350f33;color:#fbbf24;border:1px solid #78350f55;}
+.login-box{background:#1e293b;border-radius:16px;padding:24px;max-width:360px;margin:40px auto;}
+.login-box h2{font-size:18px;font-weight:800;margin-bottom:6px;}
+.login-box p{font-size:13px;color:#94a3b8;margin-bottom:20px;}
+.search-box{position:relative;}
+.search-box input{padding-left:36px;}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;}
+.tab-bar{display:flex;gap:6px;margin-bottom:16px;}
+.tab{flex:1;padding:9px;border-radius:10px;border:1px solid #334155;background:none;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.tab.active{background:#3b82f655;border-color:#3b82f6;color:#60a5fa;}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="login-screen" style="padding:20px;">
+<div class="login-box">
+<div style="font-size:32px;margin-bottom:12px;">🛡️</div>
+<h2>SchoolShield</h2>
+<p>Face Registration — Admin Login</p>
+<input type="text" id="login-school" placeholder="School ID (e.g. SCH_001)" style="margin-bottom:10px;"/>
+<input type="password" id="login-pass" placeholder="Admin Password"/>
+<div id="login-error" class="status error" style="display:none;margin-bottom:10px;"></div>
+<button class="btn btn-blue" onclick="doLogin()">Login</button>
+</div>
+</div>
+
+<!-- Main App -->
+<div id="main-app" style="display:none;">
+<div class="header">
+<div style="font-size:24px;">📷</div>
+<div>
+<h1>Face Registration</h1>
+<span id="school-name-header">SchoolShield</span>
+</div>
+<button onclick="doLogout()" style="margin-left:auto;background:none;border:1px solid #ef4444;color:#ef4444;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;">Logout</button>
+</div>
+
+<div class="container">
+<!-- Tab Bar -->
+<div class="tab-bar">
+<button class="tab active" id="tab-register" onclick="switchTab('register')">📷 Register Face</button>
+<button class="tab" id="tab-list" onclick="switchTab('list')">👥 View Registered</button>
+</div>
+
+<!-- Register Tab -->
+<div id="panel-register">
+<div class="card">
+<h2>Select Person</h2>
+<div class="tab-bar">
+<button class="tab active" id="type-student" onclick="switchType('student')">👦 Student</button>
+<button class="tab" id="type-teacher" onclick="switchType('teacher')">👩‍🏫 Teacher</button>
+<button class="tab" id="type-employee" onclick="switchType('employee')">👔 Employee</button>
+</div>
+<div class="search-box">
+<span class="search-icon">🔍</span>
+<input type="text" id="person-search" placeholder="Search by name..." oninput="filterPersons()"/>
+</div>
+<div id="person-list" style="max-height:200px;overflow-y:auto;"></div>
+</div>
+
+<div class="card" id="camera-card" style="display:none;">
+<h2 id="reg-person-name">Register Face</h2>
+<div id="reg-status" class="status info">Click "Start Camera" to begin</div>
+<div id="video-container">
+<video id="reg-video" autoplay muted playsinline></video>
+<canvas id="reg-canvas"></canvas>
+</div>
+<div style="display:flex;gap:8px;">
+<button class="btn btn-blue" id="btn-start-cam" onclick="startRegCamera()">📷 Start Camera</button>
+<button class="btn btn-green" id="btn-capture" onclick="captureAndRegister()" disabled>✅ Capture & Register</button>
+</div>
+<button class="btn btn-outline" style="margin-top:8px;" onclick="cancelReg()">Cancel</button>
+</div>
+</div>
+
+<!-- List Tab -->
+<div id="panel-list" style="display:none;">
+<div class="card">
+<h2>Registered Faces</h2>
+<div class="tab-bar">
+<button class="tab active" id="list-student" onclick="switchListType('student')">👦 Students</button>
+<button class="tab" id="list-teacher" onclick="switchListType('teacher')">👩‍🏫 Teachers</button>
+<button class="tab" id="list-employee" onclick="switchListType('employee')">👔 Employees</button>
+</div>
+<div id="registered-list"></div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBZ-l1Mp-B4m024DLD-e2yRuXu49gld1Lg",
+  authDomain: "school-shield-df230.firebaseapp.com",
+  databaseURL: "https://school-shield-df230-default-rtdb.firebaseio.com",
+  projectId: "school-shield-df230",
+  storageBucket: "school-shield-df230.firebasestorage.app",
+  messagingSenderId: "721192911180",
+  appId: "1:721192911180:web:9ca9bda66514e2815f8fe9"
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+let schoolId = null;
+let schoolData = {};
+let allPersons = { student: [], teacher: [], employee: [] };
+let faceDescriptors = {};
+let currentType = 'student';
+let selectedPerson = null;
+let regStream = null;
+let modelsLoaded = false;
+let listType = 'student';
+
+// Load face-api models
+async function loadModels() {
+  try {
+    const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+    ]);
+    modelsLoaded = true;
+    console.log('Models loaded');
+  } catch(e) {
+    console.error('Model load failed:', e);
+  }
+}
+
+loadModels();
+
+function ssRef(path) {
+  return db.ref('schoolshield/schools/' + schoolId + '/' + path);
+}
+
+async function doLogin() {
+  const sid = document.getElementById('login-school').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  if (!sid || !pass) return showLoginError('Please fill all fields');
+  
+  try {
+    const snap = await db.ref('schoolshield/schools/' + sid).get();
+    if (!snap.exists()) return showLoginError('School not found');
+    const data = snap.val();
+    const accounts = data.userAccounts ? Object.values(data.userAccounts) : [];
+    const admin = accounts.find(a => ['principal','founder','superadmin'].includes(a.role) && (a.password === pass || a.pin === pass));
+    if (!admin) return showLoginError('Invalid credentials');
+    
+    schoolId = sid;
+    schoolData = data;
+    document.getElementById('school-name-header').textContent = data.schools ? Object.values(data.schools)[0]?.name || sid : sid;
+    
+    // Load persons
+    allPersons.student = data.students ? Object.values(data.students) : [];
+    allPersons.teacher = data.teachers ? Object.values(data.teachers) : [];
+    allPersons.employee = data.employees ? Object.values(data.employees) : [];
+    
+    // Load face descriptors
+    const fdSnap = await db.ref('schoolshield/faceDescriptors/' + sid).get();
+    if (fdSnap.exists()) faceDescriptors = fdSnap.val() || {};
+    
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    filterPersons();
+  } catch(e) {
+    showLoginError('Login failed: ' + e.message);
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  schoolId = null;
+  if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'block';
+}
+
+function switchTab(tab) {
+  document.getElementById('panel-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('panel-list').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('tab-register').className = 'tab' + (tab === 'register' ? ' active' : '');
+  document.getElementById('tab-list').className = 'tab' + (tab === 'list' ? ' active' : '');
+  if (tab === 'list') renderRegisteredList();
+}
+
+function switchType(type) {
+  currentType = type;
+  ['student','teacher','employee'].forEach(t => {
+    document.getElementById('type-' + t).className = 'tab' + (t === type ? ' active' : '');
+  });
+  filterPersons();
+}
+
+function switchListType(type) {
+  listType = type;
+  ['student','teacher','employee'].forEach(t => {
+    document.getElementById('list-' + t).className = 'tab' + (t === type ? ' active' : '');
+  });
+  renderRegisteredList();
+}
+
+function filterPersons() {
+  const q = (document.getElementById('person-search').value || '').toLowerCase();
+  const persons = allPersons[currentType] || [];
+  const filtered = persons.filter(p => (p.name||'').toLowerCase().includes(q));
+  const container = document.getElementById('person-list');
+  if (!filtered.length) { container.innerHTML = '<p style="color:#64748b;font-size:13px;padding:10px;">No persons found</p>'; return; }
+  container.innerHTML = filtered.map(p => {
+    const key = currentType + '_' + p.id;
+    const isReg = !!faceDescriptors[key];
+    return '<div class="person-card" onclick="selectPerson(\'' + currentType + '\',\'' + p.id + '\')" style="cursor:pointer;">' +
+      '<div class="avatar">' + (p.photo && p.photo.startsWith('data:') ? '<img src="' + p.photo + '"/>' : (p.photo || (currentType==='student'?'👦':'👩‍💼'))) + '</div>' +
+      '<div class="person-info"><div class="person-name">' + (p.name||'—') + '</div>' +
+      '<div class="person-sub">' + (p.class||p.subject||p.designation||currentType) + '</div></div>' +
+      '<span class="badge ' + (isReg ? 'badge-green' : 'badge-yellow') + '">' + (isReg ? '✅ Registered' : '⚠️ Pending') + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+function selectPerson(type, id) {
+  const persons = allPersons[type] || [];
+  selectedPerson = persons.find(p => String(p.id) === String(id));
+  if (!selectedPerson) return;
+  currentType = type;
+  document.getElementById('reg-person-name').textContent = 'Register: ' + selectedPerson.name;
+  document.getElementById('camera-card').style.display = 'block';
+  document.getElementById('reg-status').className = 'status info';
+  document.getElementById('reg-status').textContent = 'Click "Start Camera" to begin face registration';
+  document.getElementById('btn-capture').disabled = true;
+  document.getElementById('btn-start-cam').disabled = false;
+  document.getElementById('camera-card').scrollIntoView({behavior:'smooth'});
+}
+
+async function startRegCamera() {
+  if (!modelsLoaded) {
+    document.getElementById('reg-status').className = 'status warning';
+    document.getElementById('reg-status').textContent = 'Models loading... please wait';
+    await loadModels();
+  }
+  try {
+    regStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}});
+    const video = document.getElementById('reg-video');
+    video.srcObject = regStream;
+    await video.play();
+    document.getElementById('btn-start-cam').disabled = true;
+    document.getElementById('btn-capture').disabled = false;
+    document.getElementById('reg-status').className = 'status info';
+    document.getElementById('reg-status').textContent = 'Camera ready — Position face in center and blink once, then click Capture';
+    startBlinkDetection();
+  } catch(e) {
+    document.getElementById('reg-status').className = 'status error';
+    document.getElementById('reg-status').textContent = 'Camera error: ' + e.message;
+  }
+}
+
+let blinkInterval = null;
+let blinkDetected = false;
+let eyesClosed = false;
+let eyeOpenCount = 0;
+
+function startBlinkDetection() {
+  blinkDetected = false;
+  eyesClosed = false;
+  eyeOpenCount = 0;
+  blinkInterval = setInterval(async () => {
+    const video = document.getElementById('reg-video');
+    const result = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks(true);
+    if (!result) return;
+    const lm = result.landmarks;
+    const leftEye = lm.getLeftEye();
+    const rightEye = lm.getRightEye();
+    const leftEAR = eyeAspectRatio(leftEye);
+    const rightEAR = eyeAspectRatio(rightEye);
+    const avgEAR = (leftEAR + rightEAR) / 2;
+    if (avgEAR < 0.22) { eyesClosed = true; }
+    else if (eyesClosed && avgEAR > 0.28) {
+      eyesClosed = false;
+      blinkDetected = true;
+      clearInterval(blinkInterval);
+      document.getElementById('reg-status').className = 'status success';
+      document.getElementById('reg-status').textContent = '✅ Blink detected! Click Capture to register face.';
+    }
+  }, 150);
+}
+
+function eyeAspectRatio(eye) {
+  const A = dist(eye[1], eye[5]);
+  const B = dist(eye[2], eye[4]);
+  const C = dist(eye[0], eye[3]);
+  return (A + B) / (2.0 * C);
+}
+
+function dist(p1, p2) {
+  return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+}
+
+async function captureAndRegister() {
+  if (!selectedPerson) return;
+  if (!blinkDetected) {
+    document.getElementById('reg-status').className = 'status warning';
+    document.getElementById('reg-status').textContent = '⚠️ Please blink first to verify liveness';
+    return;
+  }
+  document.getElementById('btn-capture').disabled = true;
+  document.getElementById('reg-status').className = 'status info';
+  document.getElementById('reg-status').textContent = 'Processing face...';
+  
+  try {
+    const video = document.getElementById('reg-video');
+    const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks(true).withFaceDescriptor();
+    
+    if (!detection) {
+      document.getElementById('reg-status').className = 'status error';
+      document.getElementById('reg-status').textContent = '❌ No face detected. Try again.';
+      document.getElementById('btn-capture').disabled = false;
+      return;
+    }
+    
+    const key = currentType + '_' + selectedPerson.id;
+    const descriptor = Array.from(detection.descriptor);
+    
+    // Save to Firebase
+    await db.ref('schoolshield/faceDescriptors/' + schoolId + '/' + key).set({
+      descriptor: descriptor,
+      name: selectedPerson.name,
+      type: currentType,
+      personId: selectedPerson.id,
+      registeredAt: new Date().toISOString()
+    });
+    
+    faceDescriptors[key] = { descriptor, name: selectedPerson.name, type: currentType, personId: selectedPerson.id };
+    
+    // Stop camera
+    if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+    clearInterval(blinkInterval);
+    
+    document.getElementById('reg-status').className = 'status success';
+    document.getElementById('reg-status').textContent = '✅ Face registered for ' + selectedPerson.name + '!';
+    document.getElementById('camera-card').style.display = 'none';
+    selectedPerson = null;
+    filterPersons();
+    
+  } catch(e) {
+    document.getElementById('reg-status').className = 'status error';
+    document.getElementById('reg-status').textContent = 'Error: ' + e.message;
+    document.getElementById('btn-capture').disabled = false;
+  }
+}
+
+function cancelReg() {
+  if (regStream) { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+  clearInterval(blinkInterval);
+  document.getElementById('camera-card').style.display = 'none';
+  selectedPerson = null;
+}
+
+function renderRegisteredList() {
+  const persons = allPersons[listType] || [];
+  const container = document.getElementById('registered-list');
+  const registered = persons.filter(p => !!faceDescriptors[listType + '_' + p.id]);
+  const pending = persons.filter(p => !faceDescriptors[listType + '_' + p.id]);
+  
+  let html = '';
+  if (registered.length) {
+    html += '<p style="font-size:12px;color:#34d399;margin-bottom:8px;font-weight:700;">✅ Registered (' + registered.length + ')</p>';
+    html += registered.map(p => '<div class="person-card">' +
+      '<div class="avatar">' + (p.photo && p.photo.startsWith('data:') ? '<img src="' + p.photo + '"/>' : (p.photo || '👤')) + '</div>' +
+      '<div class="person-info"><div class="person-name">' + (p.name||'—') + '</div><div class="person-sub">' + (p.class||p.designation||listType) + '</div></div>' +
+      '<button onclick="deleteRegistration(\'' + listType + '\',\'' + p.id + '\')" style="background:none;border:1px solid #ef4444;color:#ef4444;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px;">Remove</button>' +
+      '</div>').join('');
+  }
+  if (pending.length) {
+    html += '<p style="font-size:12px;color:#fbbf24;margin-top:12px;margin-bottom:8px;font-weight:700;">⚠️ Not Registered (' + pending.length + ')</p>';
+    html += pending.map(p => '<div class="person-card">' +
+      '<div class="avatar">' + (p.photo || '👤') + '</div>' +
+      '<div class="person-info"><div class="person-name">' + (p.name||'—') + '</div><div class="person-sub">' + (p.class||p.designation||listType) + '</div></div>' +
+      '<span class="badge badge-yellow">Pending</span></div>').join('');
+  }
+  if (!persons.length) html = '<p style="color:#64748b;font-size:13px;">No records found</p>';
+  container.innerHTML = html;
+}
+
+async function deleteRegistration(type, id) {
+  if (!confirm('Remove face registration for this person?')) return;
+  const key = type + '_' + id;
+  await db.ref('schoolshield/faceDescriptors/' + schoolId + '/' + key).remove();
+  delete faceDescriptors[key];
+  renderRegisteredList();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

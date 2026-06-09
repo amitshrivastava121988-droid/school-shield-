@@ -3239,6 +3239,16 @@ style={{background:`${opt.color}10`, border:`1.5px solid ${opt.color}40`, border
 </div>
 </button>
 ))}
+<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+style={{background:"#A78BFA10",border:"1.5px solid #A78BFA40",borderRadius:14,padding:"16px 18px",
+cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left",
+width:"100%",textDecoration:"none"}}>
+<span style={{fontSize:32}}>{"🧠"}</span>
+<div>
+<p style={{fontSize:14,fontWeight:700,color:"#A78BFA",fontFamily:"Outfit,sans-serif"}}>{"Face Recognition"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginTop:3,fontFamily:"Outfit,sans-serif"}}>{"AI-powered face + blink detection — auto marks attendance in SchoolShield"}</p>
+</div>
+</a>
 </div>
 </div>
 );
@@ -19057,6 +19067,19 @@ display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexS
 <span style={{marginLeft:"auto", fontSize:18, color:T.textMuted}}>›</span>
 </button>
 ))}
+<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",
+background:"#A78BFA12",border:"1.5px solid #A78BFA40",
+borderRadius:14,cursor:"pointer",textAlign:"left",width:"100%",
+fontFamily:"Outfit,sans-serif",textDecoration:"none"}}>
+<div style={{width:44,height:44,borderRadius:12,background:"#A78BFA20",
+display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{"🧠"}</div>
+<div>
+<p style={{fontWeight:800,color:T.text,fontSize:14}}>{"Face Recognition"}</p>
+<p style={{fontSize:12,color:T.textMuted,marginTop:2}}>{"AI face + blink detection — auto marks attendance"}</p>
+</div>
+<span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
+</a>
 </div>
 {markedCount > 0 && (
 <button onClick={handleSave}
@@ -19744,6 +19767,22 @@ return evThisMonth.length>0?(
 {/* ── PRINCIPAL ATTENDANCE TAB ── */}
 {tab==="attendance" && isPrincipal && (
 <div>
+{/* Principal Self Attendance */}
+<div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:14,marginBottom:14}}>
+<p style={{fontSize:13,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"My Attendance (Face Recognition)"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:10}}>{"Location verified — must be within 50m of school"}</p>
+<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
+background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
+textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
+<span style={{fontSize:26}}>{"🧠"}</span>
+<div>
+<p style={{fontWeight:800,color:"#A78BFA",fontSize:13,fontFamily:"Outfit,sans-serif"}}>{"Open Face Attendance"}</p>
+<p style={{fontSize:11,color:T.textMuted,fontFamily:"Outfit,sans-serif"}}>{"📍 GPS + Blink verify — Mobile Mode"}</p>
+</div>
+<span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
+</a>
+</div>
 {/* Students / Teachers toggle */}
 <div style={{display:"flex",gap:8,marginBottom:12}}>
 {["students","teachers"].map(ft=>(
@@ -19792,12 +19831,46 @@ onMouseLeave={e=>e.currentTarget.style.border=`1px solid ${T.border}`}>
 )}
 {/* ── TEACHER: My Attendance ── */}
 {tab==="myattendance" && isTeacher && teacherPerson && (
+<div>
+<div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
+<p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
+<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
+background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
+textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
+<span style={{fontSize:28}}>{"🧠"}</span>
+<div>
+<p style={{fontWeight:800,color:"#A78BFA",fontSize:14,fontFamily:"Outfit,sans-serif"}}>{"Face Attendance"}</p>
+<p style={{fontSize:11,color:T.textMuted,fontFamily:"Outfit,sans-serif"}}>{"📍 Location check + Blink verify"}</p>
+</div>
+<span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
+</a>
+</div>
 <CalendarGrid pType="teacher" pId={teacherPerson.id} pName={teacherPerson.name} canEditAttCal={false} showAtt={true} showEvents={true} />
+</div>
 )}
 {/* ── STAFF: My Attendance ── */}
 {tab==="myattendance" && isStaff && (
 staffPerson
-? <CalendarGrid pType="teacher" pId={staffPerson.id} pName={staffPerson.name} canEditAttCal={false} showAtt={true} showEvents={true} />
+? <div>
+<div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
+<p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
+<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
+background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
+textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
+<span style={{fontSize:28}}>{"🧠"}</span>
+<div>
+<p style={{fontWeight:800,color:"#A78BFA",fontSize:14,fontFamily:"Outfit,sans-serif"}}>{"Face Attendance"}</p>
+<p style={{fontSize:11,color:T.textMuted,fontFamily:"Outfit,sans-serif"}}>{"📍 Location check + Blink verify"}</p>
+</div>
+<span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
+</a>
+</div>
+<CalendarGrid pType="teacher" pId={staffPerson.id} pName={staffPerson.name} canEditAttCal={false} showAtt={true} showEvents={true} />
+</div>
 : <div style={{textAlign:"center",padding:"40px 0"}}>
 <p style={{fontSize:32,marginBottom:12}}>🧑‍💼</p>
 <p style={{color:T.textMuted,fontSize:13}}>Attendance record not found. Please contact admin.</p>
