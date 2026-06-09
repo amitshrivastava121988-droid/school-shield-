@@ -175,13 +175,14 @@ document.getElementById('header-date').textContent = new Date().toLocaleDateStri
 
 // Auto-login from URL params
 async function tryAutoLogin() {
-  // Try localStorage first (set by app.html)
   const sid = localStorage.getItem('ss_face_school');
   const ts = parseInt(localStorage.getItem('ss_face_ts') || '0');
   const age = Date.now() - ts;
-  
-  // Valid for 8 hours
-  if (!sid || age > 8 * 60 * 60 * 1000) return false;
+  console.log('AutoLogin attempt:', sid, 'age:', Math.round(age/1000)+'s');
+  if (!sid || age > 8 * 60 * 60 * 1000) {
+    console.log('AutoLogin skip — no sid or expired');
+    return false;
+  }
   
   try {
     document.getElementById('login-screen').innerHTML = 

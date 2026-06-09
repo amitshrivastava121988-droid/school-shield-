@@ -7000,7 +7000,7 @@ padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",boxSizing:
 <p style={{fontSize:11,color:T.textMuted,marginBottom:6}}>Number of Installments:</p>
 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
 {[1,2,3,4,6,12].map(n=>(
-<button key={n} onClick={()=>setInstallments(n)}
+<button key={n} onClick={()=>{setInstallments(n);setAmountsLocked(false);}}
 style={{padding:"6px 14px",borderRadius:20,
 border:"1.5px solid "+(installments===n?T.accent:T.border),
 background:installments===n?T.accent+"20":"transparent",
@@ -7105,6 +7105,7 @@ Grand Total: ₹{(admissionTotal+installmentRows.reduce((s,r)=>s+(r.amount||0),0
 <div style={{display:"flex",gap:8}}>
 <button onClick={function(){
 setEditMode(true);
+setAmountsLocked(false);
 var unpaidRows = stuExist.filter(function(f){return !f.paid && f.month!=="Discount" && f.month!=="Admission";}).map(function(f){
 return {id:f.id, month:f.month, type:(f.feeItems&&f.feeItems[0]&&f.feeItems[0].type)||"Tuition Fee", amount:f.amount, dueDate:f.dueDate||""};
 });
