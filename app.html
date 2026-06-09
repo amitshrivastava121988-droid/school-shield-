@@ -7125,6 +7125,63 @@ opacity:(installmentRows.length===0&&admissionTotal===0)?0.5:1}}>
 // ─── FEES SECTION ─────────────────────────────────────────────────────────────
 const FEE_MONTHS = ["April","May","June","July","August","September","October","November","December","January","February","March"];
 const FEE_TYPES = ["Tuition Fee","Admission Fee","Uniform","PT Shoes","Regular Shoes","Books","Transport","Exam Fee","Activity Fee","Other"];
+function DiscountReportModal({ fees, students, onClose }) {
+const discountFees = (fees||[]).filter(function(f){ return f.isDiscount && (Number(f.discount)||0) > 0; });
+const sorted = discountFees.slice().sort(function(a,b){ return (b.createdAt||b.date||"").localeCompare(a.createdAt||a.date||""); });
+const totalDiscount = sorted.reduce(function(s,f){ return s + (Number(f.discount)||0); }, 0);
+const [search, setSearch] = React.useState("");
+const filtered = search.trim() ? sorted.filter(function(f){ return (f.studentName||"").toLowerCase().includes(search.toLowerCase()); }) : sorted;
+return (
+<ModalBox title={"Discount Report"} onClose={onClose} wide>
+<div style={{marginBottom:12}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+<div style={{background:"#F5A62315",border:"1px solid #F5A62340",borderRadius:10,padding:"10px 16px"}}>
+<p style={{fontSize:11,color:"#F5A623",marginBottom:2}}>{"Total Discounts Given"}</p>
+<p style={{fontSize:18,fontWeight:800,color:"#F5A623"}}>{"₹"+totalDiscount.toLocaleString("en-IN")}</p>
+</div>
+<div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:10,padding:"10px 16px"}}>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:2}}>{"Students"}</p>
+<p style={{fontSize:18,fontWeight:800,color:T.text}}>{new Set(sorted.map(function(f){return f.studentName;})).size}</p>
+</div>
+</div>
+<input value={search} onChange={function(e){setSearch(e.target.value);}}
+placeholder={"Search student name..."}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px 12px",color:T.text,fontSize:13,fontFamily:"Outfit,sans-serif",outline:"none",boxSizing:"border-box"}} />
+</div>
+{filtered.length === 0 ? (
+<p style={{textAlign:"center",padding:"24px",color:T.textMuted,fontSize:13}}>{"No discount records found"}</p>
+) : (
+<div style={{maxHeight:400,overflowY:"auto"}}>
+<table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+<thead style={{position:"sticky",top:0,background:T.surface}}>
+<tr>
+{["Student","Class","Discount Type","Amount","Date"].map(function(h){
+return <th key={h} style={{padding:"8px 10px",color:T.textMuted,fontWeight:700,textAlign:"left",borderBottom:"1px solid "+T.border}}>{h}</th>;
+})}
+</tr>
+</thead>
+<tbody>
+{filtered.map(function(f,i){
+var stu = (students||[]).find(function(s){ return s.name===f.studentName; });
+var discType = (f.feeItems&&f.feeItems[0]&&f.feeItems[0].type) || f.month || "Discount";
+var date = f.createdAt ? new Date(f.createdAt).toLocaleDateString("en-IN") : (f.dueDate||f.date||"—");
+return (
+<tr key={i} style={{borderBottom:"1px solid "+T.border+"40",background:i%2===0?T.surface+"80":"transparent"}}>
+<td style={{padding:"9px 10px",fontWeight:700,color:T.text}}>{f.studentName||"—"}</td>
+<td style={{padding:"9px 10px",color:T.textMuted}}>{stu?stu.class||"—":"—"}</td>
+<td style={{padding:"9px 10px",color:"#A78BFA"}}>{discType}</td>
+<td style={{padding:"9px 10px",fontWeight:800,color:"#F5A623"}}>{"₹"+(Number(f.discount)||0).toLocaleString("en-IN")}</td>
+<td style={{padding:"9px 10px",color:T.textMuted,fontSize:11}}>{date}</td>
+</tr>
+);
+})}
+</tbody>
+</table>
+</div>
+)}
+</ModalBox>
+);
+}
 function FeeAddModal({ onSave, onClose, students, loggedInUser, defaultStudent="" }) {
 const [studentName, setStudentName] = useState(defaultStudent);
 const [studentSuggest, setStudentSuggest] = useState([]);
@@ -7654,8 +7711,8 @@ const toggleId = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(
 if (dueFees.length === 0) return (
 <div style={{background:T.card, border:`1px solid ${T.green}40`, borderRadius:16, padding:"32px 20px", textAlign:"center", marginTop:8}}>
 <p style={{fontSize:32}}>🎉</p>
-<p style={{fontWeight:700, color:T.green, fontSize:16, marginTop:8}}>Sari fees paid ho gayi!</p>
-<p style={{fontSize:12, color:T.textMuted, marginTop:4}}>Koi due nahi hai</p>
+<p style={{fontWeight:700, color:T.green, fontSize:16, marginTop:8}}>{"All fees paid!"}</p>
+<p style={{fontSize:12, color:T.textMuted, marginTop:4}}>{"No dues pending"}</p>
 </div>
 );
 return (
@@ -7816,7 +7873,14 @@ const sessionStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYe
 const sessionLabel = `${sessionStartYear}-${String(sessionStartYear+1).slice(2)}`;
 const sessionStart = new Date(sessionStartYear, 3, 1);
 const sessionEnd   = new Date(sessionStartYear + 1, 2, 31);
-const allMyFees = fees.filter(f => f.studentName === parentChildName && (!f.schoolId || sameId(f.schoolId, mySchoolId)));
+const myChildId = myChild ? String(myChild.id) : "";
+const myChildNameLower = (parentChildName||"").trim().toLowerCase();
+const allMyFees = fees.filter(f => {
+  if (f.schoolId && mySchoolId && !sameId(f.schoolId, mySchoolId)) return false;
+  if (myChildId && f.studentId && String(f.studentId) === myChildId) return true;
+  if (myChildNameLower && (f.studentName||"").trim().toLowerCase() === myChildNameLower) return true;
+  return false;
+});
 const myFees = allMyFees.filter(f => {
 const d = f.dueDate ? new Date(f.dueDate) : (f.createdAt ? new Date(f.createdAt) : null);
 if (!d || isNaN(d)) return true;
@@ -8058,7 +8122,7 @@ return (
 </tfoot>
 )}
 </table>
-{sortedFees.length === 0 && <p style={{color:T.textMuted, fontSize:13, textAlign:"center", padding:"20px 0"}}>Koi fee record nahi mila</p>}
+{sortedFees.length === 0 && <p style={{color:T.textMuted, fontSize:13, textAlign:"center", padding:"20px 0"}}>{"No fee records found"}</p>}
 </div>
 </div>
 )}
@@ -8136,7 +8200,7 @@ border:`1px solid ${f.paid?T.green+"40":T.red+"40"}`
 </div>
 );
 })}
-{sortedFees.length === 0 && <p style={{color:T.textMuted, fontSize:13, textAlign:"center", padding:16}}>Koi fee record nahi</p>}
+{sortedFees.length === 0 && <p style={{color:T.textMuted, fontSize:13, textAlign:"center", padding:16}}>"No fee records found"</p>}
 {sortedFees.length > 0 && (
 <div style={{background:T.surface, border:`1px solid ${T.border}`, borderRadius:10, padding:"12px 14px", marginTop:4}}>
 {[["Total Annual Fee",fmt(totalFees),T.accent],["Amount Paid",fmt(totalPaid),T.green],["Balance Due",fmt(totalBalance),totalBalance>0?T.red:T.green]].map(([l,v,c])=>(
@@ -8217,7 +8281,7 @@ return;
 }
 const stu = students.find(s => s.name === f.studentName && sameId(s.schoolId, mySchoolId));
 const phone = (stu?.parentPhone || "").replace(/[^0-9]/g,"");
-if (!phone) { toast("❌ Parent ka phone number student record mein nahi hai.", "error"); return; }
+if (!phone) { toast("Parent phone number not found in student record.", "error"); return; }
 const schoolName = currentSchool?.name || "School Administration";
 const dueDate = f.dueDate || "";
 const isOverdue = dueDate && new Date(dueDate) < new Date();
@@ -8632,15 +8696,17 @@ map[cls].collected = 0;
 schoolStudentsForFee.forEach(stu => {
 const cls = stu.class || "Other";
 const stuFees = visibleFees.filter(f=>f.studentName===stu.name);
-const stuPaid = stuFees.filter(f=>f.paid).reduce((s,f)=>s+(f.paidAmount||f.amount||0),0);
-map[cls].collected += stuPaid;
+const stuPaid = stuFees.filter(f=>(f.paid||f.status==="paid")&&!f.isDiscount).reduce((s,f)=>s+(f.paidAmount||f.amount||0),0);
+const stuDisc = stuFees.filter(f=>f.isDiscount).reduce((s,f)=>s+(Number(f.discount)||0),0);
+map[cls].collected += stuPaid + stuDisc;
 map[cls].due = Math.max(0, map[cls].total - map[cls].collected);
 if (map[cls].perStudentTotal === 0 && stuFees.length > 0) {
-stuFees.forEach(f => {
+stuFees.filter(f=>!f.isDiscount).forEach(f => {
 map[cls].total += (f.amount||0);
-if (f.paid) map[cls].collected += (f.paidAmount||f.amount||0);
+if (f.paid||f.status==="paid") map[cls].collected += (f.paidAmount||f.amount||0);
 else map[cls].due += (f.amount||0);
 });
+map[cls].due = Math.max(0, map[cls].due - stuDisc);
 }
 });
 return CLASSES.map(cls => [cls, map[cls]]).filter(([,v]) => v !== undefined);
@@ -8664,9 +8730,10 @@ return (
 <div className="fadeUp">
 <SectionHeader title={l("fees")} action={canEditFees && (
 <div style={{display:"flex",gap:8}}>
-<Btn onClick={()=>ctx.setActiveSection&&ctx.setActiveSection("feestructure")} color={T.purple} small>📋 Structure</Btn>
-{canEditFees && <Btn onClick={()=>setModal(<FeesBulkImportModal students={students} schoolId={mySchoolId} onClose={()=>setModal(null)} onImport={(newFees)=>{ setFees(p=>[...p,...newFees]); toast(`✅ ${newFees.length} fee records import ho gaye!`,"success"); }} />)} color={"#6c5ce7"} small>📥 Import</Btn>}
-<Btn onClick={()=>setModal(<FeeAddModal students={students} loggedInUser={loggedInUser} onSave={(d)=>setFees(p=>[...p,d])} onClose={()=>setModal(null)} />)} color={T.accent}>+ Add</Btn>
+<Btn onClick={()=>ctx.setActiveSection&&ctx.setActiveSection("feestructure")} color={T.purple} small>{"Structure"}</Btn>
+{canEditFees && <Btn onClick={()=>setModal(<FeesBulkImportModal students={students} schoolId={mySchoolId} onClose={()=>setModal(null)} onImport={(newFees)=>{ setFees(p=>[...p,...newFees]); toast(newFees.length + " fee records imported!","success"); }} />)} color={"#6c5ce7"} small>{"Import"}</Btn>}
+{canEditFees && <Btn onClick={()=>setModal(<DiscountReportModal fees={visibleFees} students={students} onClose={()=>setModal(null)} />)} color={"#F5A623"} small>{"Discounts"}</Btn>}
+<Btn onClick={()=>setModal(<FeeAddModal students={students} loggedInUser={loggedInUser} onSave={(d)=>setFees(p=>[...p,d])} onClose={()=>setModal(null)} />)} color={T.accent}>{"+ Add"}</Btn>
 </div>
 )} />
 {/* UPI Settings */}
@@ -8754,9 +8821,11 @@ transition:"all 0.2s"}}>
 ) : clsStudents.map(stu => {
 const stuFees = visibleFees.filter(f=>f.studentName===stu.name);
 const structAmt = v.perStudentTotal || 0;
-const paid = stuFees.filter(f=>f.paid).reduce((s,f)=>s+(f.paidAmount||f.amount||0),0);
-const expectedTotal = structAmt > 0 ? structAmt : stuFees.reduce((s,f)=>s+(f.amount||0),0);
-const due  = Math.max(0, expectedTotal - paid);
+const paid = stuFees.filter(f=>(f.paid||f.status==="paid")&&!f.isDiscount).reduce((s,f)=>s+(f.paidAmount||f.amount||0),0);
+const stuDiscount = stuFees.filter(f=>f.isDiscount).reduce((s,f)=>s+(Number(f.discount)||0),0);
+const expectedTotal = structAmt > 0 ? structAmt : stuFees.filter(f=>!f.isDiscount).reduce((s,f)=>s+(f.amount||0),0);
+const netExpected = Math.max(0, expectedTotal - stuDiscount);
+const due = Math.max(0, netExpected - paid);
 const total = expectedTotal;
 const sPct  = total>0 ? Math.round((paid/total)*100) : (paid>0?100:0);
 const hasOD = stuFees.some(f=>!f.paid&&f.dueDate&&new Date(f.dueDate)<today);
