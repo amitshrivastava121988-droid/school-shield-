@@ -1511,6 +1511,7 @@ const [homework, setHomework] = usePersist("homework", initHomework);
 const [buses, setBuses] = usePersist("buses", initBuses);
 const [stopRequests, setStopRequests] = usePersist("stopRequests", []);
 const [fees, setFees] = usePersist("fees", initFees);
+const [feeDeleteRequests, setFeeDeleteRequests] = usePersist("feeDeleteRequests", []);
 const [feeStructure, setFeeStructure] = usePersist("feeStructure", []);
 const [expenses, setExpenses] = usePersist("expenses", [
 { id:1, schoolId:1, category:"salary", name:"Teacher Salaries", amount:85000, date:"2026-05-01", frequency:"monthly", note:"May 2026 salaries", type:"expense" },
@@ -1821,7 +1822,7 @@ if (!role) return <LoginScreen lang={lang} setLang={setLang} l={l} setRole={setR
 if (role !== "superadmin" && role !== "founder" && !schoolActive) {
 return <SubscriptionExpiredScreen l={l} lang={lang} setLang={setLang} setRole={setRole} />;
 }
-const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, principalFeedbacks, setPrincipalFeedbacks, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection, onlineClasses, setOnlineClasses, employees, saveEmployees, greetings, setGreetings, greetingsSentLog, setGreetingsSentLog, greetingSettings, setGreetingSettings, setGs_birthday, setGs_festival, setGs_parents, setGs_teachers, setGs_branding, setGs_lang };
+const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeDeleteRequests, setFeeDeleteRequests, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, principalFeedbacks, setPrincipalFeedbacks, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection, onlineClasses, setOnlineClasses, employees, saveEmployees, greetings, setGreetings, greetingsSentLog, setGreetingsSentLog, greetingSettings, setGreetingSettings, setGs_birthday, setGs_festival, setGs_parents, setGs_teachers, setGs_branding, setGs_lang };
 return (
 <div key={themeMode} style={{display:"flex", flexDirection:"column", height:"100vh", background:T.bg, transition:"background 0.3s"}}>
 {/* TopBar */}
@@ -7469,7 +7470,7 @@ return (
 <div style={{marginTop:16, display:"flex", gap:8, flexWrap:"wrap"}}>
 {!record.paid && <Btn onClick={()=>{onMarkPaidWithMethod(record);onClose();}} color={T.green} full>✅ Mark as Paid</Btn>}
 <Btn onClick={()=>onEdit(record)} color={T.accent} outline style={{flex:1}}>✏️ Edit</Btn>
-<Btn onClick={()=>{onDelete();onClose();}} color={T.red} outline style={{flex:1}}>🗑️ Delete</Btn>
+<Btn onClick={()=>{onClose();onDelete();}} color={T.red} outline style={{flex:1}}>{"Delete"}</Btn>
 </div>
 )}
 </ModalBox>
@@ -8309,7 +8310,7 @@ reader.readAsDataURL(file);
 );
 }
 function FeesSection({ ctx }) {
-const { l, fees, setFees, toast, aiLoading, callAI, aiResult, setAiResult, setModal, students, role, loggedInUser, classNames, currentSchool, schools, setSchools, setExpenses } = ctx;
+const { l, fees, setFees, feeDeleteRequests, setFeeDeleteRequests, toast, aiLoading, callAI, aiResult, setAiResult, setModal, students, role, loggedInUser, classNames, currentSchool, schools, setSchools, setExpenses } = ctx;
 const CLASSES = classNames || DEFAULT_CLASSES;
 const mySchoolId = loggedInUser?.schoolId || null;
 const schoolStudentsForFee = students.filter(s=>!s.schoolId||String(s.schoolId)===String(mySchoolId));
@@ -8466,7 +8467,48 @@ setModal(null);
 />
 );
 };
-const deleteFee = (id) => { if(!window.confirm("Are you sure you want to delete this fee record?")) return; setFees(p=>p.filter(f=>f.id!==id)); toast("Deleted ✓","success"); };
+const [deleteOtpModal, setDeleteOtpModal] = React.useState(null);
+const [deleteReasonModal, setDeleteReasonModal] = React.useState(null);
+const deleteFee = function(id) {
+  var feeRecord = fees.find(function(f){ return f.id===id; });
+  if (!feeRecord) return;
+  var isPrincipal = ["principal","founder","superadmin"].includes(role);
+  if (isPrincipal) {
+    if (!window.confirm("Delete this fee record? This cannot be undone.")) return;
+    setFees(function(p){return p.filter(function(f){return f.id!==id;});});
+    toast("Fee record deleted","success");
+    return;
+  }
+  setDeleteReasonModal({feeId: id, feeRecord: feeRecord, reason: ""});
+};
+const submitDeleteRequest = function(feeId, feeRecord, reason) {
+  var req = {
+    id: "FDR_"+Date.now(),
+    feeId: feeId,
+    studentName: feeRecord.studentName||"",
+    month: feeRecord.month||"",
+    amount: feeRecord.amount||0,
+    reason: reason||"No reason provided",
+    requestedBy: loggedInUser?loggedInUser.name:"",
+    requestedAt: new Date().toISOString(),
+    schoolId: mySchoolId,
+    status: "pending"
+  };
+  setFeeDeleteRequests(function(prev){ return (prev||[]).concat([req]); });
+  setDeleteReasonModal(null);
+  toast("Delete request sent to Principal for approval ✓","success");
+};
+const approveFeeDelete = function(reqId) {
+  var req = (feeDeleteRequests||[]).find(function(r){ return r.id===reqId; });
+  if (!req) return;
+  setFees(function(p){return p.filter(function(f){return f.id!==req.feeId;});});
+  setFeeDeleteRequests(function(prev){return (prev||[]).map(function(r){return r.id===reqId?{...r,status:"approved"}:r;});});
+  toast("Fee record deleted & approved ✓","success");
+};
+const rejectFeeDelete = function(reqId) {
+  setFeeDeleteRequests(function(prev){return (prev||[]).map(function(r){return r.id===reqId?{...r,status:"rejected"}:r;});});
+  toast("Delete request rejected","error");
+};
 const editFee = (record) => setModal(
 <FeeEditModal
 record={record}
@@ -8549,6 +8591,48 @@ const pct = totalAnnual>0?Math.min(100,Math.round(((totalPaid+totalDiscount)/tot
 const r=54, circ=2*Math.PI*r;
 return (
 <div className="fadeUp">
+{deleteReasonModal && (
+<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",
+zIndex:99999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+<div style={{background:T.card,borderRadius:16,padding:24,maxWidth:340,width:"100%",
+border:"1px solid #FF4D4F40",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
+<p style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:4}}>{"Delete Fee Record"}</p>
+<div style={{background:T.surface,borderRadius:8,padding:"8px 12px",marginBottom:12}}>
+<p style={{fontSize:12,color:T.textMuted}}>{"Student: "}<b style={{color:T.text}}>{deleteReasonModal.feeRecord.studentName}</b></p>
+<p style={{fontSize:12,color:T.textMuted}}>{"Month: "}<b style={{color:T.text}}>{deleteReasonModal.feeRecord.month}</b></p>
+<p style={{fontSize:12,color:T.textMuted}}>{"Amount: "}<b style={{color:"#FF4D4F"}}>{"₹"+(deleteReasonModal.feeRecord.amount||0).toLocaleString("en-IN")}</b></p>
+</div>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:6}}>{"Reason for deletion (required):"}</p>
+<textarea
+value={deleteReasonModal.reason}
+onChange={function(e){setDeleteReasonModal(function(p){return {...p,reason:e.target.value};});}}
+placeholder={"e.g. Entry added by mistake, Duplicate record, Wrong amount..."}
+rows={3}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:10,
+padding:"10px 12px",fontSize:13,color:T.text,fontFamily:"Outfit,sans-serif",
+boxSizing:"border-box",outline:"none",resize:"none",marginBottom:12}}
+/>
+<p style={{fontSize:11,color:"#F5A623",marginBottom:12}}>{"This request will be sent to Principal for approval."}</p>
+<div style={{display:"flex",gap:8}}>
+<button onClick={function(){
+if(!(deleteReasonModal.reason||"").trim()){toast("Please enter a reason","error");return;}
+submitDeleteRequest(deleteReasonModal.feeId,deleteReasonModal.feeRecord,deleteReasonModal.reason);
+}}
+style={{flex:1,padding:"11px",borderRadius:10,border:"none",
+background:"#FF4D4F",color:"#fff",fontWeight:800,fontSize:13,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Send for Approval"}
+</button>
+<button onClick={function(){setDeleteReasonModal(null);}}
+style={{padding:"11px 14px",borderRadius:10,border:"1px solid "+T.border,
+background:"none",color:T.textMuted,fontWeight:700,fontSize:12,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Cancel"}
+</button>
+</div>
+</div>
+</div>
+)}
 {/* Back button */}
 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
 <button onClick={()=>setSelectedStudent(null)}
@@ -8865,6 +8949,91 @@ const overallPct = grandTotal>0?Math.round((grandCollected/grandTotal)*100):0;
 const r2=46, circ2=2*Math.PI*r2;
 return (
 <div className="fadeUp">
+{deleteReasonModal && (
+<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",
+zIndex:99999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+<div style={{background:T.card,borderRadius:16,padding:24,maxWidth:340,width:"100%",
+border:"1px solid #FF4D4F40",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
+<p style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:4}}>{"Delete Fee Record"}</p>
+<div style={{background:T.surface,borderRadius:8,padding:"8px 12px",marginBottom:12}}>
+<p style={{fontSize:12,color:T.textMuted}}>{"Student: "}<b style={{color:T.text}}>{deleteReasonModal.feeRecord.studentName}</b></p>
+<p style={{fontSize:12,color:T.textMuted}}>{"Month: "}<b style={{color:T.text}}>{deleteReasonModal.feeRecord.month}</b></p>
+<p style={{fontSize:12,color:T.textMuted}}>{"Amount: "}<b style={{color:"#FF4D4F"}}>{"₹"+(deleteReasonModal.feeRecord.amount||0).toLocaleString("en-IN")}</b></p>
+</div>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:6}}>{"Reason for deletion (required):"}</p>
+<textarea value={deleteReasonModal.reason}
+onChange={function(e){setDeleteReasonModal(function(p){return {...p,reason:e.target.value};});}}
+placeholder={"e.g. Entry added by mistake, Duplicate record, Wrong amount..."}
+rows={3}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:10,
+padding:"10px 12px",fontSize:13,color:T.text,fontFamily:"Outfit,sans-serif",
+boxSizing:"border-box",outline:"none",resize:"none",marginBottom:12}}
+/>
+<p style={{fontSize:11,color:"#F5A623",marginBottom:12}}>{"This request will be sent to Principal for approval."}</p>
+<div style={{display:"flex",gap:8}}>
+<button onClick={function(){
+if(!(deleteReasonModal.reason||"").trim()){toast("Please enter a reason","error");return;}
+submitDeleteRequest(deleteReasonModal.feeId,deleteReasonModal.feeRecord,deleteReasonModal.reason);
+}}
+style={{flex:1,padding:"11px",borderRadius:10,border:"none",background:"#FF4D4F",
+color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Send for Approval"}
+</button>
+<button onClick={function(){setDeleteReasonModal(null);}}
+style={{padding:"11px 14px",borderRadius:10,border:"1px solid "+T.border,
+background:"none",color:T.textMuted,fontWeight:700,fontSize:12,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Cancel"}
+</button>
+</div>
+</div>
+</div>
+)}
+{(function(){
+var isPrincipal = ["principal","founder","superadmin"].includes(role);
+var pendingReqs = (feeDeleteRequests||[]).filter(function(r){
+return r.status==="pending" && (!r.schoolId||String(r.schoolId)===String(mySchoolId));
+});
+if (!isPrincipal || pendingReqs.length===0) return null;
+return (
+<div style={{background:"#FF4D4F10",border:"1px solid #FF4D4F40",borderRadius:12,
+padding:14,marginBottom:14}}>
+<p style={{fontSize:13,fontWeight:800,color:"#FF4D4F",marginBottom:10}}>
+{"🗑️ Fee Delete Requests — "+pendingReqs.length+" Pending"}
+</p>
+{pendingReqs.map(function(req){
+return (
+<div key={req.id} style={{background:T.card,borderRadius:10,padding:12,marginBottom:8,
+border:"1px solid "+T.border}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+<div>
+<p style={{fontSize:13,fontWeight:700,color:T.text}}>{req.studentName}</p>
+<p style={{fontSize:11,color:T.textMuted}}>{req.month+" • ₹"+(req.amount||0).toLocaleString("en-IN")}</p>
+<p style={{fontSize:11,color:T.textMuted}}>{"By: "+req.requestedBy+" • "+new Date(req.requestedAt).toLocaleDateString("en-IN")}</p>
+</div>
+</div>
+<div style={{background:"#F5A62315",border:"1px solid #F5A62330",borderRadius:8,padding:"6px 10px",marginBottom:8}}>
+<p style={{fontSize:11,color:"#F5A623",fontWeight:600}}>{"Reason:"}</p>
+<p style={{fontSize:12,color:T.text}}>{req.reason}</p>
+</div>
+<div style={{display:"flex",gap:8}}>
+<button onClick={function(){approveFeeDelete(req.id);}}
+style={{flex:1,padding:"8px",borderRadius:8,border:"none",background:"#0ECB81",
+color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"✅ Approve & Delete"}
+</button>
+<button onClick={function(){rejectFeeDelete(req.id);}}
+style={{flex:1,padding:"8px",borderRadius:8,border:"1px solid #FF4D4F",background:"none",
+color:"#FF4D4F",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"❌ Reject"}
+</button>
+</div>
+</div>
+);
+})}
+</div>
+);
+})()}
 <SectionHeader title={l("fees")} action={canEditFees && (
 <div style={{display:"flex",gap:8}}>
 <Btn onClick={()=>ctx.setActiveSection&&ctx.setActiveSection("feestructure")} color={T.purple} small>{"Structure"}</Btn>
