@@ -173,6 +173,52 @@ let logType = 'student';
 // Update header date
 document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'short'});
 
+// Auto-login from URL params
+async function tryAutoLogin() {
+  // Try localStorage first (set by app.html)
+  const sid = localStorage.getItem('ss_face_school');
+  const ts = parseInt(localStorage.getItem('ss_face_ts') || '0');
+  const age = Date.now() - ts;
+  
+  // Valid for 8 hours
+  if (!sid || age > 8 * 60 * 60 * 1000) return false;
+  
+  try {
+    document.getElementById('login-screen').innerHTML = 
+      '<div style="padding:40px;text-align:center;"><div style="font-size:48px;margin-bottom:16px;">🛡️</div><p style="color:#94a3b8;font-size:14px;">Loading...</p></div>';
+    
+    const snap = await db.ref('schoolshield/schools/' + sid).get();
+    if (!snap.exists()) return false;
+    const data = snap.val();
+    
+    schoolId = sid;
+    allPersons.student = data.students ? Object.values(data.students) : [];
+    allPersons.teacher = data.teachers ? Object.values(data.teachers) : [];
+    allPersons.employee = data.employees ? Object.values(data.employees) : [];
+    
+    const fdSnap = await db.ref('schoolshield/faceDescriptors/' + sid).get();
+    if (fdSnap.exists()) { faceDescriptors = fdSnap.val() || {}; buildFaceMatcher(); }
+    
+    const alSnap = await db.ref('schoolshield/schools/' + sid + '/attendanceLogs').get();
+    if (alSnap.exists()) {
+      try { attendanceLogs = JSON.parse(alSnap.val() || '{}'); } catch(e) { attendanceLogs = alSnap.val() || {}; }
+    }
+    
+    schoolLocation = data.faceAttendanceLocation || null;
+    document.getElementById('login-screen').style.display = 'none';
+    
+    if (!schoolLocation) {
+      document.getElementById('setup-screen').style.display = 'block';
+    } else {
+      showMainApp();
+    }
+    return true;
+  } catch(e) {
+    console.log('Auto-login failed:', e.message);
+    return false;
+  }
+}
+
 async function loadModels() {
   try {
     const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
@@ -186,6 +232,13 @@ async function loadModels() {
   } catch(e) { console.error('Models failed:', e); }
 }
 loadModels();
+tryAutoLogin().then(function(success) {
+  if (!success) {
+    // Show login screen normally
+    document.getElementById('login-screen').innerHTML = 
+      document.getElementById('login-screen').innerHTML;
+  }
+});
 
 function ssRef(path) { return db.ref('schoolshield/schools/' + schoolId + '/' + path); }
 

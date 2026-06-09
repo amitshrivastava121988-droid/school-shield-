@@ -3239,24 +3239,20 @@ style={{background:`${opt.color}10`, border:`1.5px solid ${opt.color}40`, border
 </div>
 </button>
 ))}
-{(function(){
-var sid = schoolId || "";
-var today = new Date().toISOString().slice(0,10);
-var token = btoa(sid + "_" + today);
-var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
-return (
-<a href={url} target="_blank" rel="noopener noreferrer"
+<button onClick={function(){
+localStorage.setItem("ss_face_school", schoolId||"");
+localStorage.setItem("ss_face_ts", Date.now().toString());
+window.open("/face-attendance/face_attendance.html","_blank");
+}}
 style={{background:"#A78BFA10",border:"1.5px solid #A78BFA40",borderRadius:14,padding:"16px 18px",
 cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left",
-width:"100%",textDecoration:"none"}}>
+width:"100%",fontFamily:"Outfit,sans-serif",border:"1.5px solid #A78BFA40"}}>
 <span style={{fontSize:32}}>{"🧠"}</span>
 <div>
 <p style={{fontSize:14,fontWeight:700,color:"#A78BFA",fontFamily:"Outfit,sans-serif"}}>{"Face Recognition"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginTop:3,fontFamily:"Outfit,sans-serif"}}>{"AI face + blink detection — auto marks attendance"}</p>
 </div>
-</a>
-);
-})()}
+</button>
 </div>
 </div>
 );
@@ -19779,25 +19775,21 @@ return evThisMonth.length>0?(
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:14,marginBottom:14}}>
 <p style={{fontSize:13,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"My Attendance (Face Recognition)"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:10}}>{"Location verified — must be within 50m of school"}</p>
-{(function(){
-var sid = mySchoolId || "";
-var today = new Date().toISOString().slice(0,10);
-var token = btoa(sid + "_" + today);
-var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
-return (
-<a href={url} target="_blank" rel="noopener noreferrer"
+<button onClick={function(){
+localStorage.setItem("ss_face_school", mySchoolId||"");
+localStorage.setItem("ss_face_ts", Date.now().toString());
+window.open("/face-attendance/face_attendance.html","_blank");
+}}
 style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
-textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
+cursor:"pointer",width:"100%",boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}}>
 <span style={{fontSize:26}}>{"🧠"}</span>
 <div>
 <p style={{fontWeight:800,color:"#A78BFA",fontSize:13,fontFamily:"Outfit,sans-serif"}}>{"Open Face Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,fontFamily:"Outfit,sans-serif"}}>{"📍 GPS + Blink verify — Mobile Mode"}</p>
 </div>
 <span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
-</a>
-);
-})()}
+</button>
 </div>
 {/* Students / Teachers toggle */}
 <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -19851,25 +19843,21 @@ onMouseLeave={e=>e.currentTarget.style.border=`1px solid ${T.border}`}>
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
 <p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
-{(function(){
-var sid = mySchoolId || "";
-var today = new Date().toISOString().slice(0,10);
-var token = btoa(sid + "_" + today);
-var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
-return (
-<a href={url} target="_blank" rel="noopener noreferrer"
+<button onClick={function(){
+localStorage.setItem("ss_face_school", mySchoolId||"");
+localStorage.setItem("ss_face_ts", Date.now().toString());
+window.open("/face-attendance/face_attendance.html","_blank");
+}}
 style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
-textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
+cursor:"pointer",width:"100%",boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}}>
 <span style={{fontSize:28}}>{"🧠"}</span>
 <div>
 <p style={{fontWeight:800,color:"#A78BFA",fontSize:14,fontFamily:"Outfit,sans-serif"}}>{"Face Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,fontFamily:"Outfit,sans-serif"}}>{"📍 Location check + Blink verify"}</p>
 </div>
 <span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
-</a>
-);
-})()}
+</button>
 </div>
 <CalendarGrid pType="teacher" pId={teacherPerson.id} pName={teacherPerson.name} canEditAttCal={false} showAtt={true} showEvents={true} />
 </div>
@@ -19881,25 +19869,21 @@ staffPerson
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
 <p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
-{(function(){
-var sid = mySchoolId || "";
-var today = new Date().toISOString().slice(0,10);
-var token = btoa(sid + "_" + today);
-var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
-return (
-<a href={url} target="_blank" rel="noopener noreferrer"
+<button onClick={function(){
+localStorage.setItem("ss_face_school", mySchoolId||"");
+localStorage.setItem("ss_face_ts", Date.now().toString());
+window.open("/face-attendance/face_attendance.html","_blank");
+}}
 style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
-textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
+cursor:"pointer",width:"100%",boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}}>
 <span style={{fontSize:28}}>{"🧠"}</span>
 <div>
 <p style={{fontWeight:800,color:"#A78BFA",fontSize:14,fontFamily:"Outfit,sans-serif"}}>{"Face Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,fontFamily:"Outfit,sans-serif"}}>{"📍 Location check + Blink verify"}</p>
 </div>
 <span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
-</a>
-);
-})()}
+</button>
 </div>
 <CalendarGrid pType="teacher" pId={staffPerson.id} pName={staffPerson.name} canEditAttCal={false} showAtt={true} showEvents={true} />
 </div>
