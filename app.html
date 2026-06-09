@@ -3099,7 +3099,7 @@ const d = new Date();
 return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 // ─── MARK ATTENDANCE MODAL ────────────────────────────────────────────────────
-function MarkAttendanceModal({ students, teachers, employees, attendanceLogs, setAttendanceLogs, onClose, toast, lang="en" }) {
+function MarkAttendanceModal({ students, teachers, employees, attendanceLogs, setAttendanceLogs, onClose, toast, lang="en", schoolId="" }) {
 const todayKey = getTodayKey();
 const [selectedDate, setSelectedDate] = useState(todayKey);
 const [attendanceMode, setAttendanceMode] = useState(null); // null = mode selection screen
@@ -3239,16 +3239,24 @@ style={{background:`${opt.color}10`, border:`1.5px solid ${opt.color}40`, border
 </div>
 </button>
 ))}
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+{(function(){
+var sid = schoolId || "";
+var today = new Date().toISOString().slice(0,10);
+var token = btoa(sid + "_" + today);
+var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
+return (
+<a href={url} target="_blank" rel="noopener noreferrer"
 style={{background:"#A78BFA10",border:"1.5px solid #A78BFA40",borderRadius:14,padding:"16px 18px",
 cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left",
 width:"100%",textDecoration:"none"}}>
 <span style={{fontSize:32}}>{"🧠"}</span>
 <div>
 <p style={{fontSize:14,fontWeight:700,color:"#A78BFA",fontFamily:"Outfit,sans-serif"}}>{"Face Recognition"}</p>
-<p style={{fontSize:11,color:T.textMuted,marginTop:3,fontFamily:"Outfit,sans-serif"}}>{"AI-powered face + blink detection — auto marks attendance in SchoolShield"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginTop:3,fontFamily:"Outfit,sans-serif"}}>{"AI face + blink detection — auto marks attendance"}</p>
 </div>
 </a>
+);
+})()}
 </div>
 </div>
 );
@@ -3899,7 +3907,7 @@ return (
 {showMarkModal && (
 <div onClick={()=>setShowMarkModal(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",overflowY:"auto",padding:"20px 16px",backdropFilter:"blur(4px)"}}>
 <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:500,margin:"auto"}}>
-<MarkAttendanceModal students={students} teachers={teachers} employees={allEmployeesForAtt} attendanceLogs={attendanceLogs||{}} setAttendanceLogs={setAttendanceLogs} onClose={()=>setShowMarkModal(false)} toast={toast} lang={lang} />
+<MarkAttendanceModal students={students} teachers={teachers} employees={allEmployeesForAtt} attendanceLogs={attendanceLogs||{}} setAttendanceLogs={setAttendanceLogs} onClose={()=>setShowMarkModal(false)} toast={toast} lang={lang} schoolId={mySchoolId} />
 </div>
 </div>
 )}
@@ -19771,7 +19779,13 @@ return evThisMonth.length>0?(
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:14,marginBottom:14}}>
 <p style={{fontSize:13,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"My Attendance (Face Recognition)"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:10}}>{"Location verified — must be within 50m of school"}</p>
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+{(function(){
+var sid = mySchoolId || "";
+var today = new Date().toISOString().slice(0,10);
+var token = btoa(sid + "_" + today);
+var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
+return (
+<a href={url} target="_blank" rel="noopener noreferrer"
 style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
 textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
@@ -19782,6 +19796,8 @@ textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
 </div>
 <span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
 </a>
+);
+})()}
 </div>
 {/* Students / Teachers toggle */}
 <div style={{display:"flex",gap:8,marginBottom:12}}>
@@ -19835,7 +19851,13 @@ onMouseLeave={e=>e.currentTarget.style.border=`1px solid ${T.border}`}>
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
 <p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+{(function(){
+var sid = mySchoolId || "";
+var today = new Date().toISOString().slice(0,10);
+var token = btoa(sid + "_" + today);
+var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
+return (
+<a href={url} target="_blank" rel="noopener noreferrer"
 style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
 textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
@@ -19846,6 +19868,8 @@ textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
 </div>
 <span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
 </a>
+);
+})()}
 </div>
 <CalendarGrid pType="teacher" pId={teacherPerson.id} pName={teacherPerson.name} canEditAttCal={false} showAtt={true} showEvents={true} />
 </div>
@@ -19857,7 +19881,13 @@ staffPerson
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
 <p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
+{(function(){
+var sid = mySchoolId || "";
+var today = new Date().toISOString().slice(0,10);
+var token = btoa(sid + "_" + today);
+var url = "/face-attendance/face_attendance.html?school="+encodeURIComponent(sid)+"&token="+encodeURIComponent(token);
+return (
+<a href={url} target="_blank" rel="noopener noreferrer"
 style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
 textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
@@ -19868,6 +19898,8 @@ textDecoration:"none",width:"100%",boxSizing:"border-box"}}>
 </div>
 <span style={{marginLeft:"auto",fontSize:18,color:T.textMuted}}>{"›"}</span>
 </a>
+);
+})()}
 </div>
 <CalendarGrid pType="teacher" pId={staffPerson.id} pName={staffPerson.name} canEditAttCal={false} showAtt={true} showEvents={true} />
 </div>
