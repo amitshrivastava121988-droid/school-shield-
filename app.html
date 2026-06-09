@@ -4660,7 +4660,7 @@ position:"relative"
 {classStudents.length === 0 && (
 <div style={{textAlign:"center",padding:"24px 0",color:T.textMuted}}>
 <p style={{fontSize:32,marginBottom:8}}>📭</p>
-<p style={{fontSize:14}}>Is class mein koi student nahi</p>
+<p style={{fontSize:14}}>No students in this class</p>
 {canAdd && <p style={{fontSize:12,marginTop:6,color:T.accent}}>+ Use Add Student to add students</p>}
 </div>
 )}
@@ -6901,7 +6901,7 @@ maxWidth:480,maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()
 {/* Total Session Fee */}
 <div style={{marginBottom:12}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-<p style={{fontSize:11,color:T.textMuted}}>💰 Session ki Total Fees (पूरे साल की)</p>
+<p style={{fontSize:11,color:T.textMuted}}>💰 Session Total Fees (Full Year)</p>
 {structureTotal>0 && <span style={{fontSize:10,color:T.green,fontWeight:700}}>📋 Structure: ₹{structureTotal.toLocaleString()}</span>}
 </div>
 <input type="number" value={totalFee} onChange={e=>setTotalFee(e.target.value)}
@@ -6928,7 +6928,7 @@ fontFamily:"Outfit,sans-serif"}}/>
 {/* Admission Items — multiple fees at admission time */}
 <div style={{marginBottom:12}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-<p style={{fontSize:11,color:T.textMuted}}>🎓 Admission pe Jama Hone Wali Fees</p>
+<p style={{fontSize:11,color:T.textMuted}}>🎓 Fees Paid at Admission</p>
 <button onClick={addAdmissionItem}
 style={{fontSize:10,color:T.green,background:T.green+"15",border:"1px solid "+T.green+"40",
 borderRadius:20,padding:"3px 10px",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontWeight:700}}>
@@ -6982,10 +6982,10 @@ padding:"8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif",boxSizing:
 {(parseFloat(totalFee)||0)>0 && (
 <div style={{background:T.surface,borderRadius:10,padding:12,marginBottom:12}}>
 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-<span style={{fontSize:12,color:T.textMuted}}>Admission ke baad baki:</span>
+<span style={{fontSize:12,color:T.textMuted}}>Remaining after Admission:</span>
 <span style={{fontWeight:800,color:T.accent,fontSize:13}}>₹{remaining.toLocaleString()}</span>
 </div>
-<p style={{fontSize:11,color:T.textMuted,marginBottom:6}}>Kitni Installments mein dena chahta hai?</p>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:6}}>Number of Installments:</p>
 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
 {[1,2,3,4,6,12].map(n=>(
 <button key={n} onClick={()=>setInstallments(n)}
@@ -7004,7 +7004,7 @@ fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
 {installmentRows.length>0 && (
 <div style={{marginBottom:14}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-<p style={{fontSize:11,color:T.textMuted}}>📋 Installment Details (edit kar sakte ho)</p>
+<p style={{fontSize:11,color:T.textMuted}}>📋 Installment Details</p>
 <div style={{display:"flex",gap:6,alignItems:"center"}}>
 {amountsLocked && (
 <button onClick={function(){setAmountsLocked(false);}}
@@ -7117,7 +7117,7 @@ style={{width:"100%",padding:"14px",borderRadius:12,border:"none",
 background:T.accent,color:"#fff",fontWeight:800,fontSize:15,
 cursor:"pointer",fontFamily:"Outfit,sans-serif",
 opacity:(installmentRows.length===0&&admissionTotal===0)?0.5:1}}>
-{editMode ? "Update Installments" : "Installments Add Karo"}
+{editMode ? "Update Installments" : "Add Installments"}
 </button>
 )}
 </div>
@@ -8050,7 +8050,7 @@ ${slipBlock("Student Copy")}
 </body></html>`;
 const w = window.open("","_blank");
 if (w) { w.document.write(html); w.document.close(); }
-else toast("Popup blocked. Browser settings mein allow karo.", "error");
+else toast("Popup blocked. Please allow popups in browser settings.", "error");
 };
 const tabStyle = (active) => ({
 flex:1, padding:"10px 4px", border:"none", borderRadius:10, cursor:"pointer",
@@ -8357,7 +8357,7 @@ ${isOverdue ? "⚠️ *OVERDUE FEE NOTICE*" : "📚 *Fee Reminder*"}
 Aapke bachche ki fees abhi tak pending hai:
 • Amount: *₹${(f.amount||0).toLocaleString()}*
 • Month: ${f.month||""}${dueDate ? `\n• Due Date: ${dueDate}` : ""}
-${isOverdue ? "Yeh fees due date ke baad bhi pending hai. Kripya *aaj hi* jama karein.\n" : "Kripya fees jaldi se jama karein.\n"}
+${isOverdue ? "This fee is overdue. Please pay *today*.\n" : "Please pay the fees at the earliest.\n"}
 — *${schoolName}*`;
 const url = `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`;
 window.open(url, "_blank");
@@ -8370,7 +8370,7 @@ if (window.firebaseReady && mySchoolId) {
 try { window.db.ref(`schoolshield/schools/${mySchoolId}/reminderLog/${key}`).set(newLog[key]); } catch {}
 }
 try { localStorage.setItem("ss_reminderLog_"+mySchoolId, JSON.stringify(newLog)); } catch {}
-toast("📲 WhatsApp reminder bheja gaya! Log save ho gaya.", "success");
+toast("📲 WhatsApp reminder sent! Log saved.", "success");
 };
 const _fmp = loggedInUser?.vpPermissions||loggedInUser?.staffPermissions||loggedInUser?.receptionPermissions||loggedInUser?.accountantPermissions||loggedInUser?.coordinatorPermissions||[];
 const canEditFees = ["principal","founder","superadmin"].includes(role) ||
@@ -8555,7 +8555,7 @@ return (
 style={{background:T.surface,border:"1px solid "+T.border,color:T.text,borderRadius:20,
 padding:"8px 16px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif",
 display:"flex",alignItems:"center",gap:6}}>
-← Wapas
+← Back
 </button>
 <p style={{fontWeight:800,fontSize:16,color:T.text}}>{stu.name}</p>
 <span style={{fontSize:11,color:T.textMuted,background:T.surface,padding:"3px 10px",borderRadius:20,border:"1px solid "+T.border}}>{stu.class}</span>
@@ -8605,7 +8605,7 @@ background:T.accent+"15",border:"1px solid "+T.accent+"40",padding:"8px 12px",bo
 </Card>
 {/* Fee Records — edit/add/delete ke saath */}
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-<p style={{fontWeight:700,color:T.text,fontSize:14}}>📋 Fee Records</p>
+<p style={{fontWeight:700,color:T.text,fontSize:14}}>Fee Records</p>
 {canEditFees && (
 <div style={{display:"flex",gap:6}}>
 <Btn onClick={()=>setModal(<FeeInstallmentModal student={stu} students={students} loggedInUser={loggedInUser} feeStructure={feeStructure} existingFees={fees} onSave={function(recs){
@@ -8623,13 +8623,13 @@ toast("Installments updated!","success");
 setFees(function(p){return [...p,...recs];});
 toast("Installments added!","success");
 }
-}} onClose={()=>setModal(null)} />)} color={T.purple} small>📆 Installments</Btn>
+}} onClose={()=>setModal(null)} />)} color={T.purple} small>Installments</Btn>
 <Btn onClick={()=>setModal(<FeeAddModal students={students} loggedInUser={loggedInUser} onSave={(d)=>setFees(p=>[...p,d])} onClose={()=>setModal(null)} defaultStudent={stu.name} />)} color={T.accent} small>+ Add</Btn>
 </div>
 )}
 </div>
 <div style={{display:"grid",gap:8}}>
-{stuFees.length===0 && <p style={{color:T.textMuted,textAlign:"center",padding:20}}>Koi fee record nahi.</p>}
+{stuFees.length===0 && <p style={{color:T.textMuted,textAlign:"center",padding:20}}>No fee records found.</p>}
 {stuFees.map(f=>{
 const isOD=!f.paid&&!f.isDiscount&&f.dueDate&&new Date(f.dueDate)<new Date();
 const odDays=isOD?Math.floor((new Date()-new Date(f.dueDate))/(864e5)):0;
@@ -8660,7 +8660,7 @@ background:f.isDiscount?"#A78BFA08":f.paid?T.green+"06":isOD?T.red+"06":"transpa
 <img src={f.paymentScreenshot} alt="Payment proof"
 style={{width:"100%",maxHeight:100,objectFit:"cover",borderRadius:6,border:"1px solid "+T.border,display:"block",cursor:"pointer"}}
 onClick={function(e){e.stopPropagation();window.open(f.paymentScreenshot,"_blank");}} />
-<p style={{fontSize:9,color:T.textMuted,marginTop:2}}>{"Tap to view full"}</p>
+<p style={{fontSize:9,color:T.textMuted,marginTop:2}}>{"Tap to view full image"}</p>
 </div>
 )}
 </div>
@@ -8713,13 +8713,22 @@ fontFamily:"Outfit,sans-serif",opacity:!hasPhone?0.4:1}}>
 <button onClick={function(){
 var schoolName = (currentSchool && currentSchool.name) || "School";
 var slip = window.open("","_blank","width=620,height=820");
-var feeRows = stuFees.map(function(f){
+var feeRows = stuFees.filter(function(f){return !f.isDiscount;}).map(function(f){
+var feeLabel = (f.month||"Fee") + (f.feeItems&&f.feeItems.length&&f.feeItems[0].type ? " - "+f.feeItems[0].type : "");
 var statusCell = f.paid ? "<span style='color:green;font-weight:700'>Paid</span>" : "<span style='color:red;font-weight:700'>Pending</span>";
 var paidAmt = f.paid ? "Rs." + (f.paidAmount||f.amount||0).toLocaleString("en-IN") : "Rs.0";
-return "<tr><td style='padding:8px;border:1px solid #ddd;font-size:13px'>" + (f.feeType||f.label||"Fee") + "</td>"
-+ "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-size:13px'>Rs." + (f.amount||0).toLocaleString("en-IN") + "</td>"
-+ "<td style='padding:8px;border:1px solid #ddd;text-align:center;font-size:13px'>" + statusCell + "</td>"
-+ "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-size:13px'>" + paidAmt + "</td></tr>";
+var dateStr = f.paid ? (f.paidDate||f.date ? new Date(f.paidDate||f.date).toLocaleDateString("en-IN") : "") : (f.dueDate ? "Due: "+new Date(f.dueDate).toLocaleDateString("en-IN") : "");
+var method = f.paid && f.paymentMethod ? " ("+f.paymentMethod+")" : "";
+return "<tr><td style='padding:8px;border:1px solid #ddd;font-size:12px'>" + feeLabel + "</td>"
++ "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-size:12px'>Rs." + (f.amount||0).toLocaleString("en-IN") + "</td>"
++ "<td style='padding:8px;border:1px solid #ddd;text-align:center;font-size:12px'>" + statusCell + method + "<br><small style='color:#888'>"+dateStr+"</small></td>"
++ "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-size:12px'>" + paidAmt + "</td></tr>";
+}).join("");
+var discountRows = stuFees.filter(function(f){return f.isDiscount;}).map(function(f){
+return "<tr style='background:#f0f7ff'><td style='padding:8px;border:1px solid #ddd;font-size:12px;color:purple'>Discount - "+(f.month||"")+"</td>"
++ "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-size:12px;color:purple'>-Rs."+(f.discount||0).toLocaleString("en-IN")+"</td>"
++ "<td style='padding:8px;border:1px solid #ddd;text-align:center;font-size:12px;color:purple'>Applied</td>"
++ "<td style='padding:8px;border:1px solid #ddd;text-align:right;font-size:12px;color:purple'>-Rs."+(f.discount||0).toLocaleString("en-IN")+"</td></tr>";
 }).join("");
 var html = "<!DOCTYPE html><html><head><title>Fee Slip</title>"
 + "<style>body{font-family:Arial,sans-serif;margin:0;padding:20px;color:#333}"
@@ -8739,7 +8748,7 @@ var html = "<!DOCTYPE html><html><head><title>Fee Slip</title>"
 + "<th style='padding:8px;border:1px solid #ddd;text-align:right'>Amount</th>"
 + "<th style='padding:8px;border:1px solid #ddd;text-align:center'>Status</th>"
 + "<th style='padding:8px;border:1px solid #ddd;text-align:right'>Paid</th>"
-+ "</tr></thead><tbody>" + feeRows + "</tbody>"
++ "</tr></thead><tbody>" + feeRows + discountRows + "</tbody>"
 + "<tfoot>"
 + "<tr style='background:#f5f5f5;font-weight:700'><td colspan='2' style='padding:8px;border:1px solid #ddd'>Total</td><td colspan='2' style='padding:8px;border:1px solid #ddd;text-align:right'>Rs." + totalAnnual.toLocaleString("en-IN") + "</td></tr>"
 + "<tr style='background:#e8f5e9;font-weight:700;color:green'><td colspan='2' style='padding:8px;border:1px solid #ddd'>Paid</td><td colspan='2' style='padding:8px;border:1px solid #ddd;text-align:right'>Rs." + totalPaid.toLocaleString("en-IN") + "</td></tr>"
@@ -8756,7 +8765,41 @@ style={{width:"100%",padding:"13px",background:"linear-gradient(135deg,#1a2a6c,#
 border:"none",borderRadius:12,color:"#fff",fontWeight:800,fontSize:14,
 cursor:"pointer",fontFamily:"Outfit,sans-serif",display:"flex",
 alignItems:"center",justifyContent:"center",gap:8}}>
-⬇️ Download / Print Fee Slip
+{"Download / Print Fee Slip"}
+</button>
+<button onClick={function(){
+var sName = (currentSchool&&currentSchool.name)||"School";
+var w = window.open("","_blank","width=600,height=700");
+if (!w) return;
+var clsStr = classStr;
+var rows = clsStr && clsStr.items ? clsStr.items.map(function(it){
+return "<tr><td style='padding:8px;border:1px solid #ddd'>"+it.type+"</td><td style='padding:8px;border:1px solid #ddd;text-align:right'>Rs."+(it.amount||0).toLocaleString("en-IN")+"</td></tr>";
+}).join("") : "<tr><td colspan='2' style='padding:8px;text-align:center;color:#888'>No structure found</td></tr>";
+var total = clsStr ? (clsStr.total||0) : 0;
+var html = "<!DOCTYPE html><html><head><title>Fee Structure</title>"
++"<style>body{font-family:Arial;padding:24px;color:#000}table{width:100%;border-collapse:collapse}@media print{body{padding:0}}</style>"
++"</head><body>"
++"<div style='text-align:center;margin-bottom:16px;border-bottom:2px solid #1a2a6c;padding-bottom:12px'>"
++"<h2 style='color:#1a2a6c;margin:0'>"+sName+"</h2>"
++"<p style='margin:4px 0;font-size:13px;color:#555'>Annual Fee Structure — "+stu.class+" (Session: "+session+")</p>"
++"</div>"
++"<table style='margin-bottom:8px'><tr><td style='padding:4px 8px;color:#666'>Student</td><td style='padding:4px 8px;font-weight:700'>"+stu.name+"</td></tr>"
++"<tr><td style='padding:4px 8px;color:#666'>Class</td><td style='padding:4px 8px;font-weight:700'>"+stu.class+"</td></tr>"
++"<tr><td style='padding:4px 8px;color:#666'>Roll No.</td><td style='padding:4px 8px;font-weight:700'>"+(stu.rollNo||"—")+"</td></tr></table>"
++"<table><thead><tr style='background:#1a2a6c;color:#fff'><th style='padding:8px;border:1px solid #ddd;text-align:left'>Fee Type</th>"
++"<th style='padding:8px;border:1px solid #ddd;text-align:right'>Annual Amount</th></tr></thead><tbody>"
++rows
++"</tbody><tfoot><tr style='background:#f5f5f5;font-weight:700'><td style='padding:8px;border:1px solid #ddd'>Total Annual Fee</td>"
++"<td style='padding:8px;border:1px solid #ddd;text-align:right'>Rs."+total.toLocaleString("en-IN")+"</td></tr></tfoot></table>"
++"<script>window.onload=function(){window.print();}<\/script>"
++"</body></html>";
+w.document.write(html); w.document.close();
+}}
+style={{width:"100%",padding:"11px",background:"linear-gradient(135deg,#A78BFA,#7C3AED)",
+border:"none",borderRadius:12,color:"#fff",fontWeight:700,fontSize:13,marginTop:8,
+cursor:"pointer",fontFamily:"Outfit,sans-serif",display:"flex",
+alignItems:"center",justifyContent:"center",gap:8}}>
+{"Class Fee Structure Download"}
 </button>
 </div>
 </div>
@@ -8893,7 +8936,7 @@ display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrin
 </div>
 {/* ── Session Overview Donut + Stats ── */}
 <Card style={{padding:18,marginBottom:14}}>
-<p style={{fontWeight:800,fontSize:13,color:T.textMuted,marginBottom:12,letterSpacing:1}}>📊 SESSION OVERVIEW</p>
+<p style={{fontWeight:800,fontSize:13,color:T.textMuted,marginBottom:12,letterSpacing:1}}>SESSION OVERVIEW</p>
 <div style={{display:"flex",alignItems:"center",gap:16}}>
 <div style={{position:"relative",flexShrink:0}}>
 <svg width={110} height={110}>
@@ -8924,7 +8967,7 @@ strokeLinecap="round" transform="rotate(-90 55 55)" style={{transition:"stroke-d
 {/* ── Class-wise Fees — expandable with students ── */}
 <Card style={{padding:14,marginBottom:14}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-<p style={{fontWeight:800,fontSize:12,color:T.textMuted,letterSpacing:1}}>🏫 CLASS-WISE FEES</p>
+<p style={{fontWeight:800,fontSize:12,color:T.textMuted,letterSpacing:1}}>CLASS-WISE FEES</p>
 {canEditFees && <Btn onClick={()=>setMiscModal({cls:"", label:"", amount:""})} color={T.purple} small>+ Extra Charges</Btn>}
 </div>
 <div style={{display:"grid",gap:6}}>
@@ -8970,7 +9013,7 @@ transition:"all 0.2s"}}>
 {isExpanded && (
 <div style={{border:"1px solid "+T.accent+"40",borderTop:"none",borderRadius:"0 0 8px 8px",background:T.card,padding:"8px 10px",display:"grid",gap:6}}>
 {clsStudents.length === 0 ? (
-<p style={{fontSize:12,color:T.textMuted,padding:"8px",textAlign:"center"}}>Is class mein koi student nahi</p>
+<p style={{fontSize:12,color:T.textMuted,padding:"8px",textAlign:"center"}}>No students in this class</p>
 ) : clsStudents.map(stu => {
 const stuFees = visibleFees.filter(f=>f.studentName===stu.name);
 const structAmt = v.perStudentTotal || 0;
@@ -9079,15 +9122,15 @@ borderRadius:8,color:T.text,fontSize:13,boxSizing:"border-box"}}/>
 <div style={{display:"flex",gap:8}}>
 <Btn onClick={()=>setMiscModal(null)} color={T.textMuted} style={{flex:1}}>Cancel</Btn>
 <Btn onClick={()=>{
-if (!miscModal.cls) { toast("❌ Class select karo","error"); return; }
-if (!miscModal.label.trim()) { toast("❌ Charge name likhna zaroori hai","error"); return; }
+if (!miscModal.cls) { toast("❌ Please select a class","error"); return; }
+if (!miscModal.label.trim()) { toast("❌ Charge name is required","error"); return; }
 const amt = parseInt(miscModal.amount)||0;
 if (!amt) { toast("❌ Valid amount likho","error"); return; }
 const prev = miscCharges[miscModal.cls]||[];
 const updated = {...miscCharges, [miscModal.cls]: [...prev, {label:miscModal.label.trim(), amount:amt, addedOn:new Date().toISOString()}]};
 saveMiscCharges(updated);
 setMiscModal(null);
-toast("✅ Extra charge add ho gaya!", "success");
+toast("✅ Extra charge added!", "success");
 }} color={T.purple} style={{flex:1}}>Add Charge</Btn>
 </div>
 </div>
@@ -15514,7 +15557,7 @@ return (
 <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:12}}>
 <button onClick={()=>{ setSelectedStudent(null); setMsg(""); }}
 style={{background:T.accent+"20", border:`1px solid ${T.accent}40`, color:T.accent, padding:"7px 14px", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:700, fontSize:12}}>
-← Wapas
+← Back
 </button>
 <div style={{flex:1}}>
 <p style={{fontWeight:800, fontSize:15, color:T.text}}>💬 {selectedStudent.name}</p>
@@ -19008,7 +19051,7 @@ background:T.green, color:"#fff", fontFamily:"Outfit,sans-serif", fontSize:14, f
 <div style={{display:"flex", gap:8}}>
 <button onClick={() => setMode(null)}
 style={{flex:1, padding:"12px", borderRadius:10, border:`1px solid ${T.border}`,
-background:"transparent", color:T.textMuted, fontFamily:"Outfit,sans-serif", fontSize:13, cursor:"pointer"}}>← Wapas</button>
+background:"transparent", color:T.textMuted, fontFamily:"Outfit,sans-serif", fontSize:13, cursor:"pointer"}}>← Back</button>
 <button onClick={handleSave} disabled={presentCount === 0}
 style={{flex:2, padding:"12px", borderRadius:10, border:"none",
 background:presentCount>0 ? T.green : T.border, color:"#fff",
@@ -19083,7 +19126,7 @@ background:"#F5A623", color:"#000", fontFamily:"Outfit,sans-serif", fontSize:14,
 <div style={{display:"flex", gap:8}}>
 <button onClick={() => setMode(null)}
 style={{flex:1, padding:"12px", borderRadius:10, border:`1px solid ${T.border}`,
-background:"transparent", color:T.textMuted, fontFamily:"Outfit,sans-serif", fontSize:13, cursor:"pointer"}}>← Wapas</button>
+background:"transparent", color:T.textMuted, fontFamily:"Outfit,sans-serif", fontSize:13, cursor:"pointer"}}>← Back</button>
 <button onClick={handleSave} disabled={presentCount === 0}
 style={{flex:2, padding:"12px", borderRadius:10, border:"none",
 background:presentCount>0 ? "#F5A623" : T.border, color:presentCount>0?"#000":"#fff",
