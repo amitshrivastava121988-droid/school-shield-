@@ -3717,57 +3717,7 @@ transition:"height 0.6s ease"}}>
 </div>
 )}
 {/* ── Fee Dues Reminder ── */}
-{dueStudents.length > 0 && (
-<div style={{background:T.card,border:`1px solid #F5A62340`,borderRadius:16,padding:16,marginBottom:14}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-<p style={{fontSize:12,fontWeight:700,color:"#F5A623"}}>⚠️ Fee Dues — {dueStudents.length} Students</p>
-<span style={{background:"#F5A62320",color:"#F5A623",borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700}}>
-Total Due: {fmt(dueStudents.reduce((s,st)=>s+st.dueAmt,0))}
-</span>
-</div>
-{dueStudents.slice(0,8).map(s=>(
-<div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:`1px solid ${T.border}20`}}>
-<div style={{width:34,height:34,borderRadius:10,background:`${T.accent}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
-{s.photo||"👦"}
-</div>
-<div style={{flex:1,minWidth:0}}>
-<p style={{color:T.text,fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</p>
-<p style={{color:T.textMuted,fontSize:11}}>{s.class} • Due: <span style={{color:"#F75555",fontWeight:700}}>{fmt(s.dueAmt)}</span></p>
-</div>
-{s.parentPhone ? (
-(()=>{
-const todayKey=s.name+"_"+new Date().toISOString().slice(0,10);
-const sent=!!analyticsReminderLog[todayKey];
-const info=sent?analyticsReminderLog[todayKey]:null;
-return (
-<button onClick={()=>sendWhatsApp(s)}
-disabled={sent}
-title={sent?"Sent by "+(info&&info.sentBy||"someone")+" today":"Send WhatsApp reminder"}
-style={{
-background:sent?"#1a1a1a":"#25D36620",
-border:"1px solid "+(sent?"#555":"#25D366"),
-borderRadius:20,color:sent?"#555":"#25D366",
-padding:"5px 10px",cursor:sent?"default":"pointer",fontSize:11,fontWeight:700,
-fontFamily:"Outfit,sans-serif",whiteSpace:"nowrap",flexShrink:0
-}}>
-{sent?"✓ Sent Today":"📲 Remind"}
-</button>
-);
-})()
-) : (
-<span style={{color:T.textMuted,fontSize:10}}>No phone</span>
-)}
-</div>
-))}
-{dueStudents.length > 8 && (
-<button onClick={()=>ctx.setActiveSection("fees")}
-style={{width:"100%",marginTop:10,padding:"8px",background:T.surface,border:`1px solid ${T.border}`,
-borderRadius:8,color:T.textMuted,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-+{dueStudents.length-8} more — View All in Fees Section
-</button>
-)}
-</div>
-)}
+
 </div>
 );
 }
@@ -6859,12 +6809,15 @@ const [admissionItems, setAdmissionItems] = React.useState([{id:Date.now(),type:
 const [installments, setInstallments] = React.useState(3);
 const [installmentRows, setInstallmentRows] = React.useState([]);
 const [customMode, setCustomMode] = React.useState(false);
+const [amountsLocked, setAmountsLocked] = React.useState(false);
+const [editMode, setEditMode] = React.useState(false);
 const [discountType, setDiscountType] = React.useState("None");
 const [discountAmt, setDiscountAmt] = React.useState("");
 const DISC_TYPES = ["None","Sibling Discount","Scholar Discount","Staff Ward","RTE (Free)","Merit Scholarship","Old Student Admission Fee Waiver","Custom"];
 const sameIdM2=(a,b)=>String(a)===String(b);
 const stuExist = (existingFees||[]).filter(f=>f.studentName===student.name&&(!f.schoolId||sameIdM2(f.schoolId,mySchoolId))&&!f.isDiscount);
 const alreadyTotal = stuExist.reduce((s,f)=>s+(Number(f.amount)||0),0);
+const hasExisting = stuExist.length > 0;
 const discountAmount = discountType==="None"?0:discountType==="RTE (Free)"?(parseFloat(totalFee)||0):(parseFloat(discountAmt)||0);
 const feeTypes = ["Tuition Fee","Admission Fee","Transport Fee","Uniform Fee","Exam Fee","Development Fee","Computer Fee","Sports Fee","Library Fee","Other"];
 const admissionTotal = admissionItems.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
@@ -6882,7 +6835,7 @@ const months = ["April","May","June","July","August","September","October","Nove
 setInstallmentRows(prev => {
 return Array.from({length:installments},(_,i)=>({
 id: i+1,
-month: prev[i]?.month || months[i]||`Installment ${i+1}`,
+month: (prev[i]&&prev[i].month) || months[i] || ("Installment "+(i+1)),
 amount: prev[i] ? prev[i].amount : (i===installments-1?lastInst:perInst),
 dueDate: prev[i]?.dueDate || "",
 type: prev[i]?.type || "Tuition Fee",
@@ -6893,35 +6846,42 @@ _autoAmt: i===installments-1?lastInst:perInst, // reference ke liye
 const updateRow = (idx,key,val)=>{
 setInstallmentRows(p=>p.map((r,i)=>i===idx?{...r,[key]:val}:r));
 };
-const handleSave = ()=>{
-const records = [];
-const total=parseFloat(totalFee)||0;
+const handleSave = function(){
+if (editMode) {
+// Edit mode: update existing unpaid installments
+var updatedRows = installmentRows;
+onSave({__editMode:true, rows:updatedRows, studentName:student.name, schoolId:mySchoolId});
+onClose();
+return;
+}
+var records = [];
+var total=parseFloat(totalFee)||0;
 if (discountAmount>0 && discountType!=="None") {
 records.push({id:genId(),schoolId:mySchoolId,studentName:student.name,studentId:student.id,
 month:"Discount",amount:0,type:discountType,discount:discountAmount,
 paid:true,status:"paid",paidAmount:0,dueDate:"",isDiscount:true,
 feeItems:[{type:discountType,amount:discountAmount}],
-addedBy:loggedInUser?.name||"",date:new Date().toISOString().slice(0,10)});
+addedBy:loggedInUser?loggedInUser.name:"",date:new Date().toISOString().slice(0,10)});
 }
-admissionItems.forEach(item=>{
-const amt = parseFloat(item.amount)||0;
+admissionItems.forEach(function(item){
+var amt = parseFloat(item.amount)||0;
 if (amt>0) records.push({
 id:genId(), schoolId:mySchoolId,
 studentName:student.name, studentId:student.id,
 month:"Admission", amount:amt, type:item.type,
 paid:false, dueDate:"",
 feeItems:[{type:item.type,amount:amt}],
-addedBy:loggedInUser?.name||"", date:new Date().toISOString().slice(0,10)
+addedBy:loggedInUser?loggedInUser.name:"", date:new Date().toISOString().slice(0,10)
 });
 });
-installmentRows.forEach(row=>{
+installmentRows.forEach(function(row){
 if ((row.amount||0)>0) records.push({
 id:genId(), schoolId:mySchoolId,
 studentName:student.name, studentId:student.id,
 month:row.month, amount:row.amount, type:row.type,
 paid:false, dueDate:row.dueDate||"",
 feeItems:[{type:row.type,amount:row.amount}],
-addedBy:loggedInUser?.name||"", date:new Date().toISOString().slice(0,10)
+addedBy:loggedInUser?loggedInUser.name:"", date:new Date().toISOString().slice(0,10)
 });
 });
 if (records.length===0) return;
@@ -7045,26 +7005,44 @@ fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
 <div style={{marginBottom:14}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
 <p style={{fontSize:11,color:T.textMuted}}>📋 Installment Details (edit kar sakte ho)</p>
-<button onClick={()=>{
-const total = parseFloat(totalFee)||0;
-const remaining = total - admissionTotal;
-if(remaining<=0||installments<=0) return;
-const perInst = Math.floor(remaining/installments);
-const lastInst = remaining - perInst*(installments-1);
-setInstallmentRows(p=>p.map((r,i)=>({...r, amount: i===installments-1?lastInst:perInst})));
-}} style={{fontSize:10,color:T.accent,background:T.accent+"15",border:"1px solid "+T.accent+"40",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontWeight:700}}>
-🔄 Reset Amounts
+<div style={{display:"flex",gap:6,alignItems:"center"}}>
+{amountsLocked && (
+<button onClick={function(){setAmountsLocked(false);}}
+style={{fontSize:10,color:"#F5A623",background:"#F5A62315",border:"1px solid #F5A62340",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontWeight:700}}>
+{"✏️ Edit Amounts"}
 </button>
+)}
+{!amountsLocked && (
+<button onClick={function(){
+var total = parseFloat(totalFee)||0;
+var remaining = total - admissionTotal;
+if(remaining<=0||installments<=0) return;
+var perInst = Math.floor(remaining/installments);
+var lastInst = remaining - perInst*(installments-1);
+setInstallmentRows(function(p){return p.map(function(r,i){return {...r, amount: i===installments-1?lastInst:perInst};});});
+setAmountsLocked(true);
+}} style={{fontSize:10,color:T.accent,background:T.accent+"15",border:"1px solid "+T.accent+"40",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontWeight:700}}>
+{"🔒 Lock Amounts"}
+</button>
+)}
+</div>
 </div>
 <div style={{display:"grid",gap:8}}>
 {installmentRows.map((row,idx)=>(
 <div key={row.id} style={{background:T.surface,borderRadius:10,padding:12,border:"1px solid "+T.border}}>
 <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
-<span style={{fontSize:11,color:T.textMuted,fontWeight:700,minWidth:24}}>#{idx+1}</span>
-<input value={row.month} onChange={e=>updateRow(idx,"month",e.target.value)}
+<span style={{fontSize:11,color:T.textMuted,fontWeight:700,minWidth:24}}>{"#"+(idx+1)}</span>
+<input value={row.month} onChange={function(e){updateRow(idx,"month",e.target.value);}}
 style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:6,
 padding:"6px 8px",color:T.text,fontSize:12,fontFamily:"Outfit,sans-serif"}}
 placeholder="Month/Label"/>
+{(function(){
+var isPaid = stuExist.some(function(f){ return f.month===row.month && (f.paid||f.status==="paid"); });
+return isPaid ? (
+<span style={{fontSize:10,background:"#0ECB8120",color:"#0ECB81",borderRadius:20,
+padding:"2px 8px",fontWeight:700,flexShrink:0}}>{"✅ Paid"}</span>
+) : null;
+})()}
 <select value={row.type} onChange={e=>updateRow(idx,"type",e.target.value)}
 style={{background:T.card,border:"1px solid "+T.border,borderRadius:6,
 padding:"6px 6px",color:T.text,fontSize:11,fontFamily:"Outfit,sans-serif"}}>
@@ -7073,11 +7051,12 @@ padding:"6px 6px",color:T.text,fontSize:11,fontFamily:"Outfit,sans-serif"}}>
 </div>
 <div style={{display:"flex",gap:8}}>
 <div style={{flex:1}}>
-<p style={{fontSize:9,color:T.textMuted,marginBottom:3}}>Amount (₹)</p>
-<input type="number" value={row.amount} onChange={e=>updateRow(idx,"amount",parseFloat(e.target.value)||0)}
-style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:6,
-padding:"7px 8px",color:T.accent,fontSize:13,fontWeight:700,
-boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}}/>
+<p style={{fontSize:9,color:T.textMuted,marginBottom:3}}>{"Amount (₹)"}</p>
+<input type="number" value={row.amount} onChange={function(e){if(!amountsLocked) updateRow(idx,"amount",parseFloat(e.target.value)||0);}}
+readOnly={amountsLocked}
+style={{width:"100%",background:amountsLocked?T.surface:T.card,border:"1px solid "+(amountsLocked?"#0ECB8140":T.border),borderRadius:6,
+padding:"7px 8px",color:amountsLocked?"#0ECB81":T.accent,fontSize:13,fontWeight:700,
+boxSizing:"border-box",fontFamily:"Outfit,sans-serif",opacity:amountsLocked?0.8:1}}/>
 </div>
 <div style={{flex:1}}>
 <p style={{fontSize:9,color:T.textMuted,marginBottom:3}}>Due Date</p>
@@ -7110,14 +7089,37 @@ Grand Total: ₹{(admissionTotal+installmentRows.reduce((s,r)=>s+(r.amount||0),0
 </p>
 </div>
 )}
+{hasExisting && !editMode ? (
+<div style={{display:"flex",gap:8}}>
+<button onClick={function(){
+setEditMode(true);
+var unpaidRows = stuExist.filter(function(f){return !f.paid && f.month!=="Discount" && f.month!=="Admission";}).map(function(f){
+return {id:f.id, month:f.month, type:(f.feeItems&&f.feeItems[0]&&f.feeItems[0].type)||"Tuition Fee", amount:f.amount, dueDate:f.dueDate||""};
+});
+if (unpaidRows.length > 0) setInstallmentRows(unpaidRows);
+}}
+style={{flex:1,padding:"14px",borderRadius:12,border:"none",
+background:"#F5A623",color:"#fff",fontWeight:800,fontSize:14,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Edit Existing Installments"}
+</button>
+<button onClick={onClose}
+style={{padding:"14px 20px",borderRadius:12,border:"1px solid #ccc",
+background:"none",color:"#666",fontWeight:700,fontSize:14,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Cancel"}
+</button>
+</div>
+) : (
 <button onClick={handleSave}
 disabled={installmentRows.length===0&&admissionTotal===0}
 style={{width:"100%",padding:"14px",borderRadius:12,border:"none",
 background:T.accent,color:"#fff",fontWeight:800,fontSize:15,
 cursor:"pointer",fontFamily:"Outfit,sans-serif",
 opacity:(installmentRows.length===0&&admissionTotal===0)?0.5:1}}>
-💾 Installments Add Karo
+{editMode ? "Update Installments" : "Installments Add Karo"}
 </button>
+)}
 </div>
 </div>
 );
@@ -7301,6 +7303,7 @@ const [paymentMethod, setPaymentMethod] = useState("Cash");
 const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0,10));
 const [chequeNo, setChequeNo] = useState("");
 const [remarks, setRemarks] = useState("");
+const [screenshot, setScreenshot] = useState("");
 return (
 <ModalBox title={"✅ Mark as Paid — " + record.studentName} onClose={onClose}>
 <FormField label="Payment Method">
@@ -7317,14 +7320,33 @@ return (
 <FormField label="Remarks (optional)">
 <FormInput value={remarks} onChange={setRemarks} placeholder="e.g. Full payment received" />
 </FormField>
-<div style={{background:`${T.green}10`, border:`1px solid ${T.green}30`, borderRadius:10, padding:"10px 14px", marginBottom:16}}>
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:6,fontWeight:600}}>{"Payment Screenshot (Optional)"}</p>
+<input type="file" accept="image/*" onChange={function(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 2000000) { alert("Image too large! Max 2MB"); return; }
+  var reader = new FileReader();
+  reader.onload = function(ev){ setScreenshot(ev.target.result); };
+  reader.readAsDataURL(file);
+}} style={{fontSize:12,color:T.text,fontFamily:"Outfit,sans-serif"}} />
+{screenshot && (
+<div style={{marginTop:8,borderRadius:8,overflow:"hidden",border:"1px solid "+T.border}}>
+<img src={screenshot} alt="Payment proof" style={{width:"100%",maxHeight:120,objectFit:"cover",display:"block"}} />
+<button onClick={function(){setScreenshot("");}}
+style={{width:"100%",padding:"4px",background:"#FF4D4F15",border:"none",color:"#FF4D4F",
+fontSize:11,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Remove"}</button>
+</div>
+)}
+</div>
+<div style={{background:T.green+"10", border:"1px solid "+T.green+"30", borderRadius:10, padding:"10px 14px", marginBottom:16}}>
 <Row>
 <span style={{color:T.textMuted, fontSize:13}}>Amount to Mark Paid</span>
 <span style={{color:T.green, fontWeight:800, fontSize:18}}>₹{(record.amount||0).toLocaleString()}</span>
 </Row>
 </div>
 <div style={{display:"flex", gap:8}}>
-<Btn onClick={()=>{ onSave({ ...record, paid:true, date:paymentDate, paidAmount:record.amount, paymentMethod, chequeNo: paymentMethod==="Cheque"?chequeNo:"", paymentRemarks:remarks }); onClose(); }} color={T.green} full>✅ Confirm Payment</Btn>
+<Btn onClick={()=>{ onSave({ ...record, paid:true, date:paymentDate, paidDate:paymentDate, paidAmount:record.amount, paymentMethod, chequeNo: paymentMethod==="Cheque"?chequeNo:"", paymentRemarks:remarks, paymentScreenshot:screenshot }); onClose(); }} color={T.green} full>{"Confirm Payment"}</Btn>
 <Btn onClick={onClose} color={T.textMuted} outline>Cancel</Btn>
 </div>
 </ModalBox>
@@ -8174,29 +8196,72 @@ return (
 </div>
 );
 })()}
-{sortedFees.map((f,i)=>{
-const feeItems = f.feeItems?.length ? f.feeItems : [{type:"Tuition Fee", amount:f.amount}];
+{sortedFees.map(function(f,i){
+var feeItems = f.feeItems && f.feeItems.length ? f.feeItems : [{type:"Tuition Fee", amount:f.amount}];
 return (
-<div key={f.id} style={{marginBottom:14, borderBottom:`1px solid ${T.border}`, paddingBottom:12}}>
+<div key={f.id} style={{marginBottom:14, borderBottom:"1px solid "+T.border, paddingBottom:12}}>
 <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
-<p style={{fontWeight:700, fontSize:12, color:T.text}}>{f.month||`${i+1}th INSTALLMENT`}</p>
+<p style={{fontWeight:700, fontSize:12, color:T.text}}>{f.month||(i+1)+"th INSTALLMENT"}</p>
 <span style={{fontSize:11, padding:"2px 10px", borderRadius:20, fontWeight:700,
-background:f.paid?`${T.green}20`:`${T.red}15`,
+background:f.paid?T.green+"20":T.red+"15",
 color:f.paid?T.green:T.red,
-border:`1px solid ${f.paid?T.green+"40":T.red+"40"}`
-}}>{f.paid?"✅ Paid":"⏳ Due"}</span>
+border:"1px solid "+(f.paid?T.green+"40":T.red+"40")}}>
+{f.paid?"Paid":"Due"}
+</span>
 </div>
-{f.dueDate && <p style={{fontSize:11, color:T.textMuted, marginBottom:6}}>Due Date: {new Date(f.dueDate).toLocaleDateString("en-IN")}</p>}
-{feeItems.map((item,j)=>(
+{f.dueDate && <p style={{fontSize:11, color:T.textMuted, marginBottom:4}}>{"Due: "+new Date(f.dueDate).toLocaleDateString("en-IN")}</p>}
+{f.paid && (f.paidDate||f.date) && <p style={{fontSize:11, color:T.green, marginBottom:4}}>{"Paid on: "+new Date(f.paidDate||f.date).toLocaleDateString("en-IN")}</p>}
+{f.paid && f.paymentMethod && <p style={{fontSize:11, color:T.green, marginBottom:4}}>{f.paymentMethod==="Cash"?"💵 Cash":f.paymentMethod==="Cheque"?"📋 Cheque":"📱 "+f.paymentMethod}{f.paymentRemarks?" — "+f.paymentRemarks:""}</p>}
+{feeItems.map(function(item,j){
+return (
 <div key={j} style={{display:"flex", justifyContent:"space-between", padding:"4px 0"}}>
 <span style={{fontSize:12, color:T.textMuted}}>{item.type||"Tuition Fee"}</span>
-<span style={{fontSize:12, fontWeight:600, color:T.text}}>₹ {Number(item.amount||f.amount||0).toLocaleString()}</span>
+<span style={{fontSize:12, fontWeight:600, color:T.text}}>{"₹ "+Number(item.amount||f.amount||0).toLocaleString()}</span>
 </div>
-))}
-<div style={{display:"flex", justifyContent:"space-between", marginTop:6, paddingTop:6, borderTop:`1px dashed ${T.border}`}}>
-<span style={{fontSize:12, fontWeight:700, color:T.text}}>Subtotal</span>
-<span style={{fontSize:12, fontWeight:700, color:T.accent}}>₹ {Number(f.amount||0).toLocaleString()}</span>
+);
+})}
+<div style={{display:"flex", justifyContent:"space-between", marginTop:6, paddingTop:6, borderTop:"1px dashed "+T.border}}>
+<span style={{fontSize:12, fontWeight:700, color:T.text}}>{"Subtotal"}</span>
+<span style={{fontSize:12, fontWeight:700, color:T.accent}}>{"₹ "+Number(f.amount||0).toLocaleString()}</span>
 </div>
+{/* Payment Screenshot — parent upload, principal view */}
+{f.paid && (
+<div style={{marginTop:8}}>
+{f.paymentScreenshot ? (
+<div style={{borderRadius:8,overflow:"hidden",border:"1px solid "+T.border}}>
+<img src={f.paymentScreenshot} alt="Payment proof"
+style={{width:"100%",maxHeight:120,objectFit:"cover",display:"block",cursor:"pointer"}}
+onClick={function(){window.open(f.paymentScreenshot,"_blank");}} />
+<div style={{display:"flex",gap:6,padding:"4px 6px",background:T.surface}}>
+<a href={f.paymentScreenshot} download={"payment_"+f.studentName+"_"+f.month+".jpg"}
+style={{flex:1,padding:"4px 8px",background:T.accent+"15",borderRadius:6,
+color:T.accent,fontSize:10,fontWeight:700,textDecoration:"none",textAlign:"center"}}>
+{"Download"}
+</a>
+<button onClick={function(){setFees(function(p){return p.map(function(x){return x.id===f.id?{...x,paymentScreenshot:""}:x;});});}}
+style={{padding:"4px 8px",background:"#FF4D4F15",border:"none",borderRadius:6,
+color:"#FF4D4F",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Delete"}
+</button>
+</div>
+</div>
+) : (
+<div style={{border:"1px dashed "+T.border,borderRadius:8,padding:"8px",textAlign:"center"}}>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:6}}>{"Upload payment screenshot"}</p>
+<input type="file" accept="image/*" onChange={function(e){
+var file = e.target.files[0];
+if (!file) return;
+if (file.size > 2000000) { alert("Max 2MB"); return; }
+var reader = new FileReader();
+reader.onload = function(ev){
+setFees(function(p){return p.map(function(x){return x.id===f.id?{...x,paymentScreenshot:ev.target.result}:x;});});
+};
+reader.readAsDataURL(file);
+}} style={{fontSize:11,color:T.text}} />
+</div>
+)}
+</div>
+)}
 </div>
 );
 })}
@@ -8251,6 +8316,8 @@ const schoolStudentsForFee = students.filter(s=>!s.schoolId||String(s.schoolId)=
 const [search, setSearch] = useState("");
 const [filterStatus, setFilterStatus] = useState("all");
 const [viewMode, setViewMode] = useState("list"); // "list" | "student"
+const [stuSearchQuery, setStuSearchQuery] = useState("");
+const [stuSearchOpen, setStuSearchOpen] = useState(false);
 // ── WhatsApp Reminder State ──
 const [reminderLog, setReminderLog] = useState({});
 useEffect(() => {
@@ -8541,7 +8608,22 @@ background:T.accent+"15",border:"1px solid "+T.accent+"40",padding:"8px 12px",bo
 <p style={{fontWeight:700,color:T.text,fontSize:14}}>📋 Fee Records</p>
 {canEditFees && (
 <div style={{display:"flex",gap:6}}>
-<Btn onClick={()=>setModal(<FeeInstallmentModal student={stu} students={students} loggedInUser={loggedInUser} feeStructure={feeStructure} existingFees={fees} onSave={(recs)=>{setFees(p=>[...p,...recs]);toast("Installments added!","success");}} onClose={()=>setModal(null)} />)} color={T.purple} small>📆 Installments</Btn>
+<Btn onClick={()=>setModal(<FeeInstallmentModal student={stu} students={students} loggedInUser={loggedInUser} feeStructure={feeStructure} existingFees={fees} onSave={function(recs){
+if (recs && recs.__editMode) {
+setFees(function(prev){
+return prev.map(function(f){
+if (f.studentName !== recs.studentName || f.isDiscount) return f;
+var matchRow = recs.rows.find(function(r){ return r.month===f.month && !f.paid; });
+if (matchRow) return {...f, amount:matchRow.amount, dueDate:matchRow.dueDate||f.dueDate, feeItems:[{type:matchRow.type,amount:matchRow.amount}]};
+return f;
+});
+});
+toast("Installments updated!","success");
+} else {
+setFees(function(p){return [...p,...recs];});
+toast("Installments added!","success");
+}
+}} onClose={()=>setModal(null)} />)} color={T.purple} small>📆 Installments</Btn>
 <Btn onClick={()=>setModal(<FeeAddModal students={students} loggedInUser={loggedInUser} onSave={(d)=>setFees(p=>[...p,d])} onClose={()=>setModal(null)} defaultStudent={stu.name} />)} color={T.accent} small>+ Add</Btn>
 </div>
 )}
@@ -8566,12 +8648,24 @@ background:f.isDiscount?"#A78BFA08":f.paid?T.green+"06":isOD?T.red+"06":"transpa
 {(f.feeItems||[]).map((item,i)=>(
 <p key={i} style={{fontSize:11,color:T.textMuted,marginLeft:14}}>{item.type}: ₹{(+item.amount).toLocaleString()}</p>
 ))}
-{f.paymentMethod&&f.paid&&(
-<p style={{fontSize:10,color:T.green,marginLeft:14,marginTop:2}}>
-{f.paymentMethod==="Cash"?"💵":f.paymentMethod==="Cheque"?"📋":"📱"} {f.paymentMethod}
-</p>
+{f.paid && (
+<div style={{marginLeft:14,marginTop:3}}>
+{f.paymentMethod && <p style={{fontSize:10,color:T.green}}>
+{f.paymentMethod==="Cash"?"💵 Cash":f.paymentMethod==="Cheque"?"📋 Cheque":"📱 "+f.paymentMethod}
+{f.paidDate||f.date ? " • "+new Date(f.paidDate||f.date).toLocaleDateString("en-IN") : ""}
+</p>}
+{f.paymentRemarks && <p style={{fontSize:10,color:T.textMuted,fontStyle:"italic",marginTop:1}}>{f.paymentRemarks}</p>}
+{f.paymentScreenshot && (
+<div style={{marginTop:4}}>
+<img src={f.paymentScreenshot} alt="Payment proof"
+style={{width:"100%",maxHeight:100,objectFit:"cover",borderRadius:6,border:"1px solid "+T.border,display:"block",cursor:"pointer"}}
+onClick={function(e){e.stopPropagation();window.open(f.paymentScreenshot,"_blank");}} />
+<p style={{fontSize:9,color:T.textMuted,marginTop:2}}>{"Tap to view full"}</p>
+</div>
 )}
-{f.note&&<p style={{fontSize:10,color:T.textMuted,marginLeft:14,marginTop:2,fontStyle:"italic"}}>{f.note}</p>}
+</div>
+)}
+{!f.paid && f.note && <p style={{fontSize:10,color:T.textMuted,marginLeft:14,marginTop:2,fontStyle:"italic"}}>{f.note}</p>}
 </div>
 <div style={{textAlign:"right"}}>
 <p style={{fontWeight:800,fontSize:15,color:f.paid?T.green:T.red,
@@ -8738,6 +8832,65 @@ return (
 )} />
 {/* UPI Settings */}
 {canEditFees && <UpiSettingsCard currentSchool={currentSchool} schools={schools} setSchools={setSchools} toast={toast} />}
+{/* ── Student Search ── */}
+<div style={{position:"relative",marginBottom:12}}>
+<input
+value={stuSearchQuery}
+onChange={function(e){ setStuSearchQuery(e.target.value); setStuSearchOpen(e.target.value.length>0); }}
+onFocus={function(){ if(stuSearchQuery.length>0) setStuSearchOpen(true); }}
+placeholder={"Search student by name..."}
+style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:10,
+padding:"10px 14px 10px 36px",fontSize:13,color:T.text,
+fontFamily:"Outfit,sans-serif",boxSizing:"border-box",outline:"none"}}
+/>
+<span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:T.textMuted}}>{"🔍"}</span>
+{stuSearchQuery && (
+<button onClick={function(){setStuSearchQuery("");setStuSearchOpen(false);}}
+style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+background:"none",border:"none",color:T.textMuted,cursor:"pointer",fontSize:14}}>{"✕"}</button>
+)}
+{stuSearchOpen && (
+<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:999,
+background:T.card,border:"1px solid "+T.border,borderRadius:10,
+boxShadow:"0 8px 24px rgba(0,0,0,0.15)",maxHeight:240,overflowY:"auto",marginTop:4}}>
+{schoolStudentsForFee.filter(function(s){
+return (s.name||"").toLowerCase().includes(stuSearchQuery.toLowerCase());
+}).slice(0,10).map(function(s){
+var stuFees = visibleFees.filter(function(f){return f.studentName===s.name;});
+var paid = stuFees.filter(function(f){return f.paid&&!f.isDiscount;}).reduce(function(sm,f){return sm+(f.paidAmount||f.amount||0);},0);
+var due = stuFees.filter(function(f){return !f.paid&&!f.isDiscount;}).reduce(function(sm,f){return sm+(f.amount||0);},0);
+return (
+<div key={s.id}
+onClick={function(){setSelectedStudent(s);setStuSearchQuery("");setStuSearchOpen(false);}}
+style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+borderBottom:"1px solid "+T.border+"40",cursor:"pointer",
+background:"transparent"}}
+onMouseEnter={function(e){e.currentTarget.style.background=T.surface;}}
+onMouseLeave={function(e){e.currentTarget.style.background="transparent";}}>
+<div style={{width:32,height:32,borderRadius:"50%",background:T.accent+"20",
+display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+{s.gender==="Female"?"👧":"👦"}
+</div>
+<div style={{flex:1,minWidth:0}}>
+<p style={{fontWeight:700,color:T.text,fontSize:13}}>{s.name}</p>
+<p style={{fontSize:11,color:T.textMuted}}>{s.class||"—"}</p>
+</div>
+<div style={{textAlign:"right",flexShrink:0}}>
+{due > 0
+? <p style={{fontSize:11,color:T.red,fontWeight:700}}>{"₹"+due.toLocaleString("en-IN")+" due"}</p>
+: <p style={{fontSize:11,color:T.green,fontWeight:700}}>{"✅ Clear"}</p>
+}
+{paid > 0 && <p style={{fontSize:10,color:T.textMuted}}>{"Paid: ₹"+paid.toLocaleString("en-IN")}</p>}
+</div>
+</div>
+);
+})}
+{schoolStudentsForFee.filter(function(s){return (s.name||"").toLowerCase().includes(stuSearchQuery.toLowerCase());}).length===0 && (
+<p style={{padding:"12px 14px",color:T.textMuted,fontSize:13}}>{"No student found"}</p>
+)}
+</div>
+)}
+</div>
 {/* ── Session Overview Donut + Stats ── */}
 <Card style={{padding:18,marginBottom:14}}>
 <p style={{fontWeight:800,fontSize:13,color:T.textMuted,marginBottom:12,letterSpacing:1}}>📊 SESSION OVERVIEW</p>
@@ -9068,6 +9221,71 @@ fontSize:10,fontWeight:700,padding:"1px 7px",marginLeft:2}}>
 );
 }
 // ─── GREETINGS INLINE SECTION ────────────────────────────────────────────────
+function GreetingSentCard({ entry, index, setGreetingsSentLog, todayStr }) {
+const [expanded, setExpanded] = React.useState(false);
+const [editing, setEditing] = React.useState(false);
+const [editMsg, setEditMsg] = React.useState(entry.msg || "");
+const saveEdit = function() {
+  setGreetingsSentLog(function(prev) {
+    return (prev||[]).map(function(item, i) {
+      if (item.id === entry.id && item.date === entry.date && item.name === entry.name) {
+        return {...item, msg: editMsg};
+      }
+      return item;
+    });
+  });
+  setEditing(false);
+};
+return (
+<div style={{background:"#051a0f",border:"1px solid #0ECB8120",borderRadius:10,marginBottom:6,overflow:"hidden"}}>
+<div onClick={function(){setExpanded(function(p){return !p;});}}
+style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 10px",cursor:"pointer"}}>
+<p style={{fontWeight:700,color:"#E8EEF8",fontSize:12}}>{entry.name}</p>
+<div style={{display:"flex",alignItems:"center",gap:8}}>
+<p style={{fontSize:10,color:"#0ECB81"}}>{"✅ "+entry.sentAt}</p>
+<span style={{fontSize:11,color:"#6B7A99"}}>{expanded?"▲":"▼"}</span>
+</div>
+</div>
+{expanded && (
+<div style={{padding:"0 10px 10px"}}>
+{editing ? (
+<div>
+<textarea value={editMsg} onChange={function(e){setEditMsg(e.target.value);}} rows={4}
+style={{width:"100%",background:"#0a2010",border:"1px solid #0ECB8140",borderRadius:8,
+padding:"8px 10px",color:"#E8EEF8",fontSize:12,fontFamily:"Outfit,sans-serif",
+boxSizing:"border-box",outline:"none",resize:"vertical",marginBottom:8}} />
+<div style={{display:"flex",gap:6}}>
+<button onClick={saveEdit}
+style={{flex:1,padding:"7px",borderRadius:8,border:"none",background:"#0ECB81",
+color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Save"}
+</button>
+<button onClick={function(){setEditing(false);setEditMsg(entry.msg||"");}}
+style={{padding:"7px 12px",borderRadius:8,border:"1px solid #0ECB8140",background:"none",
+color:"#6B7A99",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Cancel"}
+</button>
+</div>
+</div>
+) : (
+<div>
+<p style={{fontSize:12,color:"#C5CDE0",background:"#0a2010",borderRadius:8,
+padding:"8px 10px",marginBottom:8,whiteSpace:"pre-line",lineHeight:1.6}}>
+{entry.msg || "No message"}
+</p>
+<button onClick={function(){setEditing(true);}}
+style={{background:"#0ECB8115",border:"1px solid #0ECB8140",borderRadius:8,
+padding:"6px 14px",color:"#0ECB81",fontSize:11,fontWeight:700,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Edit Message"}
+</button>
+</div>
+)}
+</div>
+)}
+</div>
+);
+}
 function GreetingsInlineSection({ ctx, greetingAlerts }) {
 const { greetings, setGreetings, greetingsSentLog, setGreetingsSentLog,
   greetingSettings, setGreetingSettings, currentSchool, setAlerts,
@@ -9093,6 +9311,7 @@ const upcomingG = (greetings||[]).filter(function(g){
   return g.date >= todayStr && (!g.schoolId || String(g.schoolId)===String(mySchoolId));
 }).sort(function(a,b){ return a.date.localeCompare(b.date); });
 const sentToday = (greetingsSentLog||[]).filter(function(l){ return l.date===todayStr; });
+const sentHistory = (greetingsSentLog||[]).slice().sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); }).slice(0,50);
 const bdAlerts = greetingAlerts.filter(function(a){ return a.subtype==="birthday"; });
 return (
 <div className="fadeUp" style={{paddingTop:8}}>
@@ -9304,17 +9523,12 @@ style={{background:"none",border:"none",color:"#FF4D4F",cursor:"pointer",fontSiz
 </div>
 )}
 {/* Sent today */}
-{sentToday.length > 0 && (
+{sentHistory.length > 0 && (
 <div>
-<p style={{fontSize:12,fontWeight:800,color:"#0ECB81",marginBottom:6}}>{"📋 Aaj bheji — "+sentToday.length+" wishes"}</p>
-{sentToday.map(function(e,i){
+<p style={{fontSize:12,fontWeight:800,color:"#0ECB81",marginBottom:8}}>{"Sent Wishes — "+sentHistory.length+" total"}</p>
+{sentHistory.map(function(e,i){
 return (
-<div key={i} style={{background:"#051a0f",border:"1px solid #0ECB8120",borderRadius:8,padding:8,marginBottom:4}}>
-<div style={{display:"flex",justifyContent:"space-between"}}>
-<p style={{fontWeight:700,color:"#E8EEF8",fontSize:11}}>{e.name}</p>
-<p style={{fontSize:10,color:"#0ECB81"}}>{"✅ "+e.sentAt}</p>
-</div>
-</div>
+<GreetingSentCard key={i} entry={e} index={i} setGreetingsSentLog={setGreetingsSentLog} todayStr={todayStr} />
 );
 })}
 </div>
