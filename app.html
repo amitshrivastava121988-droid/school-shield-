@@ -2191,7 +2191,7 @@ superadmin: [
 {key:"dashboard",icon:"📊",label:"dashboard"}, {key:"schools",icon:"🏫",label:"schools"},
 {key:"revenue",icon:"💰",label:"revenue"}, {key:"analytics",icon:"📈",label:"analytics"},
 {key:"discounts",icon:"🏷️",label:"discounts"}, {key:"mapview",icon:"🗺️",label:"mapView"},
-{key:"supportsettings",icon:"⚙️",label:"support"}, {key:"backup",icon:"💾",label:"Backup"},
+{key:"demorequests",icon:"🎯",label:"Demo Requests"}, {key:"supportsettings",icon:"⚙️",label:"support"}, {key:"backup",icon:"💾",label:"Backup"},
 {key:"changepassword",icon:"🔑",label:"Change Password"},
 ],
 founder: [
@@ -3032,6 +3032,7 @@ if (section === "backup") return <SuperAdminBackupSection ctx={ctx} />;
 if (section === "changepassword") return <SuperAdminChangePasswordSection ctx={ctx} />;
 if (section === "employees") return <EmployeesSection ctx={ctx} />;
 if (section === "staffdirectory") return <StaffDirectorySection ctx={ctx} />;
+if (section === "demorequests") return <DemoRequestsSection ctx={ctx} />;
 if (section === "revenue") return <RevenueSection ctx={ctx} />;
 if (section === "analytics") return <AnalyticsSection ctx={ctx} />;
 if (section === "discounts") return <DiscountsSection ctx={ctx} />;
@@ -17532,10 +17533,14 @@ fontFamily:"Outfit,sans-serif",
 // ─── PLAN-BASED FEATURE CONFIG ───────────────────────────────────────────────
 const PLAN_FEATURES = {
 basic: {
-label: "🟢 Basic",
+label: "🟢 Base",
+badge: "Base",
 color: "#0ECB81",
+price: "Starter",
+popular: false,
+crown: false,
 features: {
-certificates:       true,
+certificates:       false,
 homework:           true,
 alerts:             true,
 leave:              true,
@@ -17545,20 +17550,38 @@ reached_home:       false,
 online_class:       false,
 transport_tracking: false,
 trip_management:    false,
-parent_feedback_reply: false,
+parent_feedback_reply: true,
 syllabus_edit:      false,
-fee_due_visible:    false,
+fee_due_visible:    true,
+exams:              false,
+gallery:            false,
+inventory:          false,
+visitors:           false,
+health_tracking:    false,
+advanced_analytics: false,
+timetable:          true,
+attendance_advanced:false,
 },
 limits: {
-certificates_per_month: 5,
-homework_per_week:      5,
-alerts_per_day:         2,
-leave_per_month:        10,
+students:               200,
+notifications_month:    1000,
+media_upload_mb:        100,
+staff_accounts:         10,
+reports:                "Basic",
+backup:                 "Weekly",
+certificates_per_month: 0,
+homework_per_week:      999,
+alerts_per_day:         10,
+leave_per_month:        999,
 },
 },
 standard: {
 label: "🔵 Standard",
+badge: "Standard",
 color: "#4F8EF7",
+price: "Growth",
+popular: true,
+crown: false,
 features: {
 certificates:       true,
 homework:           true,
@@ -17573,8 +17596,22 @@ trip_management:    false,
 parent_feedback_reply: true,
 syllabus_edit:      true,
 fee_due_visible:    true,
+exams:              true,
+gallery:            true,
+inventory:          false,
+visitors:           false,
+health_tracking:    false,
+advanced_analytics: false,
+timetable:          true,
+attendance_advanced:true,
 },
 limits: {
+students:               1000,
+notifications_month:    5000,
+media_upload_mb:        5120,
+staff_accounts:         50,
+reports:                "Standard",
+backup:                 "Daily",
 certificates_per_month: 999,
 homework_per_week:      999,
 alerts_per_day:         999,
@@ -17582,8 +17619,12 @@ leave_per_month:        999,
 },
 },
 premium: {
-label: "🟣 Premium",
+label: "👑 Premium",
+badge: "Premium",
 color: "#A78BFA",
+price: "Enterprise",
+popular: false,
+crown: true,
 features: {
 certificates:       true,
 homework:           true,
@@ -17598,8 +17639,22 @@ trip_management:    true,
 parent_feedback_reply: true,
 syllabus_edit:      true,
 fee_due_visible:    true,
+exams:              true,
+gallery:            true,
+inventory:          true,
+visitors:           true,
+health_tracking:    true,
+advanced_analytics: true,
+timetable:          true,
+attendance_advanced:true,
 },
 limits: {
+students:               -1,
+notifications_month:    -1,
+media_upload_mb:        -1,
+staff_accounts:         -1,
+reports:                "Advanced + Custom",
+backup:                 "Real-time",
 certificates_per_month: 999,
 homework_per_week:      999,
 alerts_per_day:         999,
@@ -17609,18 +17664,26 @@ leave_per_month:        999,
 };
 const FEATURE_LABELS = {
 certificates:       { icon:"📜", label:"Certificates" },
-homework:           { icon:"📚", label:"Homework" },
-alerts:             { icon:"🔔", label:"Alerts" },
-leave:              { icon:"📋", label:"Leave" },
-live_camera:        { icon:"📹", label:"Live Camera" },
+homework:           { icon:"📚", label:"Homework & Syllabus" },
+alerts:             { icon:"🔔", label:"Alerts & Notices" },
+leave:              { icon:"📋", label:"Leave Management" },
+live_camera:        { icon:"📹", label:"Live Cameras" },
 authorized_pickup:  { icon:"🚗", label:"Authorized Pickup" },
-reached_home:       { icon:"🏠", label:"Reached Home" },
+reached_home:       { icon:"🏠", label:"Reached Home Tracking" },
 online_class:       { icon:"🎥", label:"Online Classes" },
 transport_tracking: { icon:"🚌", label:"Transport Tracking" },
 trip_management:    { icon:"🗺️", label:"Trip Management" },
-parent_feedback_reply: { icon:"💌", label:"Parent Feedback Reply" },
-syllabus_edit:      { icon:"📖", label:"Syllabus Edit" },
-fee_due_visible:    { icon:"💳", label:"Fee Due Visible" },
+parent_feedback_reply: { icon:"💌", label:"Parent Feedback" },
+syllabus_edit:      { icon:"📖", label:"Syllabus Management" },
+fee_due_visible:    { icon:"💳", label:"Fee Management" },
+exams:              { icon:"📝", label:"Exams & Results" },
+gallery:            { icon:"🖼️", label:"Gallery & Media" },
+inventory:          { icon:"📦", label:"Inventory Management" },
+visitors:           { icon:"👥", label:"Visitor Management" },
+health_tracking:    { icon:"🏥", label:"Health Tracking" },
+advanced_analytics: { icon:"📊", label:"Advanced Analytics" },
+timetable:          { icon:"📅", label:"Timetable" },
+attendance_advanced:{ icon:"📲", label:"Advanced Attendance" },
 };
 function SchoolForm({ l, onSave, onClose, discounts, school }) {
 const isEdit = !!school;
@@ -17721,6 +17784,64 @@ setD(p=>({...p, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.t
 {/* ── Feature Plan ── */}
 <div style={{background:`${T.surface}`, border:`1px solid ${T.border}`, borderRadius:12, padding:"14px", marginBottom:12}}>
 <p style={{fontSize:13, fontWeight:700, color:T.text, marginBottom:10}}>🎯 Feature Plan</p>
+{/* Plan Comparison Table */}
+<div style={{marginBottom:16}}>
+<p style={{fontSize:12,fontWeight:700,color:T.textMuted,marginBottom:10}}>{"Select Plan — Tap to apply"}</p>
+<div style={{display:"flex",gap:8,marginBottom:10}}>
+{Object.entries(PLAN_FEATURES).map(function([key, cfg]){
+var isActive = d.featurePlan===key;
+return (
+<div key={key} onClick={function(){applyPlan(key);}}
+style={{flex:1,borderRadius:12,border:"2px solid "+(isActive?cfg.color:T.border),
+background:isActive?cfg.color+"18":T.card,cursor:"pointer",
+overflow:"hidden",transition:"all 0.2s",position:"relative"}}>
+{cfg.popular && <div style={{background:"#4F8EF7",color:"#fff",fontSize:9,fontWeight:800,
+textAlign:"center",padding:"3px 0",letterSpacing:0.5}}>{"MOST POPULAR"}</div>}
+{cfg.crown && <div style={{background:"linear-gradient(90deg,#A78BFA,#7C3AED)",color:"#fff",fontSize:9,fontWeight:800,
+textAlign:"center",padding:"3px 0",letterSpacing:0.5}}>{"👑 PREMIUM"}</div>}
+<div style={{padding:"10px 8px",textAlign:"center"}}>
+<p style={{fontSize:13,fontWeight:800,color:cfg.color}}>{cfg.badge}</p>
+<p style={{fontSize:10,color:T.textMuted,marginTop:2}}>
+{cfg.limits.students===-1?"Unlimited":cfg.limits.students+" Students"}
+</p>
+<p style={{fontSize:10,color:T.textMuted}}>
+{cfg.limits.staff_accounts===-1?"Unlimited":cfg.limits.staff_accounts+" Staff"}
+</p>
+{isActive && <p style={{fontSize:10,fontWeight:700,color:cfg.color,marginTop:4}}>{"✓ Active"}</p>}
+</div>
+</div>
+);
+})}
+</div>
+{/* Feature comparison */}
+<div style={{background:T.surface,borderRadius:10,overflow:"hidden",border:"1px solid "+T.border}}>
+<div style={{display:"flex",background:T.card,borderBottom:"1px solid "+T.border}}>
+<div style={{flex:2,padding:"6px 10px",fontSize:11,fontWeight:700,color:T.textMuted}}>{"Feature"}</div>
+{Object.entries(PLAN_FEATURES).map(function([key,cfg]){
+return <div key={key} style={{flex:1,padding:"6px 4px",fontSize:11,fontWeight:700,color:cfg.color,textAlign:"center"}}>{cfg.badge}</div>;
+})}
+</div>
+{Object.entries(FEATURE_LABELS).map(function([fKey,meta]){
+return (
+<div key={fKey} style={{display:"flex",borderBottom:"1px solid "+T.border+"40",alignItems:"center"}}>
+<div style={{flex:2,padding:"6px 10px",fontSize:11,color:T.text}}>{meta.icon+" "+meta.label}</div>
+{Object.entries(PLAN_FEATURES).map(function([pKey,cfg]){
+var has = cfg.features[fKey];
+return <div key={pKey} style={{flex:1,textAlign:"center",padding:"6px 4px",fontSize:12}}>
+{has ? <span style={{color:"#0ECB81",fontWeight:800}}>{"✓"}</span> : <span style={{color:T.textMuted}}>{"—"}</span>}
+</div>;
+})}
+</div>
+);
+})}
+<div style={{display:"flex",background:T.card+"80",borderTop:"1px solid "+T.border,padding:"6px 0"}}>
+<div style={{flex:2,padding:"4px 10px",fontSize:11,fontWeight:700,color:T.textMuted}}>{"Backup"}</div>
+{Object.entries(PLAN_FEATURES).map(function([key,cfg]){
+return <div key={key} style={{flex:1,textAlign:"center",fontSize:10,color:T.textMuted,padding:"4px 2px"}}>{cfg.limits.backup}</div>;
+})}
+</div>
+</div>
+</div>
 {/* Plan selector buttons */}
 <div style={{display:"flex", gap:8, marginBottom:12, flexWrap:"wrap"}}>
 {Object.entries(PLAN_FEATURES).map(([key, cfg]) => (
@@ -21657,6 +21778,119 @@ borderRadius:10, padding:"10px 14px"
 </div>
 );
 }
+function DemoRequestsSection({ ctx }) {
+const [requests, setRequests] = React.useState([]);
+const [loading, setLoading] = React.useState(true);
+const [filter, setFilter] = React.useState("all");
+
+React.useEffect(function() {
+  if (!window.db) { setLoading(false); return; }
+  var ref = window.db.ref("schoolshield/demoRequests");
+  ref.orderByChild("requestedAt").limitToLast(200).on("value", function(snap) {
+    if (snap.exists()) {
+      var arr = [];
+      snap.forEach(function(child) {
+        arr.unshift({...child.val(), _key: child.key});
+      });
+      setRequests(arr);
+    }
+    setLoading(false);
+  });
+  return function() { ref.off(); };
+}, []);
+
+var filtered = filter === "all" ? requests : requests.filter(function(r){ return r.status === filter; });
+
+var updateStatus = function(key, status) {
+  window.db.ref("schoolshield/demoRequests/" + key + "/status").set(status);
+};
+
+return (
+<div className="fadeUp">
+<SectionHeader title={"Demo Requests"} />
+<div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+{["all","pending","contacted","converted","closed"].map(function(s){
+return (
+<button key={s} onClick={function(){setFilter(s);}}
+style={{padding:"6px 14px",borderRadius:20,border:"1px solid "+(filter===s?T.accent:T.border),
+background:filter===s?T.accent+"20":"transparent",color:filter===s?T.accent:T.textMuted,
+fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",
+textTransform:"capitalize"}}>
+{s==="all"?"All ("+requests.length+")":s.charAt(0).toUpperCase()+s.slice(1)}
+</button>
+);
+})}
+</div>
+{loading && <p style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"40px 0"}}>{"Loading..."}</p>}
+{!loading && filtered.length === 0 && <p style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"40px 0"}}>{"No demo requests yet"}</p>}
+{filtered.map(function(req){
+var date = req.requestedAt ? new Date(req.requestedAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
+var statusColor = {pending:"#F5A623",contacted:"#4F8EF7",converted:"#0ECB81",closed:"#6B7A99"}[req.status] || "#6B7A99";
+return (
+<div key={req._key} style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:16,marginBottom:12}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+<div>
+<p style={{fontSize:15,fontWeight:800,color:T.text}}>{req.schoolName||"—"}</p>
+<p style={{fontSize:12,color:T.textMuted}}>{req.contactName} • {req.designation||"—"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginTop:2}}>{date}</p>
+</div>
+<span style={{background:statusColor+"20",color:statusColor,border:"1px solid "+statusColor+"40",
+borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700,flexShrink:0}}>
+{(req.status||"pending").charAt(0).toUpperCase()+(req.status||"pending").slice(1)}
+</span>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+<a href={"tel:"+req.phone} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",
+background:"#25D36615",border:"1px solid #25D36640",borderRadius:10,textDecoration:"none"}}>
+<span style={{fontSize:16}}>{"📞"}</span>
+<div>
+<p style={{fontSize:10,color:T.textMuted}}>{"Phone"}</p>
+<p style={{fontSize:13,fontWeight:700,color:"#25D366"}}>{req.phone||"—"}</p>
+</div>
+</a>
+<a href={"mailto:"+req.email} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",
+background:T.accent+"15",border:"1px solid "+T.accent+"40",borderRadius:10,textDecoration:"none"}}>
+<span style={{fontSize:16}}>{"📧"}</span>
+<div>
+<p style={{fontSize:10,color:T.textMuted}}>{"Email"}</p>
+<p style={{fontSize:12,fontWeight:700,color:T.accent,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:100}}>{req.email||"—"}</p>
+</div>
+</a>
+</div>
+{(req.studentsCount||req.address) && (
+<div style={{background:T.surface,borderRadius:8,padding:"8px 10px",marginBottom:10,fontSize:12,color:T.textMuted}}>
+{req.studentsCount && <p>{"👥 Students: "+req.studentsCount}</p>}
+{req.address && <p style={{marginTop:4}}>{"📍 "+req.address}</p>}
+</div>
+)}
+<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+{["pending","contacted","converted","closed"].map(function(s){
+return (
+<button key={s} onClick={function(){updateStatus(req._key,s);}}
+style={{padding:"5px 12px",borderRadius:8,border:"1px solid "+(req.status===s?statusColor:T.border),
+background:req.status===s?statusColor+"20":"transparent",
+color:req.status===s?statusColor:T.textMuted,
+fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",
+textTransform:"capitalize"}}>
+{s.charAt(0).toUpperCase()+s.slice(1)}
+</button>
+);
+})}
+<a href={"https://wa.me/91"+req.phone+"?text=Hi+"+encodeURIComponent(req.contactName||"")+",+SchoolShield+demo+ke+baare+mein+baat+karna+tha."}
+target="_blank" rel="noopener noreferrer"
+style={{padding:"5px 12px",borderRadius:8,border:"1px solid #25D36640",
+background:"#25D36615",color:"#25D366",fontSize:11,fontWeight:700,
+textDecoration:"none",display:"inline-block"}}>
+{"💬 WhatsApp"}
+</a>
+</div>
+</div>
+);
+})}
+</div>
+);
+}
+
 function RevenueSection({ ctx }) {
 const { l, schools } = ctx;
 const activeSchools = schools.filter(s=>s.active);
