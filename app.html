@@ -914,6 +914,125 @@ return ()=>ref.off();
 },[]);
 return [info, setInfo];
 }
+function ShieldAssistant() {
+const [open, setOpen] = React.useState(false);
+const [listening, setListening] = React.useState(false);
+const [response, setResponse] = React.useState("");
+const [transcript, setTranscript] = React.useState("");
+const recognRef = React.useRef(null);
+
+const speak = function(text) {
+  setResponse(text);
+  try {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "hi-IN";
+      u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+    }
+  } catch(e) {}
+};
+
+const processQuery = function(q) {
+  q = (q||"").toLowerCase();
+  if (q.includes("attendance")||q.includes("present")||q.includes("absent")) {
+    speak("Attendance query received"); return;
+  }
+  if (q.includes("fees")||q.includes("due")) {
+    speak("Fees query received"); return;
+  }
+  speak("Shield sun raha hai: " + q);
+};
+
+const startListening = function() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { speak("Chrome use karein"); return; }
+  try {
+    var r = new SR();
+    r.lang = "hi-IN";
+    r.continuous = false;
+    r.interimResults = false;
+    r.onstart = function(){ setListening(true); };
+    r.onresult = function(e){
+      var t = e.results[0][0].transcript;
+      setTranscript(t);
+      setListening(false);
+      processQuery(t);
+    };
+    r.onerror = function(){ setListening(false); };
+    r.onend = function(){ setListening(false); };
+    recognRef.current = r;
+    r.start();
+  } catch(e){ setListening(false); }
+};
+
+return (
+<div>
+<button
+onClick={function(){setOpen(function(p){return !p;});}}
+title="Shield Assistant"
+style={{position:"fixed",bottom:162,right:24,zIndex:2999,
+width:52,height:52,borderRadius:"50%",
+background:"linear-gradient(135deg,#F5A623,#D97706)",
+border:"none",cursor:"pointer",
+boxShadow:"0 4px 20px rgba(245,166,35,0.5)",
+display:"flex",alignItems:"center",
+justifyContent:"center",fontSize:20}}>
+{"🛡️"}
+</button>
+{open && (
+<div style={{position:"fixed",bottom:226,right:16,zIndex:2999,width:280,
+background:"#0f172a",border:"1px solid rgba(245,166,35,0.3)",
+borderRadius:16,padding:14,
+boxShadow:"0 8px 32px rgba(0,0,0,0.7)"}}>
+<div style={{display:"flex",alignItems:"center",
+justifyContent:"space-between",marginBottom:10}}>
+<div style={{display:"flex",alignItems:"center",gap:8}}>
+<span style={{fontSize:18}}>{"🛡️"}</span>
+<div>
+<p style={{fontSize:13,fontWeight:800,color:"#F5A623",margin:0}}>{"Shield"}</p>
+<p style={{fontSize:10,color:"rgba(255,255,255,0.4)",margin:0}}>{"Voice Assistant"}</p>
+</div>
+</div>
+<button
+onClick={function(){setOpen(false);}}
+style={{background:"none",border:"none",
+color:"rgba(255,255,255,0.4)",fontSize:18,cursor:"pointer"}}>
+{"x"}
+</button>
+</div>
+<div style={{background:"rgba(255,255,255,0.05)",borderRadius:8,
+padding:"8px 10px",minHeight:50,marginBottom:10}}>
+{transcript
+? (<p style={{fontSize:11,color:"rgba(255,255,255,0.4)",margin:"0 0 2px"}}>{"You: "+transcript}</p>)
+: null}
+{response
+? (<p style={{fontSize:12,color:"#F5A623",fontWeight:600,margin:0}}>{response}</p>)
+: (<p style={{fontSize:11,color:"rgba(255,255,255,0.25)",fontStyle:"italic",margin:0}}>{"Bolo Shield se..."}</p>)
+}
+</div>
+<button
+onClick={listening
+? function(){
+try{ if(recognRef.current) recognRef.current.stop(); }catch(e){}
+setListening(false);
+}
+: startListening}
+style={{width:"100%",padding:"9px",borderRadius:8,border:"none",
+background:listening?"#ef4444":"#F5A623",
+color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",
+fontFamily:"Outfit,sans-serif",
+display:"flex",alignItems:"center",
+justifyContent:"center",gap:6}}>
+{listening ? "🔴 Sun raha hun..." : "🎤 Bolo Shield se"}
+</button>
+</div>
+)}
+</div>
+);
+}
+
 function CustomerSupport() {
 const [open, setOpen] = useState(false);
 const [info] = useSupportInfo();
@@ -1839,6 +1958,7 @@ return (
 {modal && <ModalOverlay modal={modal} setModal={setModal} />}
 {/* Customer Support — only for non-superadmin */}
 {role && role!=="superadmin" && <CustomerSupport />}
+{role && <ShieldAssistant />}
 </div>
 );
 }
