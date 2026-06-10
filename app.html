@@ -956,11 +956,14 @@ const processQuery = function(q) {
     go("library"); setOpen(false); speak("Library khul gaya"); return;
   }
 
-  // Student search
+  // Student search - only if actual name mentioned (not just "student")
   var stuMatch = null;
-  myStudents.forEach(function(s) {
-    if (s.name && q.includes(s.name.toLowerCase())) stuMatch = s;
-  });
+  var searchQ = q.replace("student","").replace("ki","").replace("ka","").trim();
+  if (searchQ.length > 2) {
+    myStudents.forEach(function(s) {
+      if (s.name && s.name.length > 2 && searchQ.includes(s.name.toLowerCase())) stuMatch = s;
+    });
+  }
   if (stuMatch) {
     if (q.includes("fees")||q.includes("fee")||orig.includes("फीस")) {
       if (window.__setFeeStudent) window.__setFeeStudent(stuMatch);
@@ -973,17 +976,37 @@ const processQuery = function(q) {
   // Attendance - English + Devanagari
   var isAttend = q.includes("attend") || q.includes("present") || q.includes("absent") || q.includes("haziri") || q.includes("aaj") || orig.includes("अटेंडेंस") || orig.includes("उपस्थित") || orig.includes("हाज़िरी") || orig.includes("हाज़र") || orig.includes("अत्तैंडेंस");
   if (isAttend) {
+    var myTeachers = sd.teachers || [];
+    var myEmployees = sd.employees || [];
+
+    // Check if asking about teachers/staff
+    var askTeacher = q.includes("teacher") || q.includes("staff") || q.includes("employee") || orig.includes("शिक्षक") || orig.includes("स्टाफ");
+    var askStudent = !askTeacher || q.includes("student") || orig.includes("छात्र");
+
     var present = 0; var absent = 0; var abNames = [];
-    myStudents.forEach(function(s) {
-      var key = "student_" + s.id;
-      var log = logs[key] && logs[key][today];
-      if (log && log.status === "present") { present++; }
-      else { absent++; if(s.name) abNames.push(s.name); }
-    });
-    if ((q.includes("absent")||orig.includes("अनुपस्थित")) && abNames.length > 0 && abNames.length <= 5) {
-      speak("Aaj " + absent + " absent hain: " + abNames.slice(0,5).join(", "));
+
+    if (askTeacher && !askStudent) {
+      // Teachers attendance
+      myTeachers.forEach(function(t) {
+        var key = "teacher_" + t.id;
+        var log = logs[key] && logs[key][today];
+        if (log && log.status === "present") { present++; }
+        else { absent++; if(t.name) abNames.push(t.name); }
+      });
+      speak("Teachers: Aaj " + present + " present aur " + absent + " absent. Total " + myTeachers.length);
     } else {
-      speak("Aaj " + present + " present aur " + absent + " absent. Total " + myStudents.length + " students");
+      // Students attendance (default)
+      myStudents.forEach(function(s) {
+        var key = "student_" + s.id;
+        var log = logs[key] && logs[key][today];
+        if (log && log.status === "present") { present++; }
+        else { absent++; if(s.name) abNames.push(s.name); }
+      });
+      if ((q.includes("absent")||orig.includes("अनुपस्थित")) && abNames.length > 0 && abNames.length <= 5) {
+        speak("Aaj " + absent + " students absent hain: " + abNames.slice(0,5).join(", "));
+      } else {
+        speak("Students: Aaj " + present + " present aur " + absent + " absent. Total " + myStudents.length);
+      }
     }
     return;
   }
@@ -1005,9 +1028,17 @@ const processQuery = function(q) {
     return;
   }
 
+  // Inventory navigation
+  if (go && (q.includes("inventory")||q.includes("stock")||orig.includes("इन्वेंटरी"))) {
+    go("inventory"); setOpen(false); speak("Inventory section khul gaya"); return;
+  }
+  // Transport navigation
+  if (go && (q.includes("transport")||q.includes("bus")||orig.includes("बस"))) {
+    go("transport"); setOpen(false); speak("Transport section khul gaya"); return;
+  }
   // Total students
   if (q.includes("student")||q.includes("kitne")||q.includes("total")||orig.includes("छात्र")) {
-    speak("Total " + myStudents.length + " students hain"); return;
+    speak("Total " + myStudents.length + " students aur " + (sd.teachers||[]).length + " teachers hain"); return;
   }
 
   speak("Samajh nahi aaya. Boliye: attendance, fees, ya alerts");
