@@ -914,7 +914,7 @@ return ()=>ref.off();
 },[]);
 return [info, setInfo];
 }
-function ShieldAssistant() {
+function ShieldAssistant({ shieldData }) {
 const [open, setOpen] = React.useState(false);
 const [listening, setListening] = React.useState(false);
 const [response, setResponse] = React.useState("");
@@ -934,43 +934,30 @@ const speak = function(text) {
   } catch(e) {}
 };
 
-const getData = function() {
-  try {
-    var appCtx = window.__shieldCtx || {};
-    return {
-      students: appCtx.students || [],
-      fees: appCtx.fees || [],
-      alerts: appCtx.alerts || [],
-      attendanceLogs: appCtx.attendanceLogs || {},
-      setActiveSection: appCtx.setActiveSection || null,
-      mySchoolId: appCtx.loggedInUser ? (appCtx.loggedInUser.schoolId || null) : null
-    };
-  } catch(e) { return {students:[],fees:[],alerts:[],attendanceLogs:{},setActiveSection:null,mySchoolId:null}; }
-};
-
 const processQuery = function(q) {
   q = (q||"").toLowerCase();
-  var d = getData();
+  var sd = shieldData || {};
   var today = new Date().toISOString().slice(0,10);
-  var sid = d.mySchoolId;
+  var sid = sd.loggedInUser ? (sd.loggedInUser.schoolId||null) : null;
+  var myStudents = (sd.students||[]).filter(function(s){return !s.schoolId||String(s.schoolId)===String(sid);});
+  var myFees = (sd.fees||[]).filter(function(f){return !f.schoolId||String(f.schoolId)===String(sid);});
+  var myAlerts = (sd.alerts||[]).filter(function(a){return !a.schoolId||String(a.schoolId)===String(sid);});
+  var logs = sd.attendanceLogs || {};
+  var go = sd.setActiveSection || null;
 
-  var myStudents = d.students.filter(function(s){ return !s.schoolId || String(s.schoolId)===String(sid); });
-  var myFees = d.fees.filter(function(f){ return !f.schoolId || String(f.schoolId)===String(sid); });
-  var myAlerts = d.alerts.filter(function(a){ return !a.schoolId || String(a.schoolId)===String(sid); });
-
-  // Navigate sections
-  if (d.setActiveSection) {
+  // Navigation
+  if (go) {
     if (q.includes("fees") && (q.includes("kholo")||q.includes("jao")||q.includes("open")||q.includes("section"))) {
-      d.setActiveSection("fees"); setOpen(false); speak("Fees section khul gaya"); return;
+      go("fees"); setOpen(false); speak("Fees section khul gaya"); return;
     }
     if ((q.includes("dashboard")||q.includes("home")) && (q.includes("jao")||q.includes("kholo"))) {
-      d.setActiveSection("dashboard"); setOpen(false); speak("Dashboard pe aa gaye"); return;
+      go("dashboard"); setOpen(false); speak("Dashboard pe aa gaye"); return;
     }
     if (q.includes("attendance") && (q.includes("section")||q.includes("kholo")||q.includes("jao"))) {
-      d.setActiveSection("attendance"); setOpen(false); speak("Attendance section khul gaya"); return;
+      go("attendance"); setOpen(false); speak("Attendance section khul gaya"); return;
     }
     if (q.includes("library") && (q.includes("kholo")||q.includes("jao"))) {
-      d.setActiveSection("library"); setOpen(false); speak("Library khul gaya"); return;
+      go("library"); setOpen(false); speak("Library khul gaya"); return;
     }
   }
 
@@ -982,27 +969,25 @@ const processQuery = function(q) {
   if (stuMatch) {
     if (q.includes("fees")||q.includes("fee")) {
       if (window.__setFeeStudent) window.__setFeeStudent(stuMatch);
-      if (d.setActiveSection) d.setActiveSection("fees");
+      if (go) go("fees");
       setOpen(false); speak(stuMatch.name + " ki fees page khul gayi"); return;
     }
-    speak(stuMatch.name + " Class " + (stuMatch.class||"pata nahi") + " mein hai"); return;
+    speak(stuMatch.name + " Class " + (stuMatch.class||"unknown") + " mein hai"); return;
   }
 
   // Attendance
-  if (q.includes("attendance")||q.includes("present")||q.includes("absent")||q.includes("haziri")) {
+  if (q.includes("attendance")||q.includes("present")||q.includes("absent")||q.includes("haziri")||q.includes("attandance")) {
     var present = 0; var absent = 0; var abNames = [];
     myStudents.forEach(function(s) {
       var key = "student_" + s.id;
-      var log = d.attendanceLogs[key] && d.attendanceLogs[key][today];
+      var log = logs[key] && logs[key][today];
       if (log && log.status === "present") { present++; }
       else { absent++; if(s.name) abNames.push(s.name); }
     });
     if (q.includes("absent") && abNames.length > 0 && abNames.length <= 5) {
-      speak("Aaj " + absent + " absent hain. " + abNames.slice(0,5).join(", "));
-    } else if (q.includes("absent")) {
-      speak("Aaj " + absent + " students absent hain");
+      speak("Aaj " + absent + " absent hain: " + abNames.slice(0,5).join(", "));
     } else {
-      speak("Aaj " + present + " present hain aur " + absent + " absent hain. Total " + myStudents.length + " students");
+      speak("Aaj " + present + " present hain aur " + absent + " absent hain. Total " + myStudents.length);
     }
     return;
   }
@@ -1010,8 +995,8 @@ const processQuery = function(q) {
   // Fees
   if (q.includes("fees")||q.includes("fee")||q.includes("due")||q.includes("pending")) {
     var due = myFees.filter(function(f){return !f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.amount||0);},0);
-    var paid = myFees.filter(function(f){return f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.paidAmount||f.amount||0);},0);
-    speak("Fees due hain " + due.toLocaleString("en-IN") + " rupaye. Paid " + paid.toLocaleString("en-IN") + " rupaye");
+    var paid2 = myFees.filter(function(f){return f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.paidAmount||f.amount||0);},0);
+    speak("Fees due hain " + due.toLocaleString("en-IN") + " rupaye. Paid " + paid2.toLocaleString("en-IN") + " rupaye");
     return;
   }
 
@@ -1023,17 +1008,12 @@ const processQuery = function(q) {
     return;
   }
 
-  // Total students/teachers
+  // Total
   if (q.includes("student")||q.includes("kitne")||q.includes("total")) {
-    speak("Total " + myStudents.length + " students hain school mein"); return;
+    speak("Total " + myStudents.length + " students hain"); return;
   }
 
-  // Help
-  if (q.includes("help")||q.includes("kya kar")) {
-    speak("Main Shield hun. Pooch sakte hain: attendance, fees, alerts, student ka naam, ya section navigate karne ke liye"); return;
-  }
-
-  speak("Samajh nahi aaya. Dobara boliye ya Quick buttons use karein");
+  speak("Samajh nahi aaya. Boliye: attendance, fees, alerts, ya koi student ka naam");
 };
 
 const startListening = function() {
@@ -2049,10 +2029,7 @@ return (
 {modal && <ModalOverlay modal={modal} setModal={setModal} />}
 {/* Customer Support — only for non-superadmin */}
 {role && role!=="superadmin" && <CustomerSupport />}
-{role && (function(){
-  window.__shieldCtx = ctx;
-  return <ShieldAssistant />;
-})()}
+{role && <ShieldAssistant shieldData={ctx} />}
 </div>
 );
 }
