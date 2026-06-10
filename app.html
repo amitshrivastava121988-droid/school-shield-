@@ -2191,7 +2191,7 @@ superadmin: [
 {key:"dashboard",icon:"📊",label:"dashboard"}, {key:"schools",icon:"🏫",label:"schools"},
 {key:"revenue",icon:"💰",label:"revenue"}, {key:"analytics",icon:"📈",label:"analytics"},
 {key:"discounts",icon:"🏷️",label:"discounts"}, {key:"mapview",icon:"🗺️",label:"mapView"},
-{key:"demorequests",icon:"🎯",label:"Demo Requests"}, {key:"supportsettings",icon:"⚙️",label:"support"}, {key:"backup",icon:"💾",label:"Backup"},
+{key:"supportsettings",icon:"⚙️",label:"support"}, {key:"backup",icon:"💾",label:"Backup"},
 {key:"changepassword",icon:"🔑",label:"Change Password"},
 ],
 founder: [
@@ -3032,7 +3032,6 @@ if (section === "backup") return <SuperAdminBackupSection ctx={ctx} />;
 if (section === "changepassword") return <SuperAdminChangePasswordSection ctx={ctx} />;
 if (section === "employees") return <EmployeesSection ctx={ctx} />;
 if (section === "staffdirectory") return <StaffDirectorySection ctx={ctx} />;
-if (section === "demorequests") return <DemoRequestsSection ctx={ctx} />;
 if (section === "revenue") return <RevenueSection ctx={ctx} />;
 if (section === "analytics") return <AnalyticsSection ctx={ctx} />;
 if (section === "discounts") return <DiscountsSection ctx={ctx} />;
@@ -14006,6 +14005,161 @@ return (
 </div>
 );
 }
+function ExperienceCertificateSection({ ctx }) {
+const { role, toast, loggedInUser, currentSchool, teachers } = ctx;
+const mySchoolId = loggedInUser ? (loggedInUser.schoolId || null) : null;
+const canApprove = ["principal","founder","superadmin","vice_principal"].includes(role);
+const canCreate  = ["principal","founder","superadmin","vice_principal"].includes(role);
+const STORAGE_KEY = "ss_exp_certs_" + mySchoolId;
+const [certs, setCerts] = React.useState(function(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); } catch(e){ return []; }
+});
+const saveCerts = function(arr) {
+  setCerts(arr);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch(e) {}
+  if (!window.__isDemoMode && window.firebaseReady && mySchoolId) {
+    try { const o={}; arr.forEach(function(c){if(c.id)o[String(c.id)]=c;}); window.db.ref("schoolshield/schools/"+mySchoolId+"/expCerts").set(o); } catch(e) {}
+  }
+};
+const empty = { empName:"", designation:"", department:"", joiningDate:"", relievingDate:"", empId:"", conduct:"Excellent", nature:"Permanent", responsibilities:"", remarks:"" };
+const [form, setForm] = React.useState(empty);
+const [tab, setTab] = React.useState("create");
+const [searchQuery, setSearchQuery] = React.useState("");
+const setF = function(k,v){ setForm(function(p){ return {...p,[k]:v}; }); };
+const allTeachers = (teachers||[]).filter(function(t){ return !t.schoolId || sameId(t.schoolId, mySchoolId); });
+const pickTeacher = function(t) {
+  setF("empName", t.name||"");
+  setF("designation", t.designation||t.subject||"Teacher");
+  setF("department", t.department||t.subject||"");
+  setF("empId", t.employeeId||t.empCode||"");
+};
+const myList = (certs||[]).filter(function(c){ return !c.schoolId || sameId(c.schoolId, mySchoolId); });
+const filtered = searchQuery ? myList.filter(function(c){ return (c.empName||"").toLowerCase().includes(searchQuery.toLowerCase()); }) : myList;
+const save = function() {
+  if (!form.empName.trim()) { toast("Employee naam required!","error"); return; }
+  if (!form.joiningDate) { toast("Joining date required!","error"); return; }
+  var num = myList.length + 1;
+  var numStr = num < 10 ? "00"+num : num < 100 ? "0"+num : String(num);
+  var entry = { id:Date.now(), certNumber:"EXP-"+new Date().getFullYear()+"-"+numStr,
+    empName:form.empName, designation:form.designation, department:form.department,
+    joiningDate:form.joiningDate, relievingDate:form.relievingDate, empId:form.empId,
+    conduct:form.conduct, nature:form.nature, responsibilities:form.responsibilities,
+    remarks:form.remarks,
+    issueDate:new Date().toLocaleDateString("en-GB"),
+    status:"Pending Approval", createdBy:loggedInUser?loggedInUser.name:role, schoolId:mySchoolId };
+  saveCerts((certs||[]).concat([entry]));
+  setForm(empty);
+  toast("Experience Certificate created!","success");
+  setTab("list");
+};
+const approve = function(id) {
+  saveCerts((certs||[]).map(function(c){ return c.id===id?{...c,status:"Approved",approvedBy:loggedInUser?loggedInUser.name:role}:c; }));
+  toast("Approved!","success");
+};
+const del = function(id) {
+  saveCerts((certs||[]).filter(function(c){ return c.id!==id; }));
+  toast("Deleted","success");
+};
+const print = function(c) {
+  var sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+  var sa = safeHtml(currentSchool&&currentSchool.address ? currentSchool.address : "");
+  var sp = safeHtml(currentSchool&&currentSchool.phone ? currentSchool.phone : "");
+  var today = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+  var body = "<div class='cert-wrap' style='font-family:Times New Roman,serif;'>"
+  + "<div style='text-align:center;border-bottom:3px double #333;padding-bottom:16px;margin-bottom:16px;'>"
+  + "<div style='font-size:22px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;'>" + sn + "</div>"
+  + "<div style='font-size:13px;color:#555;margin-top:4px;'>" + sa + "</div>"
+  + "<div style='font-size:12px;color:#555;'>Tel: " + sp + "</div>"
+  + "</div>"
+  + "<div style='text-align:center;margin:20px 0 24px;'>"
+  + "<div style='display:inline-block;border:2px solid #333;padding:8px 36px;'>"
+  + "<span style='font-size:20px;font-weight:bold;text-transform:uppercase;letter-spacing:3px;'>Experience Certificate</span>"
+  + "</div></div>"
+  + "<div style='display:flex;justify-content:space-between;margin-bottom:20px;font-size:13px;'>"
+  + "<span><b>Ref No:</b> " + safeHtml(c.certNumber) + "</span>"
+  + "<span><b>Date:</b> " + safeHtml(c.issueDate) + "</span>"
+  + "</div>"
+  + "<div style='font-size:14px;line-height:2.2;text-align:justify;'>"
+  + "To Whomsoever It May Concern<br/><br/>"
+  + "This is to certify that <b>Shri / Smt. " + safeHtml(c.empName) + "</b>"
+  + (c.empId ? " (Employee ID: <b>" + safeHtml(c.empId) + "</b>)" : "")
+  + " has served in this institution as <b>" + safeHtml(c.designation) + "</b>"
+  + (c.department ? " in the Department of <b>" + safeHtml(c.department) + "</b>" : "") + ".<br/><br/>"
+  + "The period of service is from <b>" + safeHtml(c.joiningDate) + "</b> to <b>" + safeHtml(c.relievingDate||"Present") + "</b>.<br/><br/>"
+  + (c.responsibilities ? "Responsibilities: <b>" + safeHtml(c.responsibilities) + "</b>.<br/><br/>" : "")
+  + "During the period of service, his / her conduct was found to be <b>" + safeHtml(c.conduct) + "</b>. "
+  + "He / She has been sincere, hardworking and dedicated towards the assigned duties.<br/><br/>"
+  + (c.remarks ? safeHtml(c.remarks) + "<br/><br/>" : "")
+  + "We wish him / her all the very best for future endeavours."
+  + "</div>"
+  + "<div style='display:flex;justify-content:space-between;margin-top:56px;'>"
+  + "<div style='text-align:center;'>"
+  + "<div style='width:140px;border-top:1px solid #333;margin:0 auto;'></div>"
+  + "<div style='font-size:12px;margin-top:4px;'>Signature of Employee</div>"
+  + "</div>"
+  + "<div style='text-align:center;'>"
+  + "<div style='width:60px;height:60px;border:1px solid #999;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999;'>Seal</div>"
+  + "<div style='width:160px;border-top:1px solid #333;margin:0 auto;'></div>"
+  + "<div style='font-size:12px;margin-top:4px;font-weight:bold;'>Principal / Director</div>"
+  + "<div style='font-size:11px;'>" + sn + "</div>"
+  + "<div style='font-size:11px;color:#666;'>Date: " + today + "</div>"
+  + "</div></div></div>";
+  openPrintWin("Experience Certificate", body);
+};
+return (
+<div>
+<div style={{display:"flex",gap:8,marginBottom:16}}>
+{canCreate && <Btn onClick={function(){setTab("create");}} color="#D97706" outline={tab!=="create"}>{"+ Create"}</Btn>}
+<Btn onClick={function(){setTab("list");}} color="#D97706" outline={tab!=="list"}>{"All ("+myList.length+")"}</Btn>
+</div>
+{tab==="create" && canCreate && (
+<Card style={{padding:18}}>
+<p style={{fontWeight:700,color:T.text,marginBottom:14,fontSize:14}}>{"Experience Certificate"}</p>
+<div style={{marginBottom:12}}>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:6,fontWeight:600}}>{"Quick Select:"}</p>
+<div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+{allTeachers.slice(0,12).map(function(t){
+return <button key={t.id} onClick={function(){pickTeacher(t);}}
+style={{padding:"4px 10px",borderRadius:8,border:"1px solid "+T.border,
+background:T.surface,color:T.textMuted,fontSize:11,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{t.name}
+</button>;
+})}
+</div>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+<FormField label="Full Name *"><FormInput value={form.empName} onChange={function(v){setF("empName",v);}} placeholder="Full name" /></FormField>
+<FormField label="Employee ID"><FormInput value={form.empId} onChange={function(v){setF("empId",v);}} placeholder="EMP-001" /></FormField>
+<FormField label="Designation *"><FormInput value={form.designation} onChange={function(v){setF("designation",v);}} placeholder="e.g. Teacher" /></FormField>
+<FormField label="Department"><FormInput value={form.department} onChange={function(v){setF("department",v);}} placeholder="e.g. Science" /></FormField>
+<FormField label="Date of Joining *"><FormInput type="date" value={form.joiningDate} onChange={function(v){setF("joiningDate",v);}} /></FormField>
+<FormField label="Date of Relieving"><FormInput type="date" value={form.relievingDate} onChange={function(v){setF("relievingDate",v);}} /></FormField>
+</div>
+<FormField label="Nature of Employment">
+<FormSelect value={form.nature} onChange={function(v){setF("nature",v);}} options={["Permanent","Temporary","Contract","Part-time","Probation"]} />
+</FormField>
+<FormField label="Responsibilities (optional)"><FormInput value={form.responsibilities} onChange={function(v){setF("responsibilities",v);}} placeholder="e.g. Teaching Mathematics Classes 6-10" /></FormField>
+<FormField label="Conduct">
+<FormSelect value={form.conduct} onChange={function(v){setF("conduct",v);}} options={["Excellent","Very Good","Good","Satisfactory"]} />
+</FormField>
+<FormField label="Additional Remarks (optional)"><FormInput value={form.remarks} onChange={function(v){setF("remarks",v);}} /></FormField>
+<Btn onClick={save} color="#D97706" full>{"Generate Experience Certificate"}</Btn>
+</Card>
+)}
+{tab==="list" && (
+<div>
+<input value={searchQuery} onChange={function(e){setSearchQuery(e.target.value);}}
+placeholder={"Search by name..."}
+style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:10,
+padding:"9px 14px",fontSize:13,color:T.text,fontFamily:"Outfit,sans-serif",
+boxSizing:"border-box",outline:"none",marginBottom:12}} />
+<CertList items={filtered} canApprove={canApprove} onApprove={approve} onDelete={del} onPrint={print} certLabel="Experience Certificate" color="#D97706" />
+</div>
+)}
+</div>
+);
+}
+
 function LettersCertificatesSection({ ctx, defaultTab = "tc" }) {
 const { role } = ctx;
 const canPayslip   = ["principal","founder","superadmin","vice_principal","accountant","teacher","coordinator"].includes(role);
@@ -14020,6 +14174,7 @@ const TABS = [
 ...(canCerts     ? [{ key:"fcc",  icon:"💰", label:"Fee Clear",  color:"#FB923C" }] : []),
 ...(canPayslip   ? [{ key:"payslip",  icon:"💵", label:"Payslip",    color:"#84CC16" }] : []),
 ...(canHRLetters ? [{ key:"hrletters",icon:"📄", label:"HR Letters", color:"#EC4899" }] : []),
+...(canHRLetters ? [{ key:"exp",icon:"🏆", label:"Experience", color:"#D97706" }] : []),
 ];
 const resolved = TABS.find(t=>t.key===defaultTab) ? defaultTab : (TABS[0]?.key||"tc");
 const [activeTab, setActiveTab] = React.useState(resolved);
@@ -14067,6 +14222,7 @@ fontSize:12,transition:"all 0.15s",
 {activeTab==="fcc"       && <FeeClearanceCertificateSection ctx={ctx} />}
 {activeTab==="payslip"   && <PayslipSection ctx={ctx} />}
 {activeTab==="hrletters" && <HRLettersSection ctx={ctx} />}
+{activeTab==="exp" && <ExperienceCertificateSection ctx={ctx} />}
 </div>
 );
 }
@@ -21778,119 +21934,6 @@ borderRadius:10, padding:"10px 14px"
 </div>
 );
 }
-function DemoRequestsSection({ ctx }) {
-const [requests, setRequests] = React.useState([]);
-const [loading, setLoading] = React.useState(true);
-const [filter, setFilter] = React.useState("all");
-
-React.useEffect(function() {
-  if (!window.db) { setLoading(false); return; }
-  var ref = window.db.ref("schoolshield/demoRequests");
-  ref.orderByChild("requestedAt").limitToLast(200).on("value", function(snap) {
-    if (snap.exists()) {
-      var arr = [];
-      snap.forEach(function(child) {
-        arr.unshift({...child.val(), _key: child.key});
-      });
-      setRequests(arr);
-    }
-    setLoading(false);
-  });
-  return function() { ref.off(); };
-}, []);
-
-var filtered = filter === "all" ? requests : requests.filter(function(r){ return r.status === filter; });
-
-var updateStatus = function(key, status) {
-  window.db.ref("schoolshield/demoRequests/" + key + "/status").set(status);
-};
-
-return (
-<div className="fadeUp">
-<SectionHeader title={"Demo Requests"} />
-<div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-{["all","pending","contacted","converted","closed"].map(function(s){
-return (
-<button key={s} onClick={function(){setFilter(s);}}
-style={{padding:"6px 14px",borderRadius:20,border:"1px solid "+(filter===s?T.accent:T.border),
-background:filter===s?T.accent+"20":"transparent",color:filter===s?T.accent:T.textMuted,
-fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",
-textTransform:"capitalize"}}>
-{s==="all"?"All ("+requests.length+")":s.charAt(0).toUpperCase()+s.slice(1)}
-</button>
-);
-})}
-</div>
-{loading && <p style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"40px 0"}}>{"Loading..."}</p>}
-{!loading && filtered.length === 0 && <p style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"40px 0"}}>{"No demo requests yet"}</p>}
-{filtered.map(function(req){
-var date = req.requestedAt ? new Date(req.requestedAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
-var statusColor = {pending:"#F5A623",contacted:"#4F8EF7",converted:"#0ECB81",closed:"#6B7A99"}[req.status] || "#6B7A99";
-return (
-<div key={req._key} style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:16,marginBottom:12}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-<div>
-<p style={{fontSize:15,fontWeight:800,color:T.text}}>{req.schoolName||"—"}</p>
-<p style={{fontSize:12,color:T.textMuted}}>{req.contactName} • {req.designation||"—"}</p>
-<p style={{fontSize:11,color:T.textMuted,marginTop:2}}>{date}</p>
-</div>
-<span style={{background:statusColor+"20",color:statusColor,border:"1px solid "+statusColor+"40",
-borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700,flexShrink:0}}>
-{(req.status||"pending").charAt(0).toUpperCase()+(req.status||"pending").slice(1)}
-</span>
-</div>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-<a href={"tel:"+req.phone} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",
-background:"#25D36615",border:"1px solid #25D36640",borderRadius:10,textDecoration:"none"}}>
-<span style={{fontSize:16}}>{"📞"}</span>
-<div>
-<p style={{fontSize:10,color:T.textMuted}}>{"Phone"}</p>
-<p style={{fontSize:13,fontWeight:700,color:"#25D366"}}>{req.phone||"—"}</p>
-</div>
-</a>
-<a href={"mailto:"+req.email} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",
-background:T.accent+"15",border:"1px solid "+T.accent+"40",borderRadius:10,textDecoration:"none"}}>
-<span style={{fontSize:16}}>{"📧"}</span>
-<div>
-<p style={{fontSize:10,color:T.textMuted}}>{"Email"}</p>
-<p style={{fontSize:12,fontWeight:700,color:T.accent,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:100}}>{req.email||"—"}</p>
-</div>
-</a>
-</div>
-{(req.studentsCount||req.address) && (
-<div style={{background:T.surface,borderRadius:8,padding:"8px 10px",marginBottom:10,fontSize:12,color:T.textMuted}}>
-{req.studentsCount && <p>{"👥 Students: "+req.studentsCount}</p>}
-{req.address && <p style={{marginTop:4}}>{"📍 "+req.address}</p>}
-</div>
-)}
-<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-{["pending","contacted","converted","closed"].map(function(s){
-return (
-<button key={s} onClick={function(){updateStatus(req._key,s);}}
-style={{padding:"5px 12px",borderRadius:8,border:"1px solid "+(req.status===s?statusColor:T.border),
-background:req.status===s?statusColor+"20":"transparent",
-color:req.status===s?statusColor:T.textMuted,
-fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",
-textTransform:"capitalize"}}>
-{s.charAt(0).toUpperCase()+s.slice(1)}
-</button>
-);
-})}
-<a href={"https://wa.me/91"+req.phone+"?text=Hi+"+encodeURIComponent(req.contactName||"")+",+SchoolShield+demo+ke+baare+mein+baat+karna+tha."}
-target="_blank" rel="noopener noreferrer"
-style={{padding:"5px 12px",borderRadius:8,border:"1px solid #25D36640",
-background:"#25D36615",color:"#25D366",fontSize:11,fontWeight:700,
-textDecoration:"none",display:"inline-block"}}>
-{"💬 WhatsApp"}
-</a>
-</div>
-</div>
-);
-})}
-</div>
-);
-}
-
 function RevenueSection({ ctx }) {
 const { l, schools } = ctx;
 const activeSchools = schools.filter(s=>s.active);
@@ -32018,6 +32061,117 @@ style={{width:"100%",padding:"13px",borderRadius:11,border:"none",background:T.a
 );
 }
 
+function IssueReturnModal({ item, sys, allPeople, returnSuggestions, onSave, onClose }) {
+const [txType, setTxType] = React.useState("issue");
+const [personName, setPersonName] = React.useState("");
+const [personType, setPersonType] = React.useState("student");
+const [qty, setQty] = React.useState("1");
+const [showSuggestions, setShowSuggestions] = React.useState(false);
+
+const suggestions = txType === "return"
+  ? returnSuggestions.filter(function(n){ return n.toLowerCase().includes(personName.toLowerCase()); })
+  : allPeople.filter(function(p){ return personName.length > 0 && p.name.toLowerCase().includes(personName.toLowerCase()); }).slice(0, 8);
+
+const handleConfirm = function() {
+  if (!personName.trim()) { alert("Recipient required"); return; }
+  var q = parseInt(qty);
+  if (isNaN(q) || q < 1) { alert("Valid quantity required"); return; }
+  if (txType === "issue" && q > sys) { alert("Not enough stock!"); return; }
+  onSave(txType, personName.trim(), personType, q);
+};
+
+return (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:20,maxWidth:380,width:"100%"}}>
+<div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+<p style={{fontWeight:700,fontSize:15,color:T.text}}>{"Issue / Return"}</p>
+<button onClick={onClose} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>{"x"}</button>
+</div>
+<p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>
+{item.name+" | Available: "}
+<b style={{color:sys>0?T.green:T.red}}>{sys}</b>
+</p>
+
+{/* Issue / Return toggle */}
+<div style={{display:"flex",gap:6,marginBottom:12}}>
+<button onClick={function(){setTxType("issue");setPersonName("");}}
+style={{flex:1,padding:"8px",borderRadius:8,border:"1px solid "+(txType==="issue"?T.accent:T.border),
+background:txType==="issue"?T.accent+"20":"transparent",color:txType==="issue"?T.accent:T.textMuted,
+fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Issue (Give Out)"}
+</button>
+<button onClick={function(){setTxType("return");setPersonName("");}}
+style={{flex:1,padding:"8px",borderRadius:8,border:"1px solid "+(txType==="return"?T.green:T.border),
+background:txType==="return"?T.green+"20":"transparent",color:txType==="return"?T.green:T.textMuted,
+fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{"Return (Take Back)"}
+</button>
+</div>
+
+{/* Person name with auto-suggestion */}
+<div style={{position:"relative",marginBottom:10}}>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4,fontWeight:600}}>
+{txType==="return" ? "Who is returning? (tap to select)" : "Issue to (Student/Teacher/Staff)"}
+</p>
+<input
+value={personName}
+onChange={function(e){setPersonName(e.target.value);setShowSuggestions(true);}}
+onFocus={function(){setShowSuggestions(true);}}
+placeholder={txType==="return"?"Select person who had this item...":"Type name to search..."}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,
+padding:"10px 12px",color:T.text,fontFamily:"Outfit,sans-serif",fontSize:13,
+boxSizing:"border-box",outline:"none"}}
+/>
+{showSuggestions && suggestions.length > 0 && (
+<div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:999,
+background:T.card,border:"1px solid "+T.border,borderRadius:8,
+maxHeight:160,overflowY:"auto",boxShadow:"0 4px 16px rgba(0,0,0,0.3)",marginTop:2}}>
+{suggestions.map(function(s,i){
+var name = typeof s === "string" ? s : s.name;
+var type = typeof s === "string" ? "—" : s.type;
+return (
+<div key={i}
+onMouseDown={function(e){e.preventDefault();setPersonName(name);if(type!=="—")setPersonType(type);setShowSuggestions(false);}}
+onTouchEnd={function(e){e.preventDefault();setPersonName(name);if(type!=="—")setPersonType(type);setShowSuggestions(false);}}
+style={{padding:"9px 12px",cursor:"pointer",borderBottom:"1px solid "+T.border+"40",
+display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+<p style={{fontSize:13,fontWeight:600,color:T.text}}>{name}</p>
+<span style={{fontSize:10,color:T.accent,background:T.accent+"20",padding:"2px 8px",borderRadius:10}}>{type}</span>
+</div>
+);
+})}
+</div>
+)}
+</div>
+
+{/* Person type (only for issue) */}
+{txType === "issue" && (
+<select value={personType} onChange={function(e){setPersonType(e.target.value);}}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,
+padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:13,marginBottom:10,outline:"none"}}>
+<option value="student">Student</option>
+<option value="teacher">Teacher</option>
+<option value="staff">Staff</option>
+<option value="other">Other</option>
+</select>
+)}
+
+{/* Quantity */}
+<input type="number" min="1" value={qty} onChange={function(e){setQty(e.target.value);}}
+placeholder="Quantity *"
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,
+padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:13,marginBottom:14,
+boxSizing:"border-box",outline:"none"}}/>
+
+<button onClick={handleConfirm}
+style={{width:"100%",padding:11,background:txType==="return"?T.green:T.accent,
+border:"none",borderRadius:8,color:"#fff",fontWeight:700,
+cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:14}}>
+{txType==="return"?"Confirm Return":"Confirm Issue"}
+</button>
+</div>
+);
+}
+
 function InventorySection({ ctx }) {
 const { role, loggedInUser, toast, setModal } = ctx;
 const mySchoolId = loggedInUser?.schoolId || null;
@@ -32029,6 +32183,8 @@ const [verifications, setVerifications] = React.useState([]);
 const [tab, setTab] = React.useState("items");
 const [verifyQtys, setVerifyQtys] = React.useState({});
 const [loaded, setLoaded] = React.useState(false);
+const [itemSearchQuery, setItemSearchQuery] = React.useState("");
+const [selectedItemFilter, setSelectedItemFilter] = React.useState(null);
 React.useEffect(() => {
 if (!mySchoolId) { setLoaded(true); return; }
 const LI = "ss_inv_"+mySchoolId+"_items";
@@ -32106,37 +32262,28 @@ setModal(null);
 </div>);
 };
 const openIssue = function(item) {
-const sys=calcStock(item.id);
-setModal(<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:24,maxWidth:380,width:"100%"}}>
-<div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
-<p style={{fontWeight:700,fontSize:15,color:T.text}}>Issue / Return</p>
-<button onClick={function(){setModal(null);}} style={{background:"none",border:"none",color:T.textMuted,fontSize:20,cursor:"pointer"}}>x</button>
-</div>
-<p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>{item.name} | Available: <b style={{color:sys>0?T.green:T.red}}>{sys}</b></p>
-<select id="t_tp" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
-<option value="issue">Issue (Give Out)</option>
-<option value="return">Return (Take Back)</option>
-</select>
-<input id="t_to" placeholder="Issued to (Name)" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10,boxSizing:"border-box"}}/>
-<select id="t_tt" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:10}}>
-<option value="student">Student</option>
-<option value="staff">Staff</option>
-<option value="other">Other</option>
-</select>
-<input id="t_qt" type="number" min="1" placeholder="Quantity *" style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:10,color:T.text,fontFamily:"Outfit,sans-serif",fontSize:14,marginBottom:16,boxSizing:"border-box"}}/>
-<button onClick={function(){
-const type=document.getElementById("t_tp").value;
-const to=(document.getElementById("t_to").value||"").trim();
-const toType=document.getElementById("t_tt").value;
-const qty=parseInt(document.getElementById("t_qt").value);
-if(!to){toast("Recipient required","error");return;}
-if(isNaN(qty)||qty<1){toast("Valid quantity required","error");return;}
-if(type==="issue"&&qty>sys){toast("Not enough stock!","error");return;}
+const sys = calcStock(item.id);
+// Get all people for suggestions
+const allStudents = (ctx.students||[]).filter(function(s){ return !s.schoolId || String(s.schoolId)===String(mySchoolId); }).map(function(s){ return {name:s.name, type:"student"}; });
+const allTeachers = (ctx.teachers||[]).filter(function(t){ return !t.schoolId || String(t.schoolId)===String(mySchoolId); }).map(function(t){ return {name:t.name, type:"teacher"}; });
+const allEmployees = (ctx.employees||[]).filter(function(e){ return !e.schoolId || String(e.schoolId)===String(mySchoolId); }).map(function(e){ return {name:e.name, type:"staff"}; });
+const allPeople = allStudents.concat(allTeachers).concat(allEmployees);
+// Get people who have this item issued (for return suggestions)
+const issuedPeople = (transactions||[]).filter(function(t){ return String(t.itemId)===String(item.id) && t.type!=="return"; }).map(function(t){ return t.issuedTo; });
+const returnSuggestions = [...new Set(issuedPeople)];
+
+setModal(<IssueReturnModal
+item={item}
+sys={sys}
+allPeople={allPeople}
+returnSuggestions={returnSuggestions}
+onSave={function(type,to,toType,qty){
 saveTrans([...(transactions||[]),{id:genId(),itemId:item.id,itemName:item.name,type:type,issuedTo:to,issuedToType:toType,qty:qty,date:new Date().toISOString().slice(0,10),createdAt:new Date().toISOString()}]);
 toast((type==="issue"?"Issued ":"Returned ")+qty+" "+item.name,"success");
 setModal(null);
-}} style={{width:"100%",padding:11,background:T.accent,border:"none",borderRadius:8,color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:14}}>Confirm</button>
-</div>);
+}}
+onClose={function(){setModal(null);}}
+/>);
 };
 if (!loaded) return <div style={{textAlign:"center",padding:40,color:T.textMuted}}>Loading...</div>;
 return (
@@ -32149,7 +32296,7 @@ return (
 {isPrincipal&&tab==="items"&&<button onClick={function(){openAddItem(null);}} style={{padding:"9px 16px",background:T.accent,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>+ Add Item</button>}
 </div>
 <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
-{[["items","Items"],["trans","Transactions"],["verify","Verify Stock"],["history","History"]].map(function(t){
+{[["items","Items"],["itemsearch","Item Search"],["trans","Transactions"],["verify","Verify Stock"],["history","History"]].map(function(t){
 return <button key={t[0]} onClick={function(){setTab(t[0]);}} style={{padding:"7px 14px",borderRadius:20,border:"none",fontFamily:"Outfit,sans-serif",fontWeight:600,fontSize:12,cursor:"pointer",background:tab===t[0]?T.accent:"rgba(255,255,255,0.06)",color:tab===t[0]?"#fff":T.textMuted}}>{t[1]}</button>;
 })}
 </div>
@@ -32174,6 +32321,90 @@ return <div key={item.id} style={{background:T.card,border:"1px solid "+T.border
 </div>
 </div>;
 })}
+</div>
+)}
+{tab==="itemsearch"&&(
+<div>
+<div style={{marginBottom:12}}>
+<input
+value={itemSearchQuery}
+onChange={function(e){setItemSearchQuery(e.target.value);setSelectedItemFilter(null);}}
+placeholder={"Search item by name or category..."}
+style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:10,
+padding:"10px 14px",fontSize:13,color:T.text,fontFamily:"Outfit,sans-serif",
+boxSizing:"border-box",outline:"none",marginBottom:10}}
+/>
+<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+{[...new Set((items||[]).map(function(i){return i.category||"Other";}))].map(function(cat){
+return (
+<button key={cat} onClick={function(){setItemSearchQuery(cat);setSelectedItemFilter(null);}}
+style={{padding:"4px 12px",borderRadius:16,border:"1px solid "+T.border,
+background:"transparent",color:T.textMuted,fontSize:11,fontWeight:600,
+cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
+{cat}
+</button>
+);
+})}
+</div>
+</div>
+{(items||[]).filter(function(item){
+var q = itemSearchQuery.toLowerCase();
+return !q || (item.name||"").toLowerCase().includes(q) || (item.category||"").toLowerCase().includes(q);
+}).map(function(item){
+var itemTrans = (transactions||[]).filter(function(t){ return String(t.itemId)===String(item.id); });
+var issued = itemTrans.filter(function(t){ return t.type!=="return"; });
+var returned = itemTrans.filter(function(t){ return t.type==="return"; });
+var isExpanded = selectedItemFilter === item.id;
+return (
+<div key={item.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
+<div onClick={function(){setSelectedItemFilter(isExpanded?null:item.id);}}
+style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 14px",cursor:"pointer"}}>
+<div>
+<p style={{fontWeight:700,fontSize:14,color:T.text}}>{item.name}</p>
+<p style={{fontSize:11,color:T.textMuted}}>{item.category} • {issued.length} issued • {returned.length} returned</p>
+</div>
+<div style={{display:"flex",alignItems:"center",gap:8}}>
+<span style={{fontSize:20,fontWeight:800,color:calcStock(item.id)>0?T.green:T.red}}>{calcStock(item.id)}</span>
+<span style={{color:T.textMuted,fontSize:14}}>{isExpanded?"▲":"▼"}</span>
+</div>
+</div>
+{isExpanded && (
+<div style={{borderTop:"1px solid "+T.border}}>
+{itemTrans.length === 0 && <p style={{padding:"12px 14px",color:T.textMuted,fontSize:12}}>{"No transactions yet"}</p>}
+{[...itemTrans].reverse().map(function(t,i){
+return (
+<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+padding:"10px 14px",borderBottom:"1px solid "+T.border+"30",
+background:t.type==="return"?T.green+"08":T.accent+"05"}}>
+<div>
+<p style={{fontSize:13,fontWeight:700,color:T.text}}>{t.issuedTo}</p>
+<p style={{fontSize:11,color:T.textMuted}}>
+{t.issuedToType} • {t.date}
+</p>
+</div>
+<div style={{textAlign:"right"}}>
+<p style={{fontWeight:800,fontSize:15,color:t.type==="return"?T.green:T.yellow}}>
+{t.type==="return"?"+":"-"}{t.qty}
+</p>
+<p style={{fontSize:10,color:T.textMuted,background:t.type==="return"?T.green+"20":T.yellow+"20",
+padding:"2px 6px",borderRadius:6,display:"inline-block"}}>
+{t.type}
+</p>
+</div>
+</div>
+);
+})}
+</div>
+)}
+</div>
+);
+})}
+{(items||[]).filter(function(item){
+var q = itemSearchQuery.toLowerCase();
+return !q || (item.name||"").toLowerCase().includes(q) || (item.category||"").toLowerCase().includes(q);
+}).length === 0 && (
+<p style={{textAlign:"center",padding:"30px",color:T.textMuted,fontSize:13}}>{"No items found"}</p>
+)}
 </div>
 )}
 {tab==="trans"&&(
