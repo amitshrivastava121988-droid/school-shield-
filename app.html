@@ -17440,21 +17440,43 @@ toast("🗑️ School aur uska poora data delete ho gaya","success");
 const toggleActive = (id) => { setSchools(p=>p.map(s=>s.id===id?{...s,active:!s.active}:s)); };
 const togglePaid = (id) => { setSchools(p=>p.map(s=>s.id===id?{...s,paid:!s.paid}:s)); };
 const editSchool = (id, data) => {
+// Update school data
 setSchools(p => p.map(s => s.id === id ? {
 ...s,
 name: data.name, address: data.address, city: data.city,
 plan: data.plan, joinDate: data.joinDate, amount: data.amount,
 dueDate: data.dueDate, principalName: data.principalName,
 principalMobile: data.principalMobile,
+logoUrl: data.logoUrl || s.logoUrl || "",
 featurePlan: data.featurePlan || s.featurePlan || "basic",
 features: data.features || s.features || {...PLAN_FEATURES.basic.features},
 limits:   data.limits   || s.limits   || {...PLAN_FEATURES.basic.limits},
 } : s));
-setUserAccounts(p => p.map(a =>
-a.role === "principal" && sameId(a.schoolId, id)
-? {...a, name: data.principalName || a.name, phone: data.principalMobile || a.phone}
-: a
-));
+// Update principal account - name, phone AND username if school name changed
+var newSchoolSlug = (data.name || "school").toLowerCase().replace(/\s+/g,"_").slice(0,12);
+var newUsername = "principal_" + newSchoolSlug;
+setUserAccounts(p => p.map(function(a) {
+if (a.role === "principal" && sameId(a.schoolId, id)) {
+return {...a,
+name: data.principalName || a.name,
+phone: data.principalMobile || a.phone,
+username: newUsername
+};
+}
+// Also update other roles (teacher, accountant etc) username suffix if school name changed
+if (sameId(a.schoolId, id) && a.username && a.role !== "superadmin") {
+// Update school name suffix in username if it exists
+var oldSchool = (schools||[]).find(function(s){return s.id===id;});
+if (oldSchool && oldSchool.name) {
+var oldSlug = oldSchool.name.toLowerCase().replace(/\s+/g,"_").slice(0,12);
+if (a.username.endsWith("_"+oldSlug)) {
+var prefix = a.username.slice(0, a.username.length - ("_"+oldSlug).length);
+return {...a, username: prefix + "_" + newSchoolSlug};
+}
+}
+}
+return a;
+}));
 toast("School updated ✓", "success");
 };
 const genCode = (id) => {
