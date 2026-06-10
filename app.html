@@ -937,32 +937,23 @@ const speak = function(text) {
 const processQuery = function(q) {
   q = (q||"").toLowerCase();
   var sd = shieldData || {};
-
   var today = new Date().toISOString().slice(0,10);
-  var sid = sd.loggedInUser ? (sd.loggedInUser.schoolId||null) : null;
   var myStudents = sd.students || [];
   var myFees = sd.fees || [];
   var myAlerts = sd.alerts || [];
   var logs = sd.attendanceLogs || {};
   var go = sd.setActiveSection || null;
 
-  // Navigation
-  if (go) {
-    if (q.includes("fees") && (q.includes("kholo")||q.includes("jao")||q.includes("open")||q.includes("section"))) {
-      go("fees"); setOpen(false); speak("Fees section khul gaya"); return;
-    }
-    if ((q.includes("dashboard")||q.includes("home")) && (q.includes("jao")||q.includes("kholo"))) {
-      go("dashboard"); setOpen(false); speak("Dashboard pe aa gaye"); return;
-    }
-    if (q.includes("attendance") && (q.includes("section")||q.includes("kholo")||q.includes("jao"))) {
-      go("attendance"); setOpen(false); speak("Attendance section khul gaya"); return;
-    }
-    if (q.includes("library") && (q.includes("kholo")||q.includes("jao"))) {
-      go("library"); setOpen(false); speak("Library khul gaya"); return;
-    }
+  if (go && q.includes("fees") && (q.includes("kholo")||q.includes("jao")||q.includes("open"))) {
+    go("fees"); setOpen(false); speak("Fees section khul gaya"); return;
+  }
+  if (go && (q.includes("dashboard")||q.includes("home"))) {
+    go("dashboard"); setOpen(false); speak("Dashboard pe aa gaye"); return;
+  }
+  if (go && q.includes("library")) {
+    go("library"); setOpen(false); speak("Library khul gaya"); return;
   }
 
-  // Student search
   var stuMatch = null;
   myStudents.forEach(function(s) {
     if (s.name && q.includes(s.name.toLowerCase())) stuMatch = s;
@@ -976,8 +967,7 @@ const processQuery = function(q) {
     speak(stuMatch.name + " Class " + (stuMatch.class||"unknown") + " mein hai"); return;
   }
 
-  // Attendance
-  if (q.includes("attendance")||q.includes("present")||q.includes("absent")||q.includes("haziri")||q.includes("attandance")) {
+  if (q.includes("attend")||q.includes("present")||q.includes("absent")||q.includes("haziri")||q.includes("aaj")) {
     var present = 0; var absent = 0; var abNames = [];
     myStudents.forEach(function(s) {
       var key = "student_" + s.id;
@@ -988,33 +978,29 @@ const processQuery = function(q) {
     if (q.includes("absent") && abNames.length > 0 && abNames.length <= 5) {
       speak("Aaj " + absent + " absent hain: " + abNames.slice(0,5).join(", "));
     } else {
-      speak("Aaj " + present + " present hain aur " + absent + " absent hain. Total " + myStudents.length);
+      speak("Aaj " + present + " present aur " + absent + " absent. Total " + myStudents.length);
     }
     return;
   }
 
-  // Fees
   if (q.includes("fees")||q.includes("fee")||q.includes("due")||q.includes("pending")) {
     var due = myFees.filter(function(f){return !f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.amount||0);},0);
     var paid2 = myFees.filter(function(f){return f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.paidAmount||f.amount||0);},0);
-    speak("Fees due hain " + due.toLocaleString("en-IN") + " rupaye. Paid " + paid2.toLocaleString("en-IN") + " rupaye");
+    speak("Due " + due.toLocaleString("en-IN") + " rupaye. Paid " + paid2.toLocaleString("en-IN") + " rupaye");
     return;
   }
 
-  // Alerts
   if (q.includes("alert")||q.includes("notice")) {
     var act = myAlerts.filter(function(a){return !a.resolved;});
-    if (act.length === 0) { speak("Koi active alert nahi hai"); }
-    else { speak("" + act.length + " active alerts hain. " + (act[0].message||act[0].title||"")); }
+    speak(act.length === 0 ? "Koi alert nahi" : act.length + " alerts hain");
     return;
   }
 
-  // Total
   if (q.includes("student")||q.includes("kitne")||q.includes("total")) {
-    speak("Total " + myStudents.length + " students hain"); return;
+    speak("Total " + myStudents.length + " students"); return;
   }
 
-  speak("Samajh nahi aaya. Boliye: attendance, fees, alerts, ya koi student ka naam");
+  speak("Samajh nahi aaya. Boliye: attendance, fees, alerts, ya student ka naam");
 };
 
 const startListening = function() {
