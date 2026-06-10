@@ -10410,28 +10410,13 @@ const [updateCount, setUpdateCount] = React.useState(0);
 const lastSpeedAlertRef = React.useRef(0);
 const SPEED_LIMIT = 60;
 const fbStatusRef = bus?.id ? `schoolshield/busLocations/${bus.id}/sharingActive` : null;
-const lastPosRef = React.useRef(null);
-const lastPosTimeRef = React.useRef(null);
 const _doWatch = (isResume) => {
 if (!navigator.geolocation) { toast("GPS aapke browser mein available nahi hai", "error"); return; }
 if (watchIdRef.current !== null) return; // already watching
 const id = navigator.geolocation.watchPosition(
 (pos) => {
 const { latitude, longitude, speed: gpsSpeed } = pos.coords;
-var speedKmh = 0;
-if (gpsSpeed != null && gpsSpeed >= 0) {
-  speedKmh = Math.round(gpsSpeed * 3.6);
-} else if (lastPosRef.current && lastPosTimeRef.current) {
-  var R = 6371000;
-  var dLat = (latitude - lastPosRef.current.lat) * Math.PI / 180;
-  var dLon = (longitude - lastPosRef.current.lng) * Math.PI / 180;
-  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lastPosRef.current.lat*Math.PI/180)*Math.cos(latitude*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
-  var dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  var timeSec = (Date.now() - lastPosTimeRef.current) / 1000;
-  if (timeSec > 0) speedKmh = Math.round((dist / timeSec) * 3.6);
-}
-lastPosRef.current = {lat: latitude, lng: longitude};
-lastPosTimeRef.current = Date.now();
+var speedKmh = (gpsSpeed != null && gpsSpeed >= 0) ? Math.round(gpsSpeed * 3.6) : 0;
 setCurSpeed(speedKmh);
 setLocEnabled(true);
 setUpdateCount(c => c + 1);
