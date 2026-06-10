@@ -1009,9 +1009,13 @@ const processQuery = function(q) {
     var pct = td > 0 ? Math.round((pd/td)*100) : 0;
     var todayLog = sLogs[today];
     if (q.includes("percent")||q.includes("kitni")||q.includes("percentage")) {
-      goAndSpeak("unifiedcalendar", targetStu.name + " ki attendance " + pct + "% hai" + (pct<75?" — 75% se kam!":" — acchi hai")); return;
+      if (go) { go("unifiedcalendar"); setOpen(false); }
+      setTimeout(function(){ if(window.__shieldOpenAttendance) window.__shieldOpenAttendance(targetStu); }, 400);
+      speak(targetStu.name + " ki attendance " + pct + "% hai" + (pct<75?" — 75% se kam!":" — acchi hai")); return;
     }
-    goAndSpeak("unifiedcalendar", targetStu.name + " aaj " + (todayLog&&todayLog.status==="present"?"present":"absent") + " hai. Overall " + pct + "%"); return;
+    if (go) { go("unifiedcalendar"); setOpen(false); }
+    setTimeout(function(){ if(window.__shieldOpenAttendance) window.__shieldOpenAttendance(targetStu); }, 400);
+    speak(targetStu.name + " aaj " + (todayLog&&todayLog.status==="present"?"present":"absent") + " hai. Overall " + pct + "%"); return;
   }
   if (isAttend) {
     var askTeacher = q.includes("teacher")||q.includes("staff");
@@ -1117,13 +1121,52 @@ const processQuery = function(q) {
   // ─── NAME SEARCH ─────────────────────────────────────────────
   if (nameMatch) {
     if (nameMatchType==="student") {
-      goAndSpeak("students", nameMatch.name+" — Class "+(nameMatch.class||"N/A")+", Roll: "+(nameMatch.rollNo||"N/A")+", Parent: "+(nameMatch.parentPhone||"N/A")); return;
+      var ns = nameMatch;
+      // Attendance for this student
+      var nsKey = "student_" + ns.id;
+      var nsLogs = logs[nsKey] || {};
+      var nsTd = Object.keys(nsLogs).length;
+      var nsPd = Object.keys(nsLogs).filter(function(d){ return nsLogs[d].status==="present"; }).length;
+      var nsPct = nsTd > 0 ? Math.round((nsPd/nsTd)*100) : 0;
+      var nsTodayLog = nsLogs[today];
+      var nsTodayStatus = nsTodayLog ? (nsTodayLog.status==="present" ? "present" : "absent") : "data nahi";
+      // Fees for this student
+      var nsFees = myFees.filter(function(f){ return f.studentName===ns.name; });
+      var nsDue = nsFees.filter(function(f){ return !f.paid&&!f.isDiscount; }).reduce(function(s,f){ return s+(Number(f.amount)||0); },0);
+      var nsPaid = nsFees.filter(function(f){ return f.paid&&!f.isDiscount; }).reduce(function(s,f){ return s+(Number(f.paidAmount||f.amount)||0); },0);
+      var nsFeeSummary = nsDue>0 ? "Fees due: Rs "+nsDue.toLocaleString("en-IN") : (nsPaid>0 ? "Fees clear" : "Fees data nahi");
+      var nsMsg = ns.name
+        + " — Class " + (ns.class||"N/A")
+        + ", Roll: " + (ns.rollNo||"N/A")
+        + ". Aaj " + nsTodayStatus
+        + ". Attendance: " + nsPct + "%"
+        + ". " + nsFeeSummary
+        + (ns.parentPhone ? ". Parent: " + ns.parentPhone : "");
+      // Deep link: open student in StudentsSection
+      if (go) { go("students"); setOpen(false); }
+      setTimeout(function(){ if(window.__shieldOpenStudent) window.__shieldOpenStudent(ns); }, 400);
+      speak(nsMsg); return;
     }
     if (nameMatchType==="teacher") {
-      goAndSpeak("teachers", nameMatch.name+" — "+(nameMatch.subject||nameMatch.designation||"Teacher")+", Phone: "+(nameMatch.phone||"N/A")); return;
+      var nt = nameMatch;
+      var ntMsg = nt.name
+        + " — " + (nt.subject||nt.designation||"Teacher")
+        + ", Phone: " + (nt.phone||"N/A")
+        + (nt.assignedClass ? ", Class: " + nt.assignedClass : "")
+        + (nt.email ? ", Email: " + nt.email : "");
+      if (go) { go("teachers"); setOpen(false); }
+      setTimeout(function(){ if(window.__shieldOpenTeacher) window.__shieldOpenTeacher(nt); }, 400);
+      speak(ntMsg); return;
     }
     if (nameMatchType==="employee") {
-      goAndSpeak("employees", nameMatch.name+" — "+(nameMatch.designation||"Employee")+", Dept: "+(nameMatch.department||"N/A")); return;
+      var ne = nameMatch;
+      var neMsg = ne.name
+        + " — " + (ne.designation||"Employee")
+        + ", Dept: " + (ne.department||"N/A")
+        + (ne.phone ? ", Phone: " + ne.phone : "");
+      if (go) { go("employees"); setOpen(false); }
+      setTimeout(function(){ if(window.__shieldOpenEmployee) window.__shieldOpenEmployee(ne); }, 400);
+      speak(neMsg); return;
     }
   }
 
@@ -4694,6 +4737,15 @@ const filtered = baseStudents.filter(s =>
 (s.name||"").toLowerCase().includes(search.toLowerCase()) ||
 (s.class||"").toLowerCase().includes(search.toLowerCase())
 );
+// ── Shield voice deep-link hook ──
+React.useEffect(function() {
+window.__shieldOpenStudent = function(s) {
+if (!s) return;
+setSelectedClass(s.class || null);
+setSearch(s.name || "");
+};
+return function() { window.__shieldOpenStudent = null; };
+}, []);
 const classCounts = {};
 CLASSES.forEach(c => { classCounts[c] = schoolStudents.filter(s=>s.class===c).length; });
 const classTeacherMap = {};
@@ -5799,6 +5851,14 @@ const mySchoolIdT = currentSchool?.id || loggedInUser?.schoolId || null;
 const schoolTeachers = teachers.filter(t=>!t.schoolId||String(t.schoolId)===String(mySchoolIdT));
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const [tSearch, setTSearch] = React.useState("");
+// ── Shield voice deep-link hook ──
+React.useEffect(function() {
+window.__shieldOpenTeacher = function(t) {
+if (!t) return;
+setTSearch(t.name || "");
+};
+return function() { window.__shieldOpenTeacher = null; };
+}, []);
 const getNextEmpId = () => {
 const schoolT = teachers.filter(t => !t.schoolId || String(t.schoolId) === String(mySchoolId));
 const nums = schoolT.map(t => {
@@ -20060,6 +20120,28 @@ const canEditAtt    = isPrincipal;
 // ── TAB state ──
 const defaultTab = isParent ? "childattendance" : isTeacher ? "classattendance" : "events";
 const [tab, setTab] = useState(defaultTab);
+// ── Shield voice deep-link hook ──
+React.useEffect(function() {
+window.__shieldOpenAttendance = function(s) {
+if (!s) return;
+setTab("classattendance");
+setTimeout(function() {
+if (s && setModal) {
+setModal(React.createElement(AttendanceCalendar, {
+personId: s.id,
+personName: s.name,
+personType: "student",
+role: role,
+attendanceLogs: attendanceLogs,
+setAttendanceLogs: setAttendanceLogs,
+leaves: leaves || [],
+onClose: function() { setModal(null); }
+}));
+}
+}, 200);
+};
+return function() { window.__shieldOpenAttendance = null; };
+}, [attendanceLogs, leaves, role, setModal, setAttendanceLogs]);
 // ── Shared month nav ──
 const now = new Date();
 const [viewYear,  setViewYear]  = useState(now.getFullYear());
@@ -20999,6 +21081,14 @@ const [filterRole, setFilterRole] = React.useState("all");
 const [showForm, setShowForm] = React.useState(false);
 const [editEmp, setEditEmp] = React.useState(null);
 const [viewTab, setViewTab] = React.useState("all"); // "all" | "lower" | "bulk"
+// ── Shield voice deep-link hook ──
+React.useEffect(function() {
+window.__shieldOpenEmployee = function(emp) {
+if (!emp) return;
+setSearch(emp.name || "");
+};
+return function() { window.__shieldOpenEmployee = null; };
+}, []);
 const [bulkMonth, setBulkMonth] = React.useState(() => { const d=new Date(); return d.toISOString().slice(0,7); });
 const [bulkSelected, setBulkSelected] = React.useState([]);
 const [bulkDone, setBulkDone] = React.useState(false);
