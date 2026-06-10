@@ -951,16 +951,22 @@ const processQuery = function(q) {
   var loggedIn = sd.loggedInUser || {};
   var role = loggedIn.role || "";
 
-  // Helper: find logged-in student
+  // goAndSpeak: navigate + speak data
+  var goAndSpeak = function(section, msg) {
+    if (go) { go(section); setOpen(false); }
+    speak(msg);
+  };
+
+  // Find logged-in student
   var myStudent = null;
   if (role === "parent" || role === "student") {
     myStudent = myStudents.find(function(s){ return s.name && s.name.toLowerCase() === (loggedIn.name||"").toLowerCase(); });
     if (!myStudent && myStudents.length === 1) myStudent = myStudents[0];
   }
 
-  // Helper: find student from query
+  // Find student from query name
   var stuMatch = null;
-  var searchQ = q.replace("student","").replace("ki","").replace("ka","").replace("ke","").trim();
+  var searchQ = q.replace(/student|ki|ka|ke|ko|meri|mera|mein/g,"").trim();
   if (searchQ.length > 2) {
     myStudents.forEach(function(s) {
       if (s.name && s.name.length > 2 && searchQ.includes(s.name.toLowerCase())) stuMatch = s;
@@ -968,159 +974,174 @@ const processQuery = function(q) {
   }
   var targetStu = stuMatch || myStudent;
 
-  // ─── 1. NAVIGATION ──────────────────────────────────────────
-  if (go) {
-    if ((q.includes("fees") || q.includes("payment") || orig.includes("फीस")) &&
-        (q.includes("kholo")||q.includes("jao")||q.includes("open")||q.includes("page")||q.includes("section"))) {
-      if (targetStu && window.__setFeeStudent) window.__setFeeStudent(targetStu);
-      go("fees"); setOpen(false); speak("Fees page khul gaya"); return;
-    }
-    if (q.includes("attend") && (q.includes("page")||q.includes("kholo")||q.includes("section")||q.includes("open"))) {
-      go("attendance"); setOpen(false); speak("Attendance section khul gaya"); return;
-    }
-    if (q.includes("timetable")||q.includes("time table")||q.includes("schedule")||orig.includes("समयसारणी")) {
-      go("timetable"); setOpen(false); speak("Timetable section khul gaya"); return;
-    }
-    if (q.includes("homework")||q.includes("home work")||q.includes("assignment")||orig.includes("गृहकार्य")) {
-      go("homework"); setOpen(false); speak("Homework section khul gaya"); return;
-    }
-    if (q.includes("exam")||q.includes("result")||q.includes("marks")||q.includes("test")||orig.includes("परीक्षा")) {
-      go("exams"); setOpen(false); speak("Exams section khul gaya"); return;
-    }
-    if (q.includes("notice")||q.includes("announcement")||orig.includes("सूचना")) {
-      go("alertsnotices"); setOpen(false); speak("Notices section khul gaya"); return;
-    }
-    if (q.includes("library")||orig.includes("लाइब्रेरी")) {
-      go("library"); setOpen(false); speak("Library khul gaya"); return;
-    }
-    if (q.includes("transport")||q.includes("bus")||orig.includes("बस")) {
-      go("transport"); setOpen(false); speak("Transport section khul gaya"); return;
-    }
-    if (q.includes("inventory")||q.includes("stock")||orig.includes("इन्वेंटरी")) {
-      go("inventory"); setOpen(false); speak("Inventory section khul gaya"); return;
-    }
-    if (q.includes("dashboard")||q.includes("home")||orig.includes("डैशबोर्ड")) {
-      go("dashboard"); setOpen(false); speak("Dashboard pe aa gaye"); return;
-    }
-  }
+  // ─── SECTION MAP ────────────────────────────────────────────
+  var sectionMap = [
+    { keys:["dashboard","home","ghar","summary","overview"], sec:"dashboard", label:"Dashboard" },
+    { keys:["student","bachche","baccha","profile","list"], sec:"students", label:"Students" },
+    { keys:["teacher","shikshak","faculty"], sec:"teachers", label:"Teachers" },
+    { keys:["employee","staff","karmchari"], sec:"employees", label:"Employees" },
+    { keys:["leave","chutti","absent application","leave application"], sec:"leaves", label:"Leave Applications" },
+    { keys:["fees","fee","payment","due","pending amount"], sec:"fees", label:"Fees" },
+    { keys:["notice","alert","announcement","update","khabar"], sec:"alertsnotices", label:"Alerts & Notices" },
+    { keys:["transport","bus","gadi","vehicle"], sec:"transport", label:"Transport" },
+    { keys:["timetable","time table","schedule","class schedule","samaysarni"], sec:"timetable", label:"Timetable" },
+    { keys:["canteen","khana","food","lunch","menu"], sec:"canteen", label:"Canteen" },
+    { keys:["gallery","photo","image","tasveer"], sec:"gallery", label:"Gallery" },
+    { keys:["account","setting","profile"], sec:"accounts", label:"Accounts" },
+    { keys:["certificate","letter","letterscerts","tc","transfer"], sec:"letterscerts", label:"Letters & Certificates" },
+    { keys:["expense","income","kharcha","revenue","paise"], sec:"expenses", label:"Expenses" },
+    { keys:["calendar","attendance page","haziri page","calender"], sec:"unifiedcalendar", label:"Calendar & Attendance" },
+    { keys:["exam","result","marks","test","pariksha"], sec:"exams", label:"Exams" },
+    { keys:["library","book","kitab"], sec:"library", label:"Library" },
+    { keys:["homework","home work","assignment","kaam","grihakarya"], sec:"homework", label:"Homework" },
+    { keys:["syllabus","course","pattakarma","padhna"], sec:"syllabus", label:"Syllabus" },
+    { keys:["visitor","guest","aagantuk"], sec:"visitors", label:"Visitors" },
+    { keys:["reached home","ghar pahuncha","safe home","reachedhome"], sec:"reachedhome", label:"Reached Home" },
+    { keys:["health","sehat","beemar","temperature","checkin"], sec:"healthcheckin", label:"Health Check-in" },
+    { keys:["inventory","stock","saman","material"], sec:"inventory", label:"Inventory" },
+    { keys:["school page","school info","school ke baare"], sec:"schoolpage", label:"School Page" },
+    { keys:["camera","live","cctv","video"], sec:"livecamera", label:"Live Camera" },
+    { keys:["discipline","behavior","behaviour","shasan"], sec:"discipline", label:"Discipline" },
+    { keys:["trip","excursion","picnic","tour"], sec:"tripmanagement", label:"Trip Management" },
+    { keys:["online class","virtual class","zoom","meet"], sec:"onlineclass", label:"Online Classes" },
+    { keys:["staff directory","contact","number","directory"], sec:"staffdirectory", label:"Staff Directory" },
+    { keys:["feedback","parent feedback","parents"], sec:"parentfeedback", label:"Parent Feedback" },
+    { keys:["pickup","authorized pickup","lene aana"], sec:"authorizedpickup", label:"Authorized Pickup" },
+    { keys:["growth","child health","bache ki health"], sec:"childhealth", label:"Child Health & Growth" },
+  ];
 
-  // ─── 2. ATTENDANCE ──────────────────────────────────────────
-  var isAttend = q.includes("attend") || q.includes("present") || q.includes("absent") ||
-    q.includes("haziri") || orig.includes("अटेंडेंस") ||
-    orig.includes("उपस्थित") || orig.includes("हाज़िरी");
-  if (isAttend) {
-    // Specific student
-    if (targetStu) {
-      var sKey = "student_" + targetStu.id;
-      var sLog = logs[sKey] && logs[sKey][today];
-      var sStatus = sLog ? sLog.status : "absent";
-      // Attendance percentage
-      if (q.includes("percent")||q.includes("kitni")||q.includes("kaisi")||orig.includes("प्रतिशत")) {
-        var totalDays = 0; var presentDays = 0;
-        if (logs[sKey]) {
-          Object.keys(logs[sKey]).forEach(function(d){ totalDays++; if(logs[sKey][d].status==="present") presentDays++; });
-        }
-        var pct = totalDays > 0 ? Math.round((presentDays/totalDays)*100) : 0;
-        var warn = pct < 75 ? " Yeh required 75% se kam hai!" : " Acchi attendance hai.";
-        speak(targetStu.name + " ki attendance " + pct + "% hai." + warn); return;
-      }
-      speak(targetStu.name + " aaj " + (sStatus==="present"?"present hai":"absent hai") + ". Class " + (targetStu.class||"")); return;
-    }
-    // Teacher attendance
-    var askTeacher = q.includes("teacher")||q.includes("staff")||orig.includes("शिक्षक");
-    if (askTeacher) {
-      var tp = 0; var ta = 0;
-      myTeachers.forEach(function(t){ var lg = logs["teacher_"+t.id]&&logs["teacher_"+t.id][today]; if(lg&&lg.status==="present")tp++; else ta++; });
-      speak("Teachers: Aaj " + tp + " present, " + ta + " absent. Total " + myTeachers.length); return;
-    }
-    // All students
+  // ─── ATTENDANCE DATA ─────────────────────────────────────────
+  var getAttData = function(type) {
     var sp = 0; var sa = 0; var abN = [];
-    myStudents.forEach(function(s){ var lg = logs["student_"+s.id]&&logs["student_"+s.id][today]; if(lg&&lg.status==="present")sp++; else{sa++;if(s.name)abN.push(s.name);} });
-    if (q.includes("absent") && abN.length > 0 && abN.length <= 5) {
-      speak("Aaj " + sa + " absent: " + abN.slice(0,5).join(", ")); return;
+    var list = type === "teacher" ? myTeachers : myStudents;
+    var prefix = type === "teacher" ? "teacher_" : "student_";
+    list.forEach(function(s){ var lg = logs[prefix+s.id]&&logs[prefix+s.id][today]; if(lg&&lg.status==="present")sp++; else{sa++;if(s.name)abN.push(s.name);} });
+    return {present:sp, absent:sa, total:list.length, absentNames:abN};
+  };
+
+  // ─── CHECK IF ATTENDANCE QUERY ───────────────────────────────
+  var isAttend = q.includes("attend") || q.includes("present") || q.includes("absent") ||
+    q.includes("haziri") || q.includes("hazir") || q.includes("upasthit") ||
+    orig.includes("अटेंडेंस") || orig.includes("हाज़िरी") || orig.includes("उपस्थित");
+
+  // ─── SPECIFIC STUDENT ATTENDANCE ────────────────────────────
+  if (isAttend && targetStu) {
+    var sKey = "student_" + targetStu.id;
+    if (q.includes("percent")||q.includes("kitni")||q.includes("kaisi")||q.includes("percentage")) {
+      var td = 0; var pd = 0;
+      if (logs[sKey]) { Object.keys(logs[sKey]).forEach(function(d){ td++; if(logs[sKey][d].status==="present") pd++; }); }
+      var pct = td > 0 ? Math.round((pd/td)*100) : 0;
+      goAndSpeak("unifiedcalendar", targetStu.name + " ki attendance " + pct + "%" + (pct<75?" — required 75% se kam hai!":" — acchi hai")); return;
     }
-    speak("Aaj " + sp + " present, " + sa + " absent. Total " + myStudents.length + " students"); return;
+    var sLog = logs[sKey] && logs[sKey][today];
+    goAndSpeak("unifiedcalendar", targetStu.name + " aaj " + (sLog&&sLog.status==="present"?"present hai":"absent hai")); return;
   }
 
-  // ─── 3. FEES ────────────────────────────────────────────────
-  var isFees = q.includes("fees")||q.includes("fee")||q.includes("due")||q.includes("pending")||q.includes("payment")||orig.includes("फीस");
-  if (isFees) {
+  // ─── ALL ATTENDANCE ──────────────────────────────────────────
+  if (isAttend) {
+    var askTeacher = q.includes("teacher")||q.includes("staff")||orig.includes("शिक्षक");
+    var att = getAttData(askTeacher?"teacher":"student");
+    if (q.includes("absent") && att.absentNames.length > 0 && att.absentNames.length <= 5) {
+      goAndSpeak("unifiedcalendar", "Aaj " + att.absent + " absent: " + att.absentNames.slice(0,5).join(", ")); return;
+    }
+    goAndSpeak("unifiedcalendar", "Aaj " + att.present + " present, " + att.absent + " absent. Total " + att.total); return;
+  }
+
+  // ─── FEES ────────────────────────────────────────────────────
+  if (q.includes("fees")||q.includes("fee")||q.includes("due")||q.includes("pending")||q.includes("payment")||orig.includes("फीस")) {
     var stuFees = targetStu ? myFees.filter(function(f){return f.studentName===targetStu.name;}) : myFees;
     var due = stuFees.filter(function(f){return !f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.amount||0);},0);
     var paid = stuFees.filter(function(f){return f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.paidAmount||f.amount||0);},0);
-    if (due > 0) {
-      speak((targetStu?targetStu.name+" ki ":"") + "fees due hai: " + due.toLocaleString("en-IN") + " rupaye. Jaldi payment karein!");
-    } else {
-      speak((targetStu?targetStu.name+" ki ":"Sabki ") + "fees clear hai. Paid: " + paid.toLocaleString("en-IN") + " rupaye");
-    }
-    return;
+    if (targetStu && window.__setFeeStudent) window.__setFeeStudent(targetStu);
+    var fMsg = due > 0 ? (targetStu?targetStu.name+" ki ":"") + "fees due: " + due.toLocaleString("en-IN") + " rupaye. Jaldi pay karein!" : (targetStu?targetStu.name+" ki ":"Sabki ") + "fees clear hai. Paid: " + paid.toLocaleString("en-IN") + " rupaye";
+    goAndSpeak("fees", fMsg); return;
   }
 
-  // ─── 4. NOTICES & ALERTS ────────────────────────────────────
-  var isNotice = q.includes("notice")||q.includes("alert")||q.includes("announcement")||q.includes("update")||orig.includes("सूचना")||orig.includes("अलर्ट");
-  if (isNotice) {
+  // ─── NOTICES & ALERTS ───────────────────────────────────────
+  if (q.includes("notice")||q.includes("alert")||q.includes("announcement")||q.includes("update")||q.includes("khabar")||orig.includes("सूचना")) {
     var activeAlerts = myAlerts.filter(function(a){return !a.resolved;});
-    if (activeAlerts.length === 0) { speak("Abhi koi naya notice ya alert nahi hai"); return; }
-    var latest = activeAlerts[0];
-    speak(activeAlerts.length + " notice hain. Latest: " + (latest.message||latest.title||"Alerts section dekho")); return;
+    var nMsg = activeAlerts.length === 0 ? "Koi naya notice nahi hai" : activeAlerts.length + " notices hain. Latest: " + (activeAlerts[0].message||activeAlerts[0].title||"Notices section dekho");
+    goAndSpeak("alertsnotices", nMsg); return;
   }
 
-  // ─── 5. TIMETABLE ───────────────────────────────────────────
-  var isTimetable = q.includes("timetable")||q.includes("time table")||q.includes("class")||q.includes("schedule")||q.includes("subject")||orig.includes("समयसारणी");
-  if (isTimetable) {
-    var timetables = sd.timetables || sd.timetable || [];
+  // ─── TIMETABLE ───────────────────────────────────────────────
+  if (q.includes("timetable")||q.includes("time table")||q.includes("schedule")||q.includes("next class")||q.includes("agle class")||orig.includes("समयसारणी")) {
+    var timetables = sd.timetables || [];
     var stuClass = targetStu ? targetStu.class : "";
-    if (q.includes("next")||q.includes("agle")||q.includes("abhi")) {
-      speak("Next class ke liye Timetable section kholo"); return;
+    var dayToCheck = todayDay;
+    if (q.includes("kal")||q.includes("tomorrow")) dayToCheck = dayNames[(now.getDay()+1)%7];
+    var classTT = timetables.find(function(t){ return t.class === stuClass; });
+    var daySlots = classTT && classTT.days ? (classTT.days[dayToCheck]||[]) : [];
+    var subjects = daySlots.filter(function(s){ return s&&s.subject; }).map(function(s){ return s.subject; });
+    var ttMsg = subjects.length > 0 ? (q.includes("kal")?"Kal ":"Aaj ") + dayToCheck + ": " + subjects.join(", ") : "Timetable section mein schedule dekho";
+    goAndSpeak("timetable", ttMsg); return;
+  }
+
+  // ─── HOMEWORK ────────────────────────────────────────────────
+  if (q.includes("homework")||q.includes("home work")||q.includes("assignment")||orig.includes("गृहकार्य")) {
+    var homeworks = sd.homeworks || sd.homework || [];
+    var stuClass4 = targetStu ? targetStu.class : "";
+    var todayHW = homeworks.filter(function(h){ return h.date===today && (!stuClass4||h.class===stuClass4); });
+    var pendingHW = homeworks.filter(function(h){ return !h.completed && h.date && h.date >= today && (!stuClass4||h.class===stuClass4); });
+    if (q.includes("pending")||q.includes("baaki")) {
+      goAndSpeak("homework", pendingHW.length === 0 ? "Koi pending homework nahi!" : pendingHW.length + " pending: " + (pendingHW[0].subject||pendingHW[0].title||"")); return;
     }
-    if (q.includes("kal")||q.includes("tomorrow")) {
-      var tomDay = dayNames[(now.getDay()+1)%7];
-      speak("Kal " + tomDay + " ka timetable dekhne ke liye Timetable section mein jaiye"); return;
+    var hwMsg = todayHW.length === 0 ? "Aaj ka koi homework nahi!" : "Aaj ka homework: " + todayHW.map(function(h){return h.subject||h.title||"";}).filter(Boolean).join(", ");
+    goAndSpeak("homework", hwMsg); return;
+  }
+
+  // ─── EXAMS ───────────────────────────────────────────────────
+  if (q.includes("exam")||q.includes("test")||q.includes("result")||q.includes("marks")||q.includes("score")||orig.includes("परीक्षा")) {
+    var exams = sd.exams || [];
+    var stuClass5 = targetStu ? targetStu.class : "";
+    var upcoming = exams.filter(function(e){ return e.date && e.date >= today && (!stuClass5||e.class===stuClass5); }).sort(function(a,b){ return a.date>b.date?1:-1; });
+    if (q.includes("next")||q.includes("kab")||q.includes("agle")) {
+      goAndSpeak("exams", upcoming.length===0 ? "Koi upcoming exam nahi" : "Agla exam: " + (upcoming[0].subject||upcoming[0].title||"") + " — " + upcoming[0].date); return;
     }
-    speak("Aaj " + todayDay + " ka timetable Timetable section mein hai"); return;
+    goAndSpeak("exams", upcoming.length===0 ? "Koi upcoming exam schedule nahi" : upcoming.length + " upcoming exams hain"); return;
   }
 
-  // ─── 6. HOMEWORK & ASSIGNMENTS ──────────────────────────────
-  var isHW = q.includes("homework")||q.includes("home work")||q.includes("assignment")||q.includes("kaam")||orig.includes("गृहकार्य");
-  if (isHW) {
-    speak("Aaj ka homework Homework section mein dekho. Wahan sab subjects ka kaam milega"); return;
+  // ─── TRANSPORT / BUS ────────────────────────────────────────
+  if (q.includes("transport")||q.includes("bus")||q.includes("gadi")||orig.includes("बस")) {
+    var buses = sd.buses || [];
+    var activeBus = buses.find(function(b){ return b.sharingActive; });
+    var busMsg = activeBus ? "Bus " + (activeBus.busNo||"") + " live tracking on hai" : "Transport section mein bus details dekho";
+    goAndSpeak("transport", busMsg); return;
   }
 
-  // ─── 7. EXAMS & RESULTS ─────────────────────────────────────
-  var isExam = q.includes("exam")||q.includes("test")||q.includes("result")||q.includes("marks")||q.includes("score")||orig.includes("परीक्षा")||orig.includes("नंबर");
-  if (isExam) {
-    if (q.includes("next")||q.includes("kab")||q.includes("schedule")) {
-      speak("Agla exam schedule Exams section mein dekho"); return;
+  // ─── LEAVES ──────────────────────────────────────────────────
+  if (q.includes("leave")||q.includes("chutti")||q.includes("absence")||orig.includes("छुट्टी")) {
+    var leaves = sd.leaveApplications || sd.leaves || [];
+    var pending = leaves.filter(function(l){ return l.status === "pending"; });
+    goAndSpeak("leaves", pending.length > 0 ? pending.length + " leave applications pending hain" : "Koi pending leave application nahi"); return;
+  }
+
+  // ─── STUDENTS COUNT / INFO ───────────────────────────────────
+  if (q.includes("kitne")||q.includes("total student")||q.includes("how many")) {
+    goAndSpeak("students", "Total " + myStudents.length + " students, " + myTeachers.length + " teachers hain"); return;
+  }
+
+  // ─── SECTION NAVIGATION (all other modules) ─────────────────
+  var navMatch = null;
+  sectionMap.forEach(function(sm) {
+    if (!navMatch) {
+      sm.keys.forEach(function(k) {
+        if (!navMatch && q.includes(k)) navMatch = sm;
+      });
     }
-    if (q.includes("marks")||q.includes("result")||q.includes("score")||orig.includes("नंबर")) {
-      speak("Results aur marks Exams section mein available hain"); return;
-    }
-    speak("Exam details ke liye Exams section mein jaiye"); return;
+  });
+  if (navMatch) {
+    goAndSpeak(navMatch.sec, navMatch.label + " section khul gaya"); return;
   }
 
-  // ─── 8. PERFORMANCE ─────────────────────────────────────────
-  var isPerf = q.includes("performance")||q.includes("weak")||q.includes("strong")||q.includes("best")||q.includes("worst")||orig.includes("प्रदर्शन");
-  if (isPerf) {
-    speak("Performance analysis ke liye Exams section mein jaiye. Wahan subject-wise marks dikh jaenge"); return;
+  // ─── HELP ────────────────────────────────────────────────────
+  if (q.includes("help")||q.includes("kya kar")||q.includes("kya karna")) {
+    speak("Main Shield hun. Bol sakte hain: attendance, fees, timetable, homework, exams, notices, transport, library, aur bahut kuch"); return;
   }
 
-  // ─── 9. STUDENT COUNT ───────────────────────────────────────
-  if (q.includes("kitne")||q.includes("total")||q.includes("count")||orig.includes("कितने")) {
-    speak("School mein total " + myStudents.length + " students aur " + myTeachers.length + " teachers hain"); return;
-  }
-
-  // ─── 10. STUDENT INFO ───────────────────────────────────────
-  if (stuMatch) {
-    speak(stuMatch.name + " Class " + (stuMatch.class||"unknown") + " mein hai. Roll: " + (stuMatch.rollNo||"N/A")); return;
-  }
-
-  // ─── 11. HELP ───────────────────────────────────────────────
-  if (q.includes("help")||q.includes("kya kar")||q.includes("kya bolu")) {
-    speak("Main Shield hun. Pooch sakte hain: attendance, fees, timetable, homework, exams, notices, ya section navigate karne ke liye"); return;
-  }
-
-  speak("Samajh nahi aaya. Boliye: attendance, fees, exam, timetable, homework, ya notice");
+  speak("Samajh nahi aaya. Boliye: attendance, fees, exam, timetable, notices, ya koi module ka naam");
 };
+
 
 const startListening = function() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
