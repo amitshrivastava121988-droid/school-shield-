@@ -13518,13 +13518,15 @@ window.db.ref(`schoolshield/schools/SCH_${String(mySchoolId).replace(/[^a-zA-Z0-
 };
 const del = (id) => { setTransferCertificates(p => (p||[]).filter(t => t.id!==id)); toast("Deleted","success"); };
 const print = (t) => {
-const sn = safeHtml(currentSchool?.name||"School Name");
+const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
+const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const sa = safeHtml(currentSchool?.address||"");
 const body = `
 <div class="cert-wrap">
 <div class="school-header">
 <div class="logo-area">
-<div class="logo-placeholder">School<br/>Logo</div>
+${logoHtml}
 <div>
 <div class="school-name">${sn}</div>
 ${sa ? `<div class="school-sub">${sa}</div>` : ""}
@@ -13681,10 +13683,12 @@ setForm(empty); toast("Character Certificate created ✓","success"); setTab("li
 const approve = (id) => { setCharacterCertificates(p=>(p||[]).map(c=>c.id===id?{...c,status:"Approved",approvedBy:loggedInUser?.name||role}:c)); toast("Approved ✓","success"); };
 const del = (id) => { setCharacterCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
-const sn = safeHtml(currentSchool?.name||"School Name");
+const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
+const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area"><div class="logo-placeholder">Logo</div><div><div class="school-name">${sn}</div></div></div></div>
+<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
 <div class="cert-title">Character Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <div class="cert-para" style="margin-top:30px">
@@ -13750,10 +13754,12 @@ setForm(empty); toast("Migration Certificate created ✓","success"); setTab("li
 const approve = (id) => { setMigrationCertificates(p=>(p||[]).map(c=>c.id===id?{...c,status:"Approved",approvedBy:loggedInUser?.name||role}:c)); toast("Approved ✓","success"); };
 const del = (id) => { setMigrationCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
-const sn = safeHtml(currentSchool?.name||"School Name");
+const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
+const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area"><div class="logo-placeholder">Logo</div><div><div class="school-name">${sn}</div></div></div></div>
+<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
 <div class="cert-title">Migration Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <table class="fields" style="margin-top:20px"><tbody>
@@ -13821,10 +13827,12 @@ setForm(empty); toast("Bonafide Certificate created ✓","success"); setTab("lis
 const approve = (id) => { setBonafideCertificates(p=>(p||[]).map(c=>c.id===id?{...c,status:"Approved",approvedBy:loggedInUser?.name||role}:c)); toast("Approved ✓","success"); };
 const del = (id) => { setBonafideCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
-const sn = safeHtml(currentSchool?.name||"School Name");
+const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
+const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area"><div class="logo-placeholder">Logo</div><div><div class="school-name">${sn}</div></div></div></div>
+<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
 <div class="cert-title">Bonafide Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <div class="cert-para" style="margin-top:30px">
@@ -13889,10 +13897,12 @@ setForm(empty); toast("Study Certificate created ✓","success"); setTab("list")
 const approve = (id) => { setStudyCertificates(p=>(p||[]).map(c=>c.id===id?{...c,status:"Approved",approvedBy:loggedInUser?.name||role}:c)); toast("Approved ✓","success"); };
 const del = (id) => { setStudyCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
-const sn = safeHtml(currentSchool?.name||"School Name");
+const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
+const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area"><div class="logo-placeholder">Logo</div><div><div class="school-name">${sn}</div></div></div></div>
+<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
 <div class="cert-title">Study Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <div class="cert-para" style="margin-top:30px">
@@ -13955,10 +13965,12 @@ setForm(empty); toast("Fee Clearance created ✓","success"); setTab("list");
 const approve = (id) => { setFeeClearanceCertificates(p=>(p||[]).map(c=>c.id===id?{...c,status:"Approved",approvedBy:loggedInUser?.name||role}:c)); toast("Approved ✓","success"); };
 const del = (id) => { setFeeClearanceCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
-const sn = safeHtml(currentSchool?.name||"School Name");
+const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
+const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area"><div class="logo-placeholder">Logo</div><div><div class="school-name">${sn}</div></div></div></div>
+<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
 <div class="cert-title">Fee Clearance Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <table class="fields" style="margin-top:20px"><tbody>
@@ -14062,11 +14074,14 @@ const del = function(id) {
 };
 const print = function(c) {
   var sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
+  var sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
+  var logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
   var sa = safeHtml(currentSchool&&currentSchool.address ? currentSchool.address : "");
   var sp = safeHtml(currentSchool&&currentSchool.phone ? currentSchool.phone : "");
   var today = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
   var body = "<div class='cert-wrap' style='font-family:Times New Roman,serif;'>"
   + "<div style='text-align:center;border-bottom:3px double #333;padding-bottom:16px;margin-bottom:16px;'>"
+  + (sl ? "<div style='margin-bottom:8px;'>" + logoHtml + "</div>" : "")
   + "<div style='font-size:22px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;'>" + sn + "</div>"
   + "<div style='font-size:13px;color:#555;margin-top:4px;'>" + sa + "</div>"
   + "<div style='font-size:12px;color:#555;'>Tel: " + sp + "</div>"
@@ -17850,6 +17865,7 @@ plan: school.plan||"Monthly", joinDate: school.joinDate||new Date().toISOString(
 amount: school.amount||4999, dueDate: school.dueDate||"",
 principalName: school.principalName||"", principalMobile: school.principalMobile||"",
 upiId: school.upiId||"",
+logoUrl: school.logoUrl||"",
 featurePlan: school.featurePlan||"basic",
 features: school.features || {...PLAN_FEATURES.basic.features},
 limits:   school.limits   || {...PLAN_FEATURES.basic.limits},
@@ -17857,6 +17873,7 @@ limits:   school.limits   || {...PLAN_FEATURES.basic.limits},
 name:"", address:"", city:"", lat:"", lng:"", plan:"Monthly",
 joinDate:new Date().toISOString().slice(0,10), amount:4999, dueDate:"",
 principalName:"", principalMobile:"", upiId:"",
+logoUrl:"",
 featurePlan:"basic",
 features: {...PLAN_FEATURES.basic.features},
 limits:   {...PLAN_FEATURES.basic.limits},
@@ -17922,6 +17939,47 @@ setD(p=>({...p, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.t
 <FormInput value={d.upiId||""} onChange={v=>setD(p=>({...p,upiId:v}))} placeholder="school@paytm / school@okicici" />
 </FormField>
 <p style={{fontSize:11, color:T.textMuted, marginTop:2}}>Parents ko online fee payment ka option milega is UPI ID pe</p>
+</div>
+<div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:10,padding:"12px 14px",marginBottom:12}}>
+<p style={{fontSize:12,color:T.accent,fontWeight:700,marginBottom:8}}>{"🏫 School Logo (for Certificates)"}</p>
+{d.logoUrl ? (
+<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+<img src={d.logoUrl} alt="School Logo"
+style={{width:64,height:64,borderRadius:8,objectFit:"contain",border:"1px solid "+T.border,background:"#fff"}} />
+<div>
+<p style={{fontSize:11,color:T.green,fontWeight:700}}>{"Logo uploaded!"}</p>
+<button onClick={function(){setD(function(p){return {...p,logoUrl:""};});}}
+style={{fontSize:11,color:T.red,background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"Outfit,sans-serif"}}>
+{"Remove"}
+</button>
+</div>
+</div>
+) : null}
+<label style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",
+background:T.card,border:"1px dashed "+T.border,borderRadius:8,cursor:"pointer"}}>
+<span style={{fontSize:16}}>{"📷"}</span>
+<span style={{fontSize:12,color:T.textMuted}}>{"Upload School Logo (PNG/JPG)"}</span>
+<input type="file" accept="image/*" style={{display:"none"}}
+onChange={function(e){
+var file = e.target.files && e.target.files[0];
+if (!file) return;
+var fd = new FormData();
+fd.append("file", file);
+fd.append("upload_preset", "pxzlx4pv");
+fd.append("cloud_name", window.CLOUDINARY_CLOUD||"dydugugig");
+fetch("https://api.cloudinary.com/v1_1/"+(window.CLOUDINARY_CLOUD||"dydugugig")+"/image/upload", {method:"POST",body:fd})
+.then(function(r){return r.json();})
+.then(function(data){
+if (data.secure_url) {
+setD(function(p){return {...p,logoUrl:data.secure_url};});
+} else {
+alert("Upload failed. Try again.");
+}
+})
+.catch(function(){alert("Upload error. Check internet.");});
+}}/>
+</label>
+<p style={{fontSize:10,color:T.textMuted,marginTop:4}}>{"Logo will appear on all certificates"}</p>
 </div>
 <FormField label={l("plan")}>
 <FormSelect value={d.plan} onChange={v=>setD(p=>({...p,plan:v}))} options={["Monthly","Yearly"]} />
