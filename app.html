@@ -937,11 +937,12 @@ const speak = function(text) {
 const processQuery = function(q) {
   q = (q||"").toLowerCase();
   var sd = shieldData || {};
+
   var today = new Date().toISOString().slice(0,10);
   var sid = sd.loggedInUser ? (sd.loggedInUser.schoolId||null) : null;
-  var myStudents = (sd.students||[]).filter(function(s){return !s.schoolId||String(s.schoolId)===String(sid);});
-  var myFees = (sd.fees||[]).filter(function(f){return !f.schoolId||String(f.schoolId)===String(sid);});
-  var myAlerts = (sd.alerts||[]).filter(function(a){return !a.schoolId||String(a.schoolId)===String(sid);});
+  var myStudents = sd.students || [];
+  var myFees = sd.fees || [];
+  var myAlerts = sd.alerts || [];
   var logs = sd.attendanceLogs || {};
   var go = sd.setActiveSection || null;
 
