@@ -5003,7 +5003,7 @@ return (
 </div>
 } />
 {isViewOnly && (
-<div style={{background:`${T.accent}15`, border:`1px solid ${T.accent}40`, borderRadius:10, padding:"10px 14px", marginBottom:14, display:"flex", alignItems:"flex-start", gap:8, flexDirection:"column"}}>
+<div style={{background:T.accent+"15", border:"1px solid "+T.accent+"40", borderRadius:10, padding:"10px 14px", marginBottom:14, display:"flex", alignItems:"flex-start", gap:8, flexDirection:"column"}}>
 <div style={{display:"flex", alignItems:"center", gap:8}}>
 <span style={{fontSize:16}}>👁️</span>
 <p style={{color:T.accent, fontSize:12, fontWeight:600}}>View Only — Aap students ki class aur attendance dekh sakte hain</p>
@@ -5012,7 +5012,7 @@ return (
 <div style={{display:"flex", flexWrap:"wrap", gap:4, paddingLeft:24}}>
 <p style={{fontSize:11, color:T.textMuted, width:"100%", marginBottom:2}}>📋 Assigned Classes:</p>
 {coordinatorClasses.map(c=>(
-<span key={c} style={{fontSize:11, background:`${T.accent}20`, color:T.accent, border:`1px solid ${T.accent}40`, borderRadius:20, padding:"2px 10px", fontWeight:700}}>{c}</span>
+<span key={c} style={{fontSize:11, background:T.accent+"20", color:T.accent, border:"1px solid "+T.accent+"40", borderRadius:20, padding:"2px 10px", fontWeight:700}}>{c}</span>
 ))}
 </div>
 )}
@@ -5040,14 +5040,14 @@ return (
 <button key={cls}
 onClick={()=>{ if(canOpen) setSelectedClass(cls); }}
 style={{
-background: isMyClass ? `${c}30` : `${c}15`,
-border: isMyClass ? `2px solid ${c}` : `1.5px solid ${c}40`,
+background: isMyClass ? c+"30" : c+"15",
+border: isMyClass ? "2px solid "+c : "1.5px solid "+c+"40",
 borderRadius:12, padding:"12px 6px",
 cursor: canOpen ? "pointer" : "default",
 textAlign:"center", transition:"all 0.15s", fontFamily:"Outfit,sans-serif",
 position:"relative"
 }}>
-{isMyClass && <span style={{position:"absolute",top:3,right:5,fontSize:8,color:c,fontWeight:800,background:`${c}20`,padding:"1px 5px",borderRadius:6}}>MY CLASS</span>}
+{isMyClass && <span style={{position:"absolute",top:3,right:5,fontSize:8,color:c,fontWeight:800,background:c+"20",padding:"1px 5px",borderRadius:6}}>MY CLASS</span>}
 <p style={{fontSize:11,fontWeight:700,color:c,marginBottom:3}}>{cls}</p>
 <p style={{fontSize:18,fontWeight:800,color:T.text}}>{count}</p>
 <p style={{fontSize:10,color:T.textMuted}}>students</p>
@@ -5068,7 +5068,7 @@ position:"relative"
 {selectedClass && !search && (
 <div style={{marginBottom:12}}>
 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-<div style={{background:`${T.accent}20`,borderRadius:10,padding:"6px 14px",border:`1px solid ${T.accent}40`}}>
+<div style={{background:T.accent+"20",borderRadius:10,padding:"6px 14px",border:"1px solid "+T.accent+"40"}}>
 <p style={{fontSize:14,fontWeight:700,color:T.accent}}>{selectedClass}</p>
 </div>
 <p style={{fontSize:13,color:T.textMuted}}>{classStudents.length} students — alphabetical</p>
@@ -5083,8 +5083,8 @@ position:"relative"
 </div>
 )}
 <div style={{marginBottom:16}}>
-<input value={search} onChange={e=>setSearch(e.target.value)} placeholder={`🔍 ${l("search")}...`}
-style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:8, padding:"8px 14px", color:T.text, fontSize:13, width:"100%", outline:"none", boxSizing:"border-box"}} />
+<input value={search} onChange={e=>setSearch(e.target.value)} placeholder={"🔍 "+l("search")+"..."}
+style={{background:T.card, border:"1px solid "+T.border, borderRadius:8, padding:"8px 14px", color:T.text, fontSize:13, width:"100%", outline:"none", boxSizing:"border-box"}} />
 </div>
 {/* Student list — only show when class selected OR search active */}
 {(search || selectedClass) && (
@@ -5093,8 +5093,8 @@ style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:8, paddi
 <Card key={s.id} style={{padding:16, display:"flex", alignItems:"flex-start", gap:14}}>
 <div style={{flexShrink:0}}>
 {s.photoUrl
-? <img src={s.photoUrl} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:`2px solid ${T.accent}`}} />
-: <div style={{width:52,height:52,borderRadius:"50%",background:`${T.accent}10`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>{s.photo}</div>
+? <img src={s.photoUrl} style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid "+T.accent}} />
+: <div style={{width:52,height:52,borderRadius:"50%",background:T.accent+"10",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>{s.photo}</div>
 }
 </div>
 <div style={{flex:1}}>
@@ -5150,7 +5150,7 @@ style={{background:T.red+"20",border:"1px solid "+T.red,color:T.red,borderRadius
 </div>
 );
 })()}
-<p style={{fontSize:12, color:T.textMuted}}>{s.class} • Roll #{s.rollNo} • {s.parentName ? `👨‍👩‍👦 ${s.parentName} • ` : ""}{s.parentPhone}</p>
+<p style={{fontSize:12, color:T.textMuted}}>{s.class} • Roll #{s.rollNo} • {s.parentName ? "👨‍👩‍👦 "+s.parentName+" • " : ""}{s.parentPhone}</p>
 <div style={{display:"flex", gap:6, marginTop:4, flexWrap:"wrap"}}>
 <Badge color={T.green}>{l("attendance")}: {s.attendance}%</Badge>
 <Badge color={T.accent}>{l("dateOfBirth")}: {s.dob}</Badge>
@@ -5159,7 +5159,7 @@ style={{background:T.red+"20",border:"1px solid "+T.red,color:T.red,borderRadius
 {s.bloodGroup && s.bloodGroup !== "Unknown" && <Badge color="#F75555">🩸 {s.bloodGroup}</Badge>}
 {s.healthHistory && <Badge color="#F5A623">💊 Medical Info</Badge>}
 {(s.documents&&s.documents.length > 0) && <Badge color={T.purple}>📂 {s.documents.length} Doc{s.documents.length>1?"s":""}</Badge>}
-{s.isCWSN && <Badge color={T.purple}>♿ CWSN{s.disabilityType?` — ${s.disabilityType.split(" ")[0]}`:""}</Badge>}
+{s.isCWSN && <Badge color={T.purple}>♿ CWSN{s.disabilityType?" — "+s.disabilityType.split(" ")[0]:""}</Badge>}
 {s.caste && s.caste !== "General" && <Badge color={T.yellow}>🏷️ {s.caste}</Badge>}
 {parseInt(s.siblingsCount||"0") > 0 && <Badge color={T.accent}>👫 {s.siblingsCount} Sibling{parseInt(s.siblingsCount)>1?"s":""}</Badge>}
 {s.samagraId && <Badge color={T.green}>📇 Samagra</Badge>}
@@ -5172,7 +5172,7 @@ style={{background:T.red+"20",border:"1px solid "+T.red,color:T.red,borderRadius
 <Btn onClick={()=>openReport(s)} color={T.accent} small>{l("viewReport")}</Btn>
 <Btn onClick={()=>openAttendance(s)} color={T.green} small>📅 Attendance</Btn>
 <Btn onClick={()=>setModal(<StudentPickupModal student={s} pickups={pickups} setPickups={setPickups} setAlerts={setAlerts} toast={toast} onClose={()=>setModal(null)} />)} color="#D946EF" small>🚗 Pickup</Btn>
-{(role==="principal"||role==="founder"||role==="accountant"||canEditFees) && (function() {
+{(role==="principal"||role==="founder"||role==="accountant") && fees && (function() {
 var sFees2 = (fees||[]).filter(function(f){return f.studentName===s.name&&!f.isDiscount;});
 var sStr2 = (feeStructure||[]).find(function(fs){return fs.class===s.class&&(!fs.schoolId||sameId(fs.schoolId,mySchoolId));});
 var sTotal2 = sStr2?(Number(sStr2.total)||0):sFees2.reduce(function(sm,f){return sm+(Number(f.amount)||0);},0);
@@ -5193,13 +5193,13 @@ setTimeout(function(){if(window.__setFeeStudent)window.__setFeeStudent(s);},400)
 {/* Star of Week / Month — Principal only */}
 {canAdd && !isViewOnly && (
 <button title={s.starWeek?"Star of Week Hatao":"Star of Week Banao"} onClick={()=>{ editStudent(s.id,{starWeek:!s.starWeek}); toast(s.starWeek?"Star of Week hataya":"⭐ Star of Week set!","success"); }}
-style={{background:s.starWeek?"#FFD70030":"transparent",border:`1px solid ${s.starWeek?"#FFD700":"#ffffff20"}`,color:s.starWeek?"#FFD700":T.textMuted,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif",transition:"all 0.2s"}}>
+style={{background:s.starWeek?"#FFD70030":"transparent",border:"1px solid "+(s.starWeek?"#FFD700":"#ffffff20"),color:s.starWeek?"#FFD700":T.textMuted,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif",transition:"all 0.2s"}}>
 ⭐W
 </button>
 )}
 {canAdd && !isViewOnly && (
 <button title={s.starMonth?"Star of Month Hatao":"Star of Month Banao"} onClick={()=>{ editStudent(s.id,{starMonth:!s.starMonth}); toast(s.starMonth?"Star of Month hataya":"🏆 Star of Month set!","success"); }}
-style={{background:s.starMonth?"#F5A62330":"transparent",border:`1px solid ${s.starMonth?"#F5A623":"#ffffff20"}`,color:s.starMonth?"#F5A623":T.textMuted,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif",transition:"all 0.2s"}}>
+style={{background:s.starMonth?"#F5A62330":"transparent",border:"1px solid "+(s.starMonth?"#F5A623":"#ffffff20"),color:s.starMonth?"#F5A623":T.textMuted,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif",transition:"all 0.2s"}}>
 🏆M
 </button>
 )}
@@ -5207,7 +5207,7 @@ style={{background:s.starMonth?"#F5A62330":"transparent",border:`1px solid ${s.s
 </div>
 {(s.documents&&s.documents.length > 0) && (
 <Btn onClick={()=>setModal(
-<ModalBox title={`📂 Documents — ${s.name}`} onClose={()=>setModal(null)} wide>
+<ModalBox title={"📂 Documents — "+s.name} onClose={()=>setModal(null)} wide>
 <div style={{display:"grid", gap:10}}>
 {s.documents.map((doc,i)=>(
 <div key={i} style={{background:T.surface, borderRadius:8, padding:"10px 14px", display:"flex", gap:10, alignItems:"center"}}>
@@ -5217,7 +5217,7 @@ style={{background:s.starMonth?"#F5A62330":"transparent",border:`1px solid ${s.s
 <p style={{fontSize:11, color:T.textMuted}}>{doc.fileName}</p>
 </div>
 {(doc.url&&doc.url.startsWith("data:image")) && (
-<img src={doc.url} style={{width:60,height:60,objectFit:"contain",borderRadius:6,border:`1px solid ${T.border}`,cursor:"pointer"}}
+<img src={doc.url} style={{width:60,height:60,objectFit:"contain",borderRadius:6,border:"1px solid "+T.border,cursor:"pointer"}}
 onClick={()=>window.open(doc.url,"_blank")} />
 )}
 </div>
@@ -30652,7 +30652,7 @@ style={{width:80,background:T.surface,border:`1px solid ${T.border}`,borderRadiu
 <p style={{fontSize:12,fontWeight:700,color:T.red,marginBottom:8,textTransform:"uppercase"}}>⚠️ Confirmation Pending</p>
 <div style={{display:"grid",gap:8}}>
 {notReached.map(t=>(
-<div key={t.id} style={{background:`${T.red}08`,border:`1px solid ${T.red}25`,borderRadius:12,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div key={t.id} style={{background:T.red+"08",border:"1px solid "+T.red+"25",borderRadius:12,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <div>
 <p style={{fontWeight:700,fontSize:13,color:T.text}}>👨‍🏫 {t.name}</p>
 <p style={{fontSize:11,color:T.textMuted}}>{t.subject} • {t.class}</p>
@@ -30683,10 +30683,10 @@ return (
 onClick={handleReachedHome}
 style={{
 width:180, height:180, borderRadius:"50%",
-background: pressed ? `${T.green}30` : `linear-gradient(135deg,${T.green}80,${T.green})`,
-border:`4px solid ${T.green}`,
+background: pressed ? T.green+"30" : "linear-gradient(135deg,"+T.green+"80,"+T.green+")",
+border:"4px solid "+T.green,
 cursor:"pointer", fontSize:60,
-boxShadow:`0 0 40px ${T.green}50`,
+boxShadow:"0 0 40px "+T.green+"50",
 display:"inline-flex", alignItems:"center", justifyContent:"center",
 transition:"all 0.3s",
 animation: "pulse 2s infinite",
@@ -30704,7 +30704,7 @@ animation: "pulse 2s infinite",
 <p style={{fontSize:12,fontWeight:700,color:T.textMuted,marginBottom:8,textTransform:"uppercase"}}>Recent Records</p>
 <div style={{display:"grid",gap:8}}>
 {records.filter(r=>r.teacherUsername===loggedInUser?.username).slice(0,5).map(r=>(
-<div key={r.id} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}>
+<div key={r.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}>
 <p style={{fontSize:13,color:T.text}}>{r.date}</p>
 <p style={{fontSize:13,color:T.green,fontWeight:700}}>✅ {r.time}</p>
 </div>
@@ -31259,7 +31259,7 @@ transition:"all 0.15s",
 {checkins.filter(c=>c.username===loggedInUser?.username).slice(1,8).map(c=>{
 const f = FEELINGS.find(x=>x.key===c.feeling)||FEELINGS[0];
 return (
-<div key={c.id} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div key={c.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <div style={{display:"flex",gap:10,alignItems:"center"}}>
 <span style={{fontSize:20}}>{c.emoji}</span>
 <div>
