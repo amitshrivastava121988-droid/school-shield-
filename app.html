@@ -15339,7 +15339,7 @@ cursor:"default",
 }
 // ─── PARENT PROFILE SECTION ──────────────────────────────────────────────────
 function ParentProfileSection({ ctx }) {
-const { students, loggedInUser, currentSchool, userAccounts, setUserAccounts, toast } = ctx;
+const { students, loggedInUser, setLoggedInUser, currentSchool, userAccounts, setUserAccounts, toast } = ctx;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const schoolStudents = (students||[]).filter(s => !s.schoolId || String(s.schoolId) === String(mySchoolId));
 const child = loggedInUser?.studentId
@@ -15360,6 +15360,7 @@ reader.onload = function(ev) {
 const updated = Object.assign({}, photos, {[key]: ev.target.result});
 setPhotos(updated);
 setUserAccounts(function(prev) { return prev.map(function(a) { return a.id === (loggedInUser && loggedInUser.id) ? Object.assign({}, a, updated) : a; }); });
+if (loggedInUser) setLoggedInUser(Object.assign({}, loggedInUser, updated));
 toast("Photo updated ✓", "success");
 };
 reader.readAsDataURL(file);
@@ -15367,6 +15368,7 @@ window.uploadToCloudinary(file).then(function(url) {
 const updated = Object.assign({}, photos, {[key]: url});
 setPhotos(updated);
 setUserAccounts(function(prev) { return prev.map(function(a) { return a.id === (loggedInUser && loggedInUser.id) ? Object.assign({}, a, updated) : a; }); });
+if (loggedInUser) setLoggedInUser(Object.assign({}, loggedInUser, updated));
 }).catch(function(err) { console.warn("Cloudinary parent photo upload failed:", err); });
 };
 if (!child) return (
@@ -29531,12 +29533,43 @@ toast("Facility added!", "success");
 };
 const delFac = (id) => setPg(p => ({ ...p, facilities:(p.facilities||[]).filter(f=>f.id!==id) }));
 const bannerRef = useRef(null);
+const [slideIdx, setSlideIdx] = React.useState(0);
+const bannerSlides = (pg.bannerSlides && pg.bannerSlides.length > 0)
+? pg.bannerSlides
+: (pg.bannerPhoto ? [pg.bannerPhoto] : []);
+React.useEffect(function() {
+if (bannerSlides.length <= 1) return;
+var t = setInterval(function() {
+setSlideIdx(function(i) { return (i + 1) % bannerSlides.length; });
+}, 4000);
+return function() { clearInterval(t); };
+}, [bannerSlides.length]);
 const handleBanner = function(e) {
 const file = e.target.files[0]; if (!file) return;
 const reader = new FileReader();
-reader.onload = function(ev) { setPg(function(p) { return Object.assign({}, p, {bannerPhoto: ev.target.result}); }); };
+reader.onload = function(ev) {
+setPg(function(p) {
+var slides = (p.bannerSlides && p.bannerSlides.length > 0) ? p.bannerSlides.slice() : (p.bannerPhoto ? [p.bannerPhoto] : []);
+slides.push(ev.target.result);
+return Object.assign({}, p, {bannerSlides: slides, bannerPhoto: slides[0]});
+});
+};
 reader.readAsDataURL(file);
-window.uploadToCloudinary(file).then(function(url) { setPg(function(p) { return Object.assign({}, p, {bannerPhoto: url}); }); }).catch(function(err) { console.warn("Cloudinary banner upload failed:", err); });
+window.uploadToCloudinary(file).then(function(url) {
+setPg(function(p) {
+var slides = (p.bannerSlides && p.bannerSlides.length > 0) ? p.bannerSlides.slice() : (p.bannerPhoto ? [p.bannerPhoto] : []);
+var idx = slides.findIndex(function(s) { return s && s.length < 100; });
+if (idx >= 0) slides[idx] = url; else slides.push(url);
+return Object.assign({}, p, {bannerSlides: slides, bannerPhoto: slides[0]});
+});
+}).catch(function(err) { console.warn("Cloudinary banner upload failed:", err); });
+};
+const removeSlide = function(i) {
+setPg(function(p) {
+var slides = (p.bannerSlides || []).filter(function(_, si) { return si !== i; });
+return Object.assign({}, p, {bannerSlides: slides, bannerPhoto: slides[0] || null});
+});
+setSlideIdx(0);
 };
 const handleLogo = function(e) {
 const file = e.target.files[0]; if (!file) return;
@@ -29576,26 +29609,46 @@ return (
 <div style={{
 position:"relative", borderRadius:16, overflow:"hidden",
 marginBottom:16, minHeight:160,
-background: pg.bannerPhoto
-? `url(${pg.bannerPhoto}) center/cover`
-: `linear-gradient(135deg, ${T.accent}, ${T.purple})`,
+background: bannerSlides.length > 0
+? "url(" + bannerSlides[slideIdx % bannerSlides.length] + ") center/cover"
+: "linear-gradient(135deg, " + T.accent + ", " + T.purple + ")",
+transition:"background-image 0.6s ease"
 }}>
 {/* Overlay */}
 <div style={{
 position:"absolute", inset:0,
 background:"linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.65))"
 }} />
-{/* Banner upload button (principal only) */}
+{/* Slide dots */}
+{bannerSlides.length > 1 && (
+<div style={{position:"absolute", bottom:8, left:"50%", transform:"translateX(-50%)", display:"flex", gap:5, zIndex:3}}>
+{bannerSlides.map(function(_, di) {
+return (
+<div key={di} onClick={function(){ setSlideIdx(di); }}
+style={{width: di===slideIdx%bannerSlides.length ? 18 : 7, height:7, borderRadius:99,
+background: di===slideIdx%bannerSlides.length ? "#fff" : "rgba(255,255,255,0.45)",
+cursor:"pointer", transition:"width 0.3s"}} />
+);
+})}
+</div>
+)}
+{/* Banner buttons (principal only) */}
 {isPrincipal && (
-<>
+<div style={{position:"absolute", top:10, right:10, zIndex:4, display:"flex", gap:6}}>
 <input ref={bannerRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleBanner} />
-<button onClick={()=>bannerRef.current?.click()} style={{
-position:"absolute", top:10, right:10, zIndex:2,
+<button onClick={function(){ bannerRef.current && bannerRef.current.click(); }} style={{
 background:"rgba(0,0,0,0.55)", border:"1px solid rgba(255,255,255,0.3)",
 borderRadius:8, padding:"5px 10px", color:"#fff",
 fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700, cursor:"pointer"
-}}>📷 Change Banner</button>
-</>
+}}>➕ Add Slide</button>
+{bannerSlides.length > 1 && (
+<button onClick={function(){ removeSlide(slideIdx % bannerSlides.length); }} style={{
+background:"rgba(200,0,0,0.6)", border:"1px solid rgba(255,255,255,0.3)",
+borderRadius:8, padding:"5px 10px", color:"#fff",
+fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700, cursor:"pointer"
+}}>🗑️ Remove</button>
+)}
+</div>
 )}
 {/* School Logo + Name */}
 <div style={{
