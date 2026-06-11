@@ -2610,7 +2610,7 @@ principal: [
 {key:"library",icon:"📚",label:"Library"},{key:"disciplinereport",icon:"📋",label:"Discipline Report"},
 {key:"classsettings",icon:"🏷️",label:"Class Settings"},
 {key:"syllabus",icon:"📖",label:"Syllabus"},{key:"webcam",icon:"📹",label:"Live Cameras"},{key:"schoolpage",icon:"🏫",label:"School Page"},
-{key:"visitors",icon:"🚪",label:"Visitors"},{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
+{key:"visitors",icon:"🚪",label:"Visitors"},{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"studentreachedhome",icon:"🏡",label:"Student Reached Home"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"allpickup",icon:"🚗",label:"Authorized Pickup"},{key:"feedback",icon:"💌",label:"Parent Feedback"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
@@ -2663,7 +2663,7 @@ teacher: [
 {key:"canteen",icon:"🍱",label:"canteen"},{key:"exams",icon:"📝",label:"Exams"},
 {key:"syllabus",icon:"📖",label:"Syllabus"},{key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"chat",icon:"💬",label:"chat"},
-{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
+{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"studentreachedhome",icon:"🏡",label:"Student Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
 ],
@@ -2676,7 +2676,7 @@ parent: [
 {key:"chat",icon:"💬",label:"chat"},
 {key:"canteen",icon:"🍱",label:"canteen"},{key:"timetable",icon:"📅",label:"timetable"},
 {key:"examSyllabus",icon:"📝",label:"Exam & Syllabus"},{key:"unifiedcalendar",icon:"📅",label:"Calendar & Attendance"},
-{key:"busroute",icon:"🚌",label:"busRoute"},{key:"webcam",icon:"📹",label:"Live Cameras"},
+{key:"studentreachedhome",icon:"🏡",label:"Student Reached Home"},{key:"busroute",icon:"🚌",label:"busRoute"},{key:"webcam",icon:"📹",label:"Live Cameras"},
 {key:"feedback",icon:"💌",label:"Feedback"},{key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
@@ -3444,6 +3444,7 @@ if (section === "webcam")   return <WebcamSection ctx={ctx} />;
 if (section === "schoolpage") return <SchoolPageSection ctx={ctx} />;
 if (section === "visitors") return <VisitorManagementSection ctx={ctx} />;
 if (section === "reachedhome") return <TeacherReachedHomeSection ctx={ctx} />;
+if (section === "studentreachedhome") return <StudentReachedHomeSection ctx={ctx} />;
 if (section === "staffpanic") return <StaffPanicSection ctx={ctx} />;
 if (section === "healthcheckin") return <HealthCheckinSection ctx={ctx} />;
 if (section === "healthgrowth") return <HealthGrowthSection ctx={ctx} />;
@@ -5100,14 +5101,14 @@ style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:8, paddi
 {(()=>{
 const dupMatches = s.isDuplicateDismissed ? [] : (schoolStudents||students).filter(x => {
 if (x.id === s.id) return false;
-const nameSame = x.name?.trim().toLowerCase() === s.name?.trim().toLowerCase();
+const nameSame = (x.name||"").trim().toLowerCase() === (s.name||"").trim().toLowerCase();
 if (!nameSame) return false;
 const dobSame = x.dob && s.dob && x.dob.trim() === s.dob.trim();
 if (!dobSame) return false;
-const parentNameSame = x.parentName?.trim() && s.parentName?.trim() &&
-x.parentName.trim().toLowerCase() === s.parentName.trim().toLowerCase();
-const parentPhoneSame = x.parentPhone?.trim() && s.parentPhone?.trim() &&
-x.parentPhone.trim() === s.parentPhone.trim();
+const parentNameSame = (x.parentName||"").trim() && (s.parentName||"").trim() &&
+(x.parentName||"").trim().toLowerCase() === (s.parentName||"").trim().toLowerCase();
+const parentPhoneSame = (x.parentPhone||"").trim() && (s.parentPhone||"").trim() &&
+(x.parentPhone||"").trim() === (s.parentPhone||"").trim();
 return parentNameSame || parentPhoneSame;
 });
 const isDupLive = dupMatches.length > 0;
@@ -5157,7 +5158,7 @@ style={{background:T.red+"20",border:"1px solid "+T.red,color:T.red,borderRadius
 {s.gender && <Badge color={T.purple}>{s.gender==="Female"?"👧":"👦"} {s.gender}</Badge>}
 {s.bloodGroup && s.bloodGroup !== "Unknown" && <Badge color="#F75555">🩸 {s.bloodGroup}</Badge>}
 {s.healthHistory && <Badge color="#F5A623">💊 Medical Info</Badge>}
-{s.documents?.length > 0 && <Badge color={T.purple}>📂 {s.documents.length} Doc{s.documents.length>1?"s":""}</Badge>}
+{(s.documents&&s.documents.length > 0) && <Badge color={T.purple}>📂 {s.documents.length} Doc{s.documents.length>1?"s":""}</Badge>}
 {s.isCWSN && <Badge color={T.purple}>♿ CWSN{s.disabilityType?` — ${s.disabilityType.split(" ")[0]}`:""}</Badge>}
 {s.caste && s.caste !== "General" && <Badge color={T.yellow}>🏷️ {s.caste}</Badge>}
 {parseInt(s.siblingsCount||"0") > 0 && <Badge color={T.accent}>👫 {s.siblingsCount} Sibling{parseInt(s.siblingsCount)>1?"s":""}</Badge>}
@@ -5202,20 +5203,20 @@ style={{background:s.starMonth?"#F5A62330":"transparent",border:`1px solid ${s.s
 🏆M
 </button>
 )}
-{!isViewOnly && role!=="teacher" && <button onClick={()=>sendPanicAlert(s.name,setAlerts,toast,false,s,currentSchool?.id||1)} style={{background:"#F7555520",border:"2px solid #F75555",color:"#F75555",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontWeight:800,fontSize:12,fontFamily:"Outfit,sans-serif"}}>🚨 PANIC</button>}
+{!isViewOnly && role!=="teacher" && <button onClick={()=>sendPanicAlert(s.name,setAlerts,toast,false,s,(currentSchool&&currentSchool.id)||1)} style={{background:"#F7555520",border:"2px solid #F75555",color:"#F75555",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontWeight:800,fontSize:12,fontFamily:"Outfit,sans-serif"}}>🚨 PANIC</button>}
 </div>
-{s.documents?.length > 0 && (
+{(s.documents&&s.documents.length > 0) && (
 <Btn onClick={()=>setModal(
 <ModalBox title={`📂 Documents — ${s.name}`} onClose={()=>setModal(null)} wide>
 <div style={{display:"grid", gap:10}}>
 {s.documents.map((doc,i)=>(
 <div key={i} style={{background:T.surface, borderRadius:8, padding:"10px 14px", display:"flex", gap:10, alignItems:"center"}}>
-<span style={{fontSize:20}}>{doc.url?.startsWith("data:image")?"🖼️":"📄"}</span>
+<span style={{fontSize:20}}>{(doc.url&&doc.url.startsWith("data:image"))?"🖼️":"📄"}</span>
 <div style={{flex:1}}>
 <p style={{fontWeight:600, color:T.text, fontSize:13}}>{doc.name}</p>
 <p style={{fontSize:11, color:T.textMuted}}>{doc.fileName}</p>
 </div>
-{doc.url?.startsWith("data:image") && (
+{(doc.url&&doc.url.startsWith("data:image")) && (
 <img src={doc.url} style={{width:60,height:60,objectFit:"contain",borderRadius:6,border:`1px solid ${T.border}`,cursor:"pointer"}}
 onClick={()=>window.open(doc.url,"_blank")} />
 )}
@@ -13388,49 +13389,76 @@ submittedAt: new Date().toLocaleString("en-IN"),
 } : h));
 toast("Homework submitted ✓","success");
 };
-const myStudentName = loggedInUser?.studentName || "";
+const myStudentName = (loggedInUser && loggedInUser.studentName) || "";
+const [hwTab, setHwTab] = React.useState("homework");
+const tabItems = visibleHomework.filter(function(h){ return (h.type||"homework") === hwTab; });
 return (
 <div className="fadeUp">
-<SectionHeader title={l("homework")} action={canAdd && (
-<Btn onClick={()=>setModal(<HWForm l={l} onSave={addHW} onClose={()=>setModal(null)} defaultClass={teacherClass} />)} color={T.accent}>+ Add</Btn>
+<SectionHeader title={hwTab==="homework" ? "📓 Homework" : "📋 Assignments"} action={canAdd && (
+<Btn onClick={function(){
+if (hwTab==="homework") setModal(<HWForm l={l} onSave={addHW} onClose={function(){setModal(null);}} defaultClass={teacherClass} hwType="homework" />);
+else setModal(<HWForm l={l} onSave={addHW} onClose={function(){setModal(null);}} defaultClass={teacherClass} hwType="assignment" />);
+}} color={hwTab==="assignment"?T.purple:T.accent}>+ Add</Btn>
 )} />
-{visibleHomework.length === 0 && (
+{/* Tabs */}
+<div style={{display:"flex",gap:8,marginBottom:14}}>
+{[{k:"homework",label:"📓 Homework"},{k:"assignment",label:"📋 Assignments"}].map(function(t){
+return (
+<button key={t.k} onClick={function(){setHwTab(t.k);}}
+style={{flex:1,padding:"9px 0",borderRadius:10,border:"1.5px solid "+(hwTab===t.k?(t.k==="assignment"?T.purple:T.accent):T.border),
+background:hwTab===t.k?(t.k==="assignment"?T.purple+"18":T.accent+"18"):"transparent",
+color:hwTab===t.k?(t.k==="assignment"?T.purple:T.accent):T.textMuted,
+fontFamily:"Outfit,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+{t.label}
+</button>
+);
+})}
+</div>
+{tabItems.length === 0 && (
 <Card style={{padding:32,textAlign:"center"}}>
-<p style={{fontSize:32,marginBottom:8}}>📝</p>
+<p style={{fontSize:32,marginBottom:8}}>{hwTab==="assignment"?"📋":"📝"}</p>
 <p style={{color:T.textMuted}}>
-{isParent ? "Aapke bachche ke liye koi homework nahi mila" : "Koi homework nahi mila"}
+{isParent ? ("Aapke bachche ke liye koi "+(hwTab==="assignment"?"assignment":"homework")+" nahi mila") : ("Koi "+(hwTab==="assignment"?"assignment":"homework")+" nahi mila")}
 </p>
 </Card>
 )}
 <div style={{display:"grid", gap:12}}>
-{visibleHomework.map(h => {
+{tabItems.map(function(h) {
 const mySubmission = isParent
-? (h.submissions||[]).find(s => s.studentName === myStudentName)
+? (h.submissions||[]).find(function(s){ return s.studentName === myStudentName; })
 : null;
 const isDone = !!mySubmission;
+const isAssignment = (h.type||"homework") === "assignment";
+const today = new Date(); const due = h.dueDate ? new Date(h.dueDate) : null;
+const isOverdue = due && due < today && !isDone;
 return (
-<Card key={h.id} style={{padding:14}}>
+<Card key={h.id} style={{padding:14, borderLeft: isAssignment ? "3px solid "+T.purple : "3px solid "+T.accent}}>
 {/* Header row */}
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,flexWrap:"wrap"}}>
 <div style={{flex:1}}>
 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-<Badge color={T.accent}>{h.class}</Badge>
-<Badge color={T.purple}>{h.subject}</Badge>
+<Badge color={isAssignment?T.purple:T.accent}>{isAssignment?"📋":"📝"} {h.class}</Badge>
+<Badge color={T.accent}>{h.subject}</Badge>
+{isAssignment && h.maxMarks && <Badge color={T.yellow}>🎯 {h.maxMarks} Marks</Badge>}
+{isAssignment && h.submissionType && <Badge color={T.textMuted}>{h.submissionType==="physical"?"📁 Physical":"💻 Online"}</Badge>}
 {isDone && <Badge color={T.green}>✅ Done</Badge>}
+{isOverdue && !isDone && <Badge color={T.red}>⚠️ Overdue</Badge>}
 </div>
-<p style={{color:T.text,fontSize:13,marginTop:2,lineHeight:1.5}}>{h.description}</p>
-<p style={{fontSize:11,color:T.textMuted,marginTop:4}}>📅 Due: {h.dueDate}</p>
+<p style={{color:T.text,fontSize:13,marginTop:2,lineHeight:1.5,fontWeight:600}}>{h.title||h.description}</p>
+{h.title && h.description && <p style={{color:T.textMuted,fontSize:12,marginTop:3,lineHeight:1.4}}>{h.description}</p>}
+{isAssignment && h.instructions && <p style={{fontSize:12,color:T.yellow,marginTop:4,lineHeight:1.4}}>📌 {h.instructions}</p>}
+<p style={{fontSize:11,color:isOverdue?T.red:T.textMuted,marginTop:4,fontWeight:isOverdue?700:400}}>📅 Due: {h.dueDate||"—"}</p>
 </div>
 {/* Action buttons — teacher/principal */}
 {!isParent && (
 <div style={{display:"flex",gap:6,flexShrink:0}}>
 {canEdit && (
-<button onClick={()=>setModal(<HWForm l={l} editItem={h} onSave={d=>{updateHW(h.id,d);}} onClose={()=>setModal(null)} defaultClass={h.class} />)}
-style={{background:"none",border:`1px solid ${T.border}`,color:T.accent,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif"}}>✏️</button>
+<button onClick={function(){setModal(<HWForm l={l} editItem={h} onSave={function(d){updateHW(h.id,d);}} onClose={function(){setModal(null);}} defaultClass={h.class} hwType={h.type||"homework"} />);}}
+style={{background:"none",border:"1px solid "+T.border,color:T.accent,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif"}}>✏️</button>
 )}
 {canDelete && (
-<button onClick={()=>deleteHW(h.id)}
-style={{background:"none",border:`1px solid ${T.red}40`,color:T.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif"}}>🗑️</button>
+<button onClick={function(){deleteHW(h.id);}}
+style={{background:"none",border:"1px solid "+T.red+"40",color:T.red,padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif"}}>🗑️</button>
 )}
 </div>
 )}
@@ -13496,7 +13524,7 @@ onClose={()=>setModal(null)}
 />
 )}
 style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${T.accent}`,background:`${T.accent}12`,color:T.accent,fontFamily:"Outfit,sans-serif",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4}}>
-✅ Homework Done — Submit Karo
+{(h.type||"homework")==="assignment" ? "📋 Assignment Submit Karo" : "✅ Homework Done — Submit Karo"}
 </button>
 )}
 </div>
@@ -13595,20 +13623,29 @@ setFiles(function(p) { return p.concat(results); });
 setUploading(false);
 });
 };
+var isAssignment = (hw.type||"homework") === "assignment";
 return (
-<ModalBox title="✅ Homework Submit Karo" onClose={onClose}>
+<ModalBox title={isAssignment ? "📋 Assignment Submit Karo" : "✅ Homework Submit Karo"} onClose={onClose}>
 <p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>
-📚 {hw.class} — {hw.subject}<br/>
+{isAssignment ? "📋" : "📚"} {hw.class} — {hw.subject}{hw.title ? " — "+hw.title : ""}<br/>
 👤 Student: <b style={{color:T.text}}>{studentName}</b>
+{isAssignment && hw.maxMarks ? <span style={{color:T.yellow}}><br/>🎯 Max Marks: {hw.maxMarks}</span> : null}
+{isAssignment && hw.instructions ? <span style={{color:T.textMuted,fontSize:11}}><br/>📌 {hw.instructions}</span> : null}
 </p>
+{isAssignment && hw.submissionType === "physical" && (
+<div style={{background:T.yellow+"15",border:"1px solid "+T.yellow+"40",borderRadius:10,padding:"10px 14px",marginBottom:12}}>
+<p style={{fontSize:13,fontWeight:700,color:T.yellow}}>📁 Physical Submission</p>
+<p style={{fontSize:12,color:T.textMuted,marginTop:3}}>Assignment physically jama kar dein — yahan confirm karo ki jama kar di</p>
+</div>
+)}
 {/* Note */}
 <div style={{marginBottom:12}}>
 <p style={{fontSize:12,color:T.textMuted,marginBottom:4}}>💬 Note / Comment (optional)</p>
-<textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="e.g. Homework complete kar liya..."
-style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"8px 12px",color:T.text,fontSize:13,outline:"none",resize:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+<textarea value={note} onChange={function(e){setNote(e.target.value);}} rows={2} placeholder={isAssignment?"e.g. Assignment complete, diagram bhi banaya...":"e.g. Homework complete kar liya..."}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px 12px",color:T.text,fontSize:13,outline:"none",resize:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
 </div>
 {/* Upload */}
-<p style={{fontSize:12,color:T.textMuted,marginBottom:8,fontWeight:700}}>📎 Homework ki photo ya PDF upload karo:</p>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:8,fontWeight:700}}>{isAssignment?"📎 Assignment ki photo ya PDF upload karo:":"📎 Homework ki photo ya PDF upload karo:"}</p>
 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
 <button onClick={()=>photoRef.current?.click()}
 style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"10px",background:`${T.green}15`,border:`1.5px dashed ${T.green}`,borderRadius:10,cursor:"pointer",color:T.green,fontFamily:"Outfit,sans-serif",fontSize:13,fontWeight:600}}>
@@ -13648,13 +13685,20 @@ style={{background:"none",border:"none",color:T.red,cursor:"pointer",fontSize:13
 </ModalBox>
 );
 }
-function HWForm({ l, onSave, onClose, defaultClass, classNames, editItem }) {
+function HWForm({ l, onSave, onClose, defaultClass, classNames, editItem, hwType }) {
 const isEdit = !!editItem;
+const itemType = (editItem && editItem.type) || hwType || "homework";
+const isAssignment = itemType === "assignment";
 const [d, setD] = useState({
-class: editItem?.class || defaultClass||"Class 1",
-subject: editItem?.subject || "",
-description: editItem?.description || "",
-dueDate: editItem?.dueDate || ""
+class: (editItem && editItem.class) || defaultClass||"Class 1",
+subject: (editItem && editItem.subject) || "",
+description: (editItem && editItem.description) || "",
+dueDate: (editItem && editItem.dueDate) || "",
+type: itemType,
+title: (editItem && editItem.title) || "",
+maxMarks: (editItem && editItem.maxMarks) || "",
+submissionType: (editItem && editItem.submissionType) || "online",
+instructions: (editItem && editItem.instructions) || ""
 });
 const [attachments, setAttachments] = useState(editItem?.attachments || []);
 const [uploading, setUploading] = useState(false);
@@ -13736,9 +13780,14 @@ onSave({...d, attachments});
 onClose();
 };
 return (
-<ModalBox title={isEdit ? "✏️ Edit Homework" : "📝 Add Homework"} onClose={onClose}>
+<ModalBox title={isAssignment ? (isEdit?"✏️ Edit Assignment":"📋 Add Assignment") : (isEdit?"✏️ Edit Homework":"📝 Add Homework")} onClose={onClose}>
 <div style={{maxHeight:"75vh", overflowY:"auto", paddingRight:4}}>
 <FormField label={l("class")}><FormSelect value={d.class} onChange={v=>setD(p=>({...p,class:v,subject:""}))} options={CLASSES} /></FormField>
+{isAssignment && (
+<FormField label="Assignment Title">
+<FormInput value={d.title} onChange={function(v){setD(function(p){return Object.assign({},p,{title:v});});}} placeholder="e.g. Chapter 3 Project Work" />
+</FormField>
+)}
 <div style={{marginBottom:12}}>
 <p style={{fontSize:11,color:T.textMuted,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>{l("subject")}</p>
 <div style={{position:"relative"}}>
@@ -13767,7 +13816,25 @@ style={{display:"block",width:"100%",textAlign:"left",background:"none",border:"
 <textarea value={d.description} onChange={e=>setD(p=>({...p,description:e.target.value}))} rows={3}
 style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"8px 12px",color:T.text,fontSize:13,outline:"none",resize:"none",boxSizing:"border-box"}} />
 </FormField>
-<FormField label="Due Date"><FormInput type="date" value={d.dueDate} onChange={v=>setD(p=>({...p,dueDate:v}))} /></FormField>
+<FormField label="Due Date"><FormInput type="date" value={d.dueDate} onChange={function(v){setD(function(p){return Object.assign({},p,{dueDate:v});});}} /></FormField>
+{isAssignment && (
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+<FormField label="Max Marks">
+<FormInput value={d.maxMarks} onChange={function(v){setD(function(p){return Object.assign({},p,{maxMarks:v});});}} placeholder="e.g. 20" />
+</FormField>
+<FormField label="Submission Type">
+<FormSelect value={d.submissionType} onChange={function(v){setD(function(p){return Object.assign({},p,{submissionType:v});});}}
+options={["online","physical"]} />
+</FormField>
+</div>
+)}
+{isAssignment && (
+<FormField label="Instructions (Optional)">
+<textarea value={d.instructions} onChange={function(e){setD(function(p){return Object.assign({},p,{instructions:e.target.value});});}} rows={2}
+placeholder="e.g. A4 sheet mein likhna hai, diagram zaroori hai..."
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px 12px",color:T.text,fontSize:13,outline:"none",resize:"none",boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
+</FormField>
+)}
 {/* Attachment section */}
 <div style={{marginTop:8, marginBottom:12}}>
 <p style={{fontSize:12, fontWeight:700, color:T.textMuted, marginBottom:8, letterSpacing:1}}>ATTACHMENTS</p>
@@ -13818,7 +13885,7 @@ style={{background:`${T.red}20`,border:`1px solid ${T.red}40`,borderRadius:6,col
 </div>
 </div>
 <div style={{display:"flex", gap:8, marginTop:12}}>
-<Btn onClick={handleSave} color={T.accent} full>{isEdit ? "✅ Update Homework" : l("save")} {attachments.length>0?`(${attachments.length} files)`:""}</Btn>
+<Btn onClick={handleSave} color={isAssignment?T.purple:T.accent} full>{isEdit ? (isAssignment?"✅ Update Assignment":"✅ Update Homework") : (isAssignment?"📋 Save Assignment":l("save"))} {attachments.length>0?"("+attachments.length+" files)":""}</Btn>
 <Btn onClick={onClose} color={T.textMuted} outline>{l("cancel")}</Btn>
 </div>
 </ModalBox>
@@ -30643,6 +30710,228 @@ animation: "pulse 2s infinite",
 </div>
 ))}
 </div>
+</div>
+)}
+</div>
+);
+}
+// ─── STUDENT REACHED HOME ─────────────────────────────────────────────────────
+function StudentReachedHomeSection({ ctx }) {
+const { role, loggedInUser, students, userAccounts, setAlerts, toast } = ctx;
+const mySchoolId = (loggedInUser && loggedInUser.schoolId) || null;
+const isParent = role === "parent";
+const isTeacher = role === "teacher";
+const isPrincipal = ["principal","founder","vice_principal","superadmin"].includes(role);
+
+// Teacher ki assigned class
+const myAssignedClass = React.useMemo(function() {
+if (!isTeacher) return null;
+var linkedId = loggedInUser && loggedInUser.linkedId;
+var userId = loggedInUser && loggedInUser.id;
+var t = (ctx.teachers||[]).find(function(t){ return t.id===(linkedId||userId); });
+if (t && t.assignedClass) return t.assignedClass;
+var acc = (userAccounts||[]).find(function(a){ return a.id===userId||a.linkedId===userId; });
+if (acc && acc.assignedClass) return acc.assignedClass;
+return (loggedInUser && loggedInUser.assignedClass) || null;
+}, [isTeacher, loggedInUser, ctx.teachers, userAccounts]);
+
+// Parent ka student
+var parentStudentName = (loggedInUser && loggedInUser.studentName) || "";
+
+const STORE_KEY = "ss_stuReachedHome_" + mySchoolId;
+const TOGGLE_KEY = "ss_stuReachedHomeEnabled_" + mySchoolId;
+
+const [records, setRecords] = React.useState(function() {
+try { var s = localStorage.getItem(STORE_KEY); return s ? JSON.parse(s) : []; } catch(e) { return []; }
+});
+const [enabled, setEnabled] = React.useState(function() {
+try { return localStorage.getItem(TOGGLE_KEY) !== "false"; } catch(e) { return true; }
+});
+const [pressed, setPressed] = React.useState(false);
+
+React.useEffect(function() {
+if (!window.firebaseReady) return;
+var ref = ssSchoolRef("studentReachedHome");
+ref.on("value", function(snap) {
+if (snap.exists()) { try { var d = JSON.parse(snap.val()); if (Array.isArray(d)) setRecords(d); } catch(e) {} }
+});
+return function() { ref.off(); };
+}, [mySchoolId]);
+
+const saveRecords = function(r) {
+setRecords(r);
+try { localStorage.setItem(STORE_KEY, JSON.stringify(r)); } catch(e) {}
+if (window.firebaseReady) ssSchoolRef("studentReachedHome").set(JSON.stringify(r));
+};
+
+const todayKey = new Date().toLocaleDateString("en-IN");
+const todayRecords = records.filter(function(r){ return r.date === todayKey && r.schoolId === mySchoolId; });
+
+// ── PRINCIPAL VIEW: Sirf toggle ──
+if (isPrincipal) {
+return (
+<div className="fadeUp">
+<SectionHeader title="🏡 Student Reached Home" />
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:"18px 16px",marginBottom:16}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div>
+<p style={{fontWeight:700,fontSize:15,color:T.text}}>🏡 Student Reached Home Tracking</p>
+<p style={{fontSize:12,color:T.textMuted,marginTop:4}}>Parents apne bachche ke ghar pahunchne ki confirmation denge</p>
+</div>
+<button onClick={function(){
+var newVal = !enabled;
+setEnabled(newVal);
+try { localStorage.setItem(TOGGLE_KEY, String(newVal)); } catch(e) {}
+if (window.firebaseReady) ssSchoolRef("studentReachedHomeEnabled").set(newVal);
+toast(newVal ? "✅ Student Reached Home tracking ON" : "❌ Student Reached Home tracking OFF", newVal?"success":"info");
+}} style={{
+width:52,height:28,borderRadius:99,border:"none",cursor:"pointer",
+background: enabled ? T.green : T.border,
+position:"relative",transition:"background 0.3s",flexShrink:0
+}}>
+<div style={{
+position:"absolute",top:3,
+left: enabled ? 26 : 3,
+width:22,height:22,borderRadius:"50%",background:"#fff",
+transition:"left 0.3s",boxShadow:"0 1px 4px rgba(0,0,0,0.3)"
+}} />
+</button>
+</div>
+{enabled && (
+<div style={{marginTop:14,padding:"10px 12px",background:T.green+"12",borderRadius:10,border:"1px solid "+T.green+"30"}}>
+<p style={{fontSize:12,color:T.green,fontWeight:700}}>✅ Tracking Active — Aaj {todayRecords.length} student(s) ne confirm kiya</p>
+</div>
+)}
+</div>
+</div>
+);
+}
+
+// ── TEACHER VIEW: Apni class ke students ki list ──
+if (isTeacher) {
+var classStudents = (students||[]).filter(function(s){
+return (!s.schoolId || String(s.schoolId)===String(mySchoolId)) && s.class === myAssignedClass;
+});
+var reachedIds = todayRecords.map(function(r){ return r.studentId; });
+var notReached = classStudents.filter(function(s){ return reachedIds.indexOf(s.id) < 0; });
+var reached = classStudents.filter(function(s){ return reachedIds.indexOf(s.id) >= 0; });
+return (
+<div className="fadeUp">
+<SectionHeader title={"🏡 Student Reached Home — " + (myAssignedClass||"My Class")} />
+<p style={{fontSize:12,color:T.textMuted,marginBottom:14}}>Aaj ke records — {todayKey}</p>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+<div style={{background:T.green+"12",border:"1px solid "+T.green+"30",borderRadius:12,padding:14,textAlign:"center"}}>
+<p style={{fontSize:28,fontWeight:900,color:T.green}}>{reached.length}</p>
+<p style={{fontSize:12,color:T.textMuted}}>✅ Ghar Pahunche</p>
+</div>
+<div style={{background:T.red+"12",border:"1px solid "+T.red+"30",borderRadius:12,padding:14,textAlign:"center"}}>
+<p style={{fontSize:28,fontWeight:900,color:T.red}}>{notReached.length}</p>
+<p style={{fontSize:12,color:T.textMuted}}>⏳ Confirm Nahi</p>
+</div>
+</div>
+{reached.length > 0 && (
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,fontWeight:700,color:T.green,marginBottom:8,textTransform:"uppercase"}}>✅ Ghar Pahunch Gaye</p>
+<div style={{display:"grid",gap:8}}>
+{reached.map(function(s){
+var rec = todayRecords.find(function(r){ return r.studentId===s.id; });
+return (
+<div key={s.id} style={{background:T.card,border:"1px solid "+T.green+"30",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div>
+<p style={{fontWeight:700,fontSize:13,color:T.text}}>👦 {s.name}</p>
+<p style={{fontSize:11,color:T.textMuted}}>{s.class} • Roll: {s.rollNo||"—"}</p>
+</div>
+<p style={{fontSize:12,color:T.green,fontWeight:700}}>🏠 {rec && rec.time}</p>
+</div>
+);
+})}
+</div>
+</div>
+)}
+{notReached.length > 0 && (
+<div>
+<p style={{fontSize:11,fontWeight:700,color:T.red,marginBottom:8,textTransform:"uppercase"}}>⏳ Confirmation Pending</p>
+<div style={{display:"grid",gap:8}}>
+{notReached.map(function(s){
+return (
+<div key={s.id} style={{background:T.red+"08",border:"1px solid "+T.red+"25",borderRadius:10,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div>
+<p style={{fontWeight:700,fontSize:13,color:T.text}}>👦 {s.name}</p>
+<p style={{fontSize:11,color:T.textMuted}}>{s.class} • Roll: {s.rollNo||"—"}</p>
+</div>
+<span style={{fontSize:18}}>⏳</span>
+</div>
+);
+})}
+</div>
+</div>
+)}
+{classStudents.length === 0 && (
+<Card style={{padding:24,textAlign:"center"}}>
+<p style={{color:T.textMuted,fontSize:13}}>Aapki class ke students nahi mile. Assigned class check karein.</p>
+</Card>
+)}
+</div>
+);
+}
+
+// ── PARENT VIEW: Apne bachche ka button ──
+var myTodayRecord = todayRecords.find(function(r){ return r.studentName === parentStudentName && r.date === todayKey; });
+return (
+<div className="fadeUp">
+<SectionHeader title="🏡 Ghar Pahunch Gaye?" />
+<p style={{color:T.textMuted,fontSize:13,marginBottom:24}}>Bachcha ghar pahunch jaaye tab neeche button press karein — school ko notification jayegi</p>
+{!enabled ? (
+<Card style={{padding:28,textAlign:"center"}}>
+<p style={{fontSize:36,marginBottom:8}}>🔕</p>
+<p style={{color:T.textMuted,fontSize:13}}>Abhi yeh feature school ne disable kiya hua hai</p>
+</Card>
+) : myTodayRecord ? (
+<div style={{background:T.green+"15",border:"1.5px solid "+T.green+"40",borderRadius:20,padding:"32px 24px",textAlign:"center",marginBottom:20}}>
+<p style={{fontSize:60,marginBottom:8}}>🏠</p>
+<p style={{fontSize:20,fontWeight:800,color:T.green}}>Ghar Pahunch Gaye! ✅</p>
+<p style={{color:T.textMuted,fontSize:14,marginTop:8}}>Aapne aaj {myTodayRecord.time} baje confirm kiya</p>
+<p style={{color:T.textMuted,fontSize:12,marginTop:4}}>Class teacher ko notification bheji ja chuki hai</p>
+</div>
+) : (
+<div style={{textAlign:"center",marginBottom:20}}>
+<button onClick={function(){
+var now = new Date();
+var rec = {
+id: Date.now(),
+studentName: parentStudentName,
+studentId: (loggedInUser && loggedInUser.studentId) || parentStudentName,
+time: now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}),
+date: now.toLocaleDateString("en-IN"),
+timestamp: now.getTime(),
+schoolId: mySchoolId
+};
+saveRecords([rec].concat(records));
+setAlerts(function(prev) { return [{
+id: Date.now(),
+type: "student_reached_home",
+studentName: parentStudentName,
+time: rec.time,
+date: rec.date,
+read: false,
+schoolId: mySchoolId,
+forRole: "teacher"
+}].concat(prev); });
+setPressed(true);
+toast("✅ Class teacher ko notification bheji gayi! Ghar pe rehein safe 🏠","success");
+setTimeout(function(){ setPressed(false); },5000);
+}} style={{
+width:180,height:180,borderRadius:"50%",
+background: pressed ? T.green+"30" : "linear-gradient(135deg,"+T.green+"80,"+T.green+")",
+border:"4px solid "+T.green,
+cursor:"pointer",fontSize:60,
+display:"inline-flex",alignItems:"center",justifyContent:"center",
+boxShadow: pressed ? "0 0 0 12px "+T.green+"20" : "0 8px 32px "+T.green+"40",
+transition:"all 0.3s",outline:"none"
+}}>
+🏠
+</button>
+<p style={{color:T.textMuted,fontSize:13,marginTop:16}}>Press karo jab bachcha ghar pahunch jaaye</p>
 </div>
 )}
 </div>
