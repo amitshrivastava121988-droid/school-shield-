@@ -11179,7 +11179,7 @@ const isPassed  = liveIdx > 0 && i < liveIdx;
 const kidsHere  = (b.routeChildren || []).filter(c => c.stop === sn);
 const arrT      = typeof s === "object" ? (s.time || "") : "";
 const dropT     = typeof s === "object" ? (s.dropTime || "") : "";
-const showT     = principalRouteDir === "arrival" ? arrT : dropT;
+const showT     = principalRouteDir === "arrival" ? dropT : arrT;
 const hasGeo    = stopHasGeo(s);
 const dotBg     = isCurrent ? T.yellow : isPassed ? T.green : T.surface;
 const dotBorder = isCurrent ? T.yellow : isPassed ? T.green : (kidsHere.length > 0 ? T.accent : T.border);
@@ -11223,7 +11223,7 @@ border:`1px solid ${principalRouteDir==="arrival"?T.accent:T.green}30`}}>
 {kidsHere.map((c, ci) => (
 <span key={ci} style={{fontSize:10, background:`${T.accent}18`, color:T.accent,
 borderRadius:99, padding:"2px 9px", border:`1px solid ${T.accent}30`, fontWeight:600}}>
-👦 {c.studentName}{principalRouteDir==="arrival" ? (c.pickupTime ? ` ⏰${c.pickupTime}` : "") : (c.dropTime ? ` ⏰${c.dropTime}` : "")}
+👦 {c.studentName}{principalRouteDir==="arrival" ? (c.dropTime ? ` ⏰${c.dropTime}` : "") : (c.pickupTime ? ` ⏰${c.pickupTime}` : "")}
 </span>
 ))}
 </div>
@@ -12025,10 +12025,30 @@ const [docs, setDocs]     = React.useState({ rc: initial?.rc||null, insurance: i
 const [expiries, setExp]  = React.useState({ rcExpiry: initial?.rcExpiry||"", insuranceExpiry: initial?.insuranceExpiry||"", fitnessExpiry: initial?.fitnessExpiry||"" });
 const [driverSugg, setDriverSugg] = React.useState([]);
 const [condSugg, setCondSugg]     = React.useState([]);
+const [stopSuggestions, setStopSuggestions] = React.useState([]);
 // ── Stop Library ──
 const stopLibKey = "ss_stopLib_" + (initial?.schoolId || window.currentSchoolId || "default");
 const [stopLib, setStopLib] = React.useState(function() {
-try { return JSON.parse(localStorage.getItem(stopLibKey) || "[]"); } catch(e) { return []; }
+try {
+var existing = JSON.parse(localStorage.getItem(stopLibKey) || "[]");
+// One-time migration: merge stops from initial bus if they have GPS
+if (initial && Array.isArray(initial.stops)) {
+var merged = existing.slice();
+initial.stops.forEach(function(s) {
+if (!s || !s.name) return;
+if (!s.lat && !s.lng) return; // only migrate stops with GPS
+var idx = merged.findIndex(function(m) { return m.name === s.name; });
+var entry = { name: s.name, lat: s.lat || null, lng: s.lng || null, radius: s.radius || 40 };
+if (idx >= 0) merged[idx] = entry;
+else merged.push(entry);
+});
+if (merged.length !== existing.length) {
+try { localStorage.setItem(stopLibKey, JSON.stringify(merged)); } catch(e) {}
+return merged;
+}
+}
+return existing;
+} catch(e) { return []; }
 });
 const saveStopLib = function(stops) {
 var merged = stopLib.slice();
@@ -12177,14 +12197,69 @@ setD(p=>({...p, schoolLat: pos.coords.latitude.toFixed(6), schoolLng: pos.coords
 </div>
 </div>
 <FormField label="Route Stops (comma separated)">
-<FormInput value={d.stopsRaw} onChange={v => {
-setD(p => ({ ...p, stopsRaw: v }));
-const names = v.split(",").map(s => s.trim()).filter(Boolean);
-setGeoStops(prev => names.map(name => {
-const existing = prev.find(g => g.name === name);
-return existing || { name, lat: null, lng: null, radius: 40, time: "", dropTime: "" };
-}));
-}} placeholder="e.g. Gandhi Nagar, Shyam Nagar, Market, School Gate" />
+<div style={{position:"relative"}}>
+<input
+value={d.stopsRaw}
+onChange={function(e) {
+var v = e.target.value;
+setD(function(p) { return Object.assign({}, p, {stopsRaw: v}); });
+var names = v.split(",").map(function(s){return s.trim();}).filter(Boolean);
+setGeoStops(function(prev) { return names.map(function(name) {
+var existing = prev.find(function(g){return g.name===name;});
+if (existing) return existing;
+var libMatch = stopLib.find(function(m){return m.name===name;});
+if (libMatch) return {name:name, lat:libMatch.lat||null, lng:libMatch.lng||null, radius:libMatch.radius||40, time:"", dropTime:""};
+return {name:name, lat:null, lng:null, radius:40, time:"", dropTime:""};
+}); });
+// Suggestion: last typed word ke liye
+var parts = v.split(",");
+var lastPart = parts[parts.length-1].trim().toLowerCase();
+if (lastPart.length >= 1) {
+var suggs = stopLib.filter(function(lib) {
+var alreadyIn = parts.slice(0,-1).map(function(x){return x.trim().toLowerCase();}).indexOf(lib.name.toLowerCase()) >= 0;
+return !alreadyIn && lib.name.toLowerCase().includes(lastPart);
+});
+setStopSuggestions(suggs);
+} else {
+setStopSuggestions([]);
+}
+}}
+onBlur={function(){ setTimeout(function(){ setStopSuggestions([]); }, 150); }}
+placeholder="e.g. Gandhi Nagar, Shyam Nagar, Market, School Gate"
+style={{width:"100%", padding:"10px 12px", borderRadius:8, border:"1.5px solid "+T.border, background:T.surface, color:T.text, fontSize:14, fontFamily:"Outfit,sans-serif", boxSizing:"border-box"}}
+/>
+{stopSuggestions.length > 0 && (
+<div style={{position:"absolute", top:"100%", left:0, right:0, zIndex:9999, background:T.card, border:"1px solid "+T.accent, borderRadius:"0 0 8px 8px", boxShadow:"0 6px 20px rgba(0,0,0,0.4)", maxHeight:180, overflowY:"auto"}}>
+{stopSuggestions.map(function(lib, li) {
+return (
+<div key={li}
+onPointerDown={function(e){
+e.preventDefault();
+var parts = d.stopsRaw.split(",");
+parts[parts.length-1] = " " + lib.name;
+var newRaw = parts.join(",").replace(/^,\s*/,"").trim();
+if (newRaw.startsWith(",")) newRaw = newRaw.slice(1).trim();
+setD(function(p) { return Object.assign({}, p, {stopsRaw: newRaw}); });
+var names = newRaw.split(",").map(function(s){return s.trim();}).filter(Boolean);
+setGeoStops(function(prev) { return names.map(function(name) {
+var existing = prev.find(function(g){return g.name===name;});
+if (existing) return existing;
+var lm = stopLib.find(function(m){return m.name===name;});
+if (lm) return {name:name, lat:lm.lat||null, lng:lm.lng||null, radius:lm.radius||40, time:"", dropTime:""};
+return {name:name, lat:null, lng:null, radius:40, time:"", dropTime:""};
+}); });
+setStopSuggestions([]);
+}}
+style={{padding:"10px 14px", fontSize:13, color:T.text, cursor:"pointer", borderBottom:"1px solid "+T.border, fontFamily:"Outfit,sans-serif", display:"flex", alignItems:"center", gap:8}}>
+<span>{lib.lat ? "📡" : "📍"}</span>
+<span style={{fontWeight:700}}>{lib.name}</span>
+{lib.lat && <span style={{fontSize:10, color:T.green, marginLeft:"auto"}}>GPS ✓</span>}
+</div>
+);
+})}
+</div>
+)}
+</div>
 </FormField>
 {/* 📚 Saved Stop Library */}
 {stopLib.length > 0 && (
