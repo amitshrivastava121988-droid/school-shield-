@@ -2094,6 +2094,48 @@ try { localStorage.setItem(ALERT_KEY, "1"); } catch {}
 }
 }
 
+// ── PRINCIPAL/ACCOUNTANT: Class-wise fees summary (1 din gap) ──
+if (["principal","founder","vice_principal","accountant"].includes(role)) {
+const PRINCIPAL_FEE_KEY = "ss_fees_principal_alert_" + (mySchoolId||"x") + "_" + todayStr;
+try { if (localStorage.getItem(PRINCIPAL_FEE_KEY)) return; } catch {}
+const schoolFees = fees.filter(function(f) {
+return !f.paid && !f.isDiscount && f.dueDate && f.dueDate < todayStr &&
+(!f.schoolId || String(f.schoolId) === String(mySchoolId));
+});
+if (schoolFees.length === 0) return;
+// Class-wise group
+const classMap = {};
+schoolFees.forEach(function(f) {
+const cls = f.class || "Unknown";
+if (!classMap[cls]) classMap[cls] = { count: 0, total: 0 };
+classMap[cls].count++;
+classMap[cls].total += Number(f.amount) || 0;
+});
+const summaryAlerts = [];
+Object.keys(classMap).forEach(function(cls) {
+const info = classMap[cls];
+const alertId = "fee_class_summary_" + cls + "_" + todayStr;
+const alreadyExists = alerts.some(function(a) { return a.id === alertId; });
+if (!alreadyExists) {
+summaryAlerts.push({
+id: alertId,
+schoolId: mySchoolId,
+type: "fee_class_summary",
+title: "💳 " + cls + " — Fees Pending",
+message: info.count + " student(s) ki fees overdue — Total: ₹" + info.total.toLocaleString("en-IN"),
+forClass: cls,
+read: false,
+ts: Date.now(),
+isClassSummary: true
+});
+}
+});
+if (summaryAlerts.length > 0) {
+setAlerts(function(prev) { return [...(prev||[]), ...summaryAlerts]; });
+try { localStorage.setItem(PRINCIPAL_FEE_KEY, "1"); } catch {}
+}
+}
+
 }, [loggedInUser?.id, role]);
 // ─────────────────────────────────────────────────────────────────────────────
 useEffect(() => {
@@ -4656,9 +4698,28 @@ if (a.forParent === true) return userRole === "parent";
 if (a.forTeacher === true) return userRole === "teacher";
 if (a.forUserId && user?.id) return String(a.forUserId) === String(user.id);
 if (a.forTeacherId && user?.teacherId) return String(a.forTeacherId) === String(user.teacherId);
-if (DRIVER_ALERT_TYPES.includes(a.type)) return userRole === "driver";
+if (DRIVER_ALERT_TYPES.includes(a.type)) {
+if (a.type === "PANIC" || a.isPanic) return ["principal","founder","vice_principal","superadmin","teacher"].includes(userRole);
+return userRole === "driver" || userRole === "transport_head";
+}
+if (["late_alert","bus_breakdown","speed_alert","student_absent_bus","route_change","pickup_change","drop_change"].includes(a.type)) {
+return userRole === "transport_head";
+}
+// Student reached home — sirf assigned class teacher ko
+if (a.type === "student_reached_home") {
+if (userRole === "teacher") {
+if (!a.forTeacherClass) return true;
+var uClass = (user && (user.assignedClass || user.class)) || null;
+return uClass && uClass === a.forTeacherClass;
+}
+// Principal ko sirf class-wise summary
+if (["principal","founder","vice_principal","superadmin"].includes(userRole)) {
+return a.isClassSummary === true;
+}
+return false;
+}
 if (["fee_due","fee_paid","fee_overdue","fee_duesoon"].includes(a.type)) return ["parent","accountant"].includes(userRole);
-if (["fee_overdue_summary"].includes(a.type)) return false;
+if (["fee_overdue_summary","fee_class_summary"].includes(a.type)) return ["principal","vice_principal","founder","accountant"].includes(userRole);
 if (a.type === "tc_requested") return ["accountant","principal","vice_principal","founder"].includes(userRole);
 if (a.type === "tc_approved")  return userRole === "parent";
 if (a.type === "leave_request" || a.type === "leave_approved_action") return ["principal","vice_principal","founder"].includes(userRole);
@@ -11074,9 +11135,10 @@ if (diffMin >= 10 && !lateAlertsSent[bus.id]) {
 const alertId = Date.now();
 const alertData = {
 id: alertId, schoolId: schoolId||null, type: "late_alert",
-message: `⏰ Late Alert: ${bus.busNo} (${bus.route}) — ${diffMin} min late! Expected: ${expected}`,
+message: "⏰ Late Alert: "+bus.busNo+" ("+bus.route+") — "+diffMin+" min late! Expected: "+expected,
 busNo: bus.busNo, delayMin: diffMin, read: false,
-time: now.toLocaleTimeString()
+time: now.toLocaleTimeString(),
+forRole: "transport_head"
 };
 if (window.firebaseReady) window.db.ref(`schoolshield/alerts/${alertId}`).set(alertData);
 if (setAlerts) setAlerts(p => [...p, alertData]);
@@ -14873,8 +14935,10 @@ fontSize:12,transition:"all 0.15s",
 );
 }
 function PayslipSection({ ctx }) {
-const { l, teachers: allTeachers, role, currentSchool, loggedInUser, db, schoolId } = ctx;
-const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
+const { l, teachers: allTeachers, role, currentSchool, loggedInUser, db, schoolId, schoolPageData } = ctx;
+const mySchoolId = (currentSchool && currentSchool.id) || (loggedInUser && loggedInUser.schoolId) || null;
+const _pgData = (schoolPageData && mySchoolId) ? (schoolPageData[mySchoolId] || {}) : {};
+const schoolLogoImg = _pgData.schoolLogoImg || null;
 const teachers = allTeachers.filter(t => !t.schoolId || sameId(t.schoolId, mySchoolId));
 const isPrincipal = ["principal","founder","superadmin","accountant"].includes(role);
 // ── Teacher sirf apni salary dekhe ──
@@ -14992,14 +15056,14 @@ td{padding:8px 4px;font-size:13px;border-bottom:1px solid #1F2A3F40;color:#9AA3B
 </style></head><body>
 <div class="slip">
 <div class="hdr">
-<div style="font-size:34px;margin-bottom:6px;">🛡️</div>
+${schoolLogoImg ? '<img src="'+schoolLogoImg+'" style="width:64px;height:64px;object-fit:contain;border-radius:50%;margin-bottom:6px;" />' : (currentSchool&&currentSchool.logoUrl) ? '<img src="'+currentSchool.logoUrl+'" style="width:64px;height:64px;object-fit:contain;border-radius:50%;margin-bottom:6px;" />' : '<div style="font-size:34px;margin-bottom:6px;">🛡️</div>'}
 <div class="school">${slipSchoolName}</div>
 <div class="sub">📍 ${slipSchoolAddress} &nbsp;|&nbsp; 📞 ${slipSchoolPhone}</div>
 <span class="slip-title">SALARY SLIP — ${selMonth}</span>
 </div>
 <div class="info-box">
 <div class="info-item"><label>Employee Name</label><span>${teacher?.name || "—"}</span></div>
-<div class="info-item"><label>Designation</label><span>${teacher?.subject || "Teacher"}</span></div>
+<div class="info-item"><label>Designation</label><span>${teacher&&teacher.designation ? teacher.designation : (teacher&&teacher.subject ? teacher.subject+' Teacher' : 'Teacher')}</span></div>
 <div class="info-item"><label>Phone</label><span>${teacher?.phone || "—"}</span></div>
 <div class="info-item"><label>Month</label><span>${selMonth}</span></div>
 </div>
@@ -15090,7 +15154,7 @@ setOtherDed(savedSlip.otherDed ?? 0);
 <p style={{fontSize:11,color:T.textMuted,fontWeight:700,letterSpacing:0.5,marginBottom:10}}>🏫 SCHOOL INFO ON SLIP</p>
 <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8}}>
 {[["School Name",slipSchoolName,setSlipSchoolName],["Address",slipSchoolAddress,setSlipSchoolAddress],["Phone",slipSchoolPhone,setSlipSchoolPhone]].map(([lb,val,set])=>(
-<div key={lb}><p style={labelStyle}>{lb}</p><input value={val} onChange={e=>set(e.target.value)} style={inpStyle} /></div>
+<div key={lb}><p style={labelStyle}>{lb}</p><input value={val} onChange={function(e){ if(isPrincipal) set(e.target.value); }} readOnly={!isPrincipal} style={Object.assign({},inpStyle,!isPrincipal?{opacity:0.6,cursor:"not-allowed",background:T.surface}:{})} /></div>
 ))}
 </div>
 </Card>
@@ -30717,7 +30781,7 @@ animation: "pulse 2s infinite",
 }
 // ─── STUDENT REACHED HOME ─────────────────────────────────────────────────────
 function StudentReachedHomeSection({ ctx }) {
-const { role, loggedInUser, students, userAccounts, setAlerts, toast } = ctx;
+const { role, loggedInUser, students, userAccounts, setAlerts, toast, setActiveSection } = ctx;
 const mySchoolId = (loggedInUser && loggedInUser.schoolId) || null;
 const isParent = role === "parent";
 const isTeacher = role === "teacher";
@@ -30907,7 +30971,11 @@ timestamp: now.getTime(),
 schoolId: mySchoolId
 };
 saveRecords([rec].concat(records));
-setAlerts(function(prev) { return [{
+// Student ki class dhundho
+var stuObj = (students||[]).find(function(s){ return s.name===parentStudentName && (!s.schoolId||String(s.schoolId)===String(mySchoolId)); });
+var stuClass = stuObj ? stuObj.class : null;
+setAlerts(function(prev) {
+var newAlerts = [{
 id: Date.now(),
 type: "student_reached_home",
 studentName: parentStudentName,
@@ -30915,8 +30983,34 @@ time: rec.time,
 date: rec.date,
 read: false,
 schoolId: mySchoolId,
-forRole: "teacher"
-}].concat(prev); });
+forTeacherClass: stuClass,
+isClassSummary: false
+}];
+// Principal ke liye class-wise summary check
+if (stuClass) {
+var classStudentsAll = (students||[]).filter(function(s){ return s.class===stuClass && (!s.schoolId||String(s.schoolId)===String(mySchoolId)); });
+var todayRecs = [rec].concat(records).filter(function(r){ return r.date===rec.date && r.schoolId===mySchoolId; });
+var classReachedCount = classStudentsAll.filter(function(s){
+return todayRecs.some(function(r){ return r.studentName===s.name; });
+}).length;
+var allReached = classReachedCount >= classStudentsAll.length && classStudentsAll.length > 0;
+if (allReached) {
+newAlerts.push({
+id: Date.now()+1,
+type: "student_reached_home",
+title: "🏡 "+stuClass+" — Sab Ghar Pahunch Gaye!",
+message: stuClass+" ke sare "+classStudentsAll.length+" students ghar pahunch gaye",
+time: rec.time,
+date: rec.date,
+read: false,
+schoolId: mySchoolId,
+isClassSummary: true,
+forClass: stuClass
+});
+}
+}
+return newAlerts.concat(prev);
+});
 setPressed(true);
 toast("✅ Class teacher ko notification bheji gayi! Ghar pe rehein safe 🏠","success");
 setTimeout(function(){ setPressed(false); },5000);
