@@ -12013,21 +12013,21 @@ const empty = { busNo:"", route:"", totalSeats:"", driverName:"", driverPhone:""
 const [d, setD]           = React.useState(initial ? { ...initial, stopsRaw: (initial.stops||[]).map(s=>stopName(s)).join(", ") } : empty);
 const [bulkRadius, setBulkRadius] = React.useState(40);
 const [geoStops, setGeoStops] = React.useState(() => {
-if (!initial?.stops) return [];
+if (!initial || !initial.stops) return [];
 return initial.stops.map(s => typeof s === "object" ? s : { name: s, lat: null, lng: null, radius: 40, time: "", dropTime: "" });
 });
 const [geoFetchingIdx, setGeoFetchingIdx] = React.useState(null); // which stop is fetching location
 const [tab, setTab]       = React.useState("basic");
 const photoRef            = useRef(null);
-const [pp, setPp]         = React.useState(initial?.driverPhoto || null);
+const [pp, setPp]         = React.useState((initial && initial.driverPhoto) || null);
 const docRefs             = { rc: useRef(null), insurance: useRef(null), fitness: useRef(null), pollution: useRef(null), permit: useRef(null), driverIdDoc: useRef(null) };
-const [docs, setDocs]     = React.useState({ rc: initial?.rc||null, insurance: initial?.insurance||null, fitness: initial?.fitness||null, pollution: initial?.pollution||null, permit: initial?.permit||null, driverIdDoc: initial?.driverIdDoc||null });
-const [expiries, setExp]  = React.useState({ rcExpiry: initial?.rcExpiry||"", insuranceExpiry: initial?.insuranceExpiry||"", fitnessExpiry: initial?.fitnessExpiry||"" });
+const [docs, setDocs]     = React.useState({ rc: (initial&&initial.rc)||null, insurance: (initial&&initial.insurance)||null, fitness: (initial&&initial.fitness)||null, pollution: (initial&&initial.pollution)||null, permit: (initial&&initial.permit)||null, driverIdDoc: (initial&&initial.driverIdDoc)||null });
+const [expiries, setExp]  = React.useState({ rcExpiry: (initial&&initial.rcExpiry)||"", insuranceExpiry: (initial&&initial.insuranceExpiry)||"", fitnessExpiry: (initial&&initial.fitnessExpiry)||"" });
 const [driverSugg, setDriverSugg] = React.useState([]);
 const [condSugg, setCondSugg]     = React.useState([]);
 const [stopSuggestions, setStopSuggestions] = React.useState([]);
 // ── Stop Library ──
-const stopLibKey = "ss_stopLib_" + (initial?.schoolId || window.currentSchoolId || "default");
+const stopLibKey = "ss_stopLib_" + ((initial && initial.schoolId) || window.currentSchoolId || "default");
 const [stopLib, setStopLib] = React.useState(function() {
 try {
 var existing = JSON.parse(localStorage.getItem(stopLibKey) || "[]");
@@ -12065,7 +12065,7 @@ try { localStorage.setItem(stopLibKey, JSON.stringify(merged)); } catch(e) {}
 const getEmpSuggestions = (role, typed) => {
 if (!typed || typed.length < 2) return [];
 try {
-const schoolId = initial?.schoolId || null;
+const schoolId = (initial && initial.schoolId) || null;
 const keys = Object.keys(localStorage).filter(k => k.startsWith("ss_employees_"));
 let employees = [];
 keys.forEach(k => { try { const d = JSON.parse(localStorage.getItem(k)); if (Array.isArray(d)) employees.push(...d); } catch {} });
