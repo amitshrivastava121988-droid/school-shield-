@@ -11883,6 +11883,15 @@ setPName(selStudent.parentName || "");
 setPPhone(selStudent.parentPhone || "");
 }
 }, [selStudent]);
+// Auto-fill time from bus stop when stop is selected
+React.useEffect(() => {
+if (!stop) return;
+var matchedStop = stops.find(function(s) { return stopName(s) === stop; });
+if (matchedStop && typeof matchedStop === "object") {
+if (matchedStop.time) setPTime(matchedStop.time);
+if (matchedStop.dropTime) setDTime(matchedStop.dropTime);
+}
+}, [stop]);
 const doAdd = () => {
 if (!selStudent) { alert("Pehle student select karo"); return; }
 onAdd({
@@ -11945,8 +11954,20 @@ style={{width:"100%",background:T.inputBg,border:"1px solid "+(stuOpen?T.accent:
 ? <div style={{padding:"12px 14px",color:T.textMuted,fontSize:12}}>Koi student nahi mila</div>
 : filteredStu.map(s=>(
 <div key={s.id}
-onPointerDown={e=>{ e.preventDefault(); pickStudent(s); }}
-style={{padding:"11px 14px",fontSize:13,color:String(s.id)===String(sel)?T.accent:T.text,background:String(s.id)===String(sel)?T.accent+"15":"transparent",cursor:"pointer",fontFamily:"Outfit,sans-serif",borderBottom:"1px solid "+T.border,userSelect:"none"}}>
+onPointerDown={e=>{
+e.currentTarget._scrolling = false;
+e.currentTarget._startY = e.clientY;
+}}
+onPointerMove={e=>{
+if (Math.abs(e.clientY - (e.currentTarget._startY||e.clientY)) > 6) {
+e.currentTarget._scrolling = true;
+}
+}}
+onPointerUp={e=>{
+if (!e.currentTarget._scrolling) { e.preventDefault(); pickStudent(s); }
+e.currentTarget._scrolling = false;
+}}
+style={{padding:"11px 14px",fontSize:13,color:String(s.id)===String(sel)?T.accent:T.text,background:String(s.id)===String(sel)?T.accent+"15":"transparent",cursor:"pointer",fontFamily:"Outfit,sans-serif",borderBottom:"1px solid "+T.border,userSelect:"none",touchAction:"pan-y"}}>
 {s.photo||"👦"} {s.name} — {s.class}
 </div>
 ))
@@ -11966,11 +11987,11 @@ style={{padding:"11px 14px",fontSize:13,color:String(s.id)===String(sel)?T.accen
 <FormField label="Pickup Point / Ghar">
 <FormInput value={pickup} onChange={setPickup} placeholder="e.g. Makan no. 12, gali 3" />
 </FormField>
-<FormField label="Pickup Time">
-<FormInput value={pTime} onChange={setPTime} placeholder="e.g. 07:30 AM" />
+<FormField label={"Pickup Time" + (pTime ? " ✓" : "")}>
+<FormInput value={pTime} onChange={setPTime} placeholder={stop ? "Stop se auto fill hoga..." : "e.g. 07:30 AM"} />
 </FormField>
-<FormField label="Drop Time">
-<FormInput value={dTime} onChange={setDTime} placeholder="e.g. 02:30 PM" />
+<FormField label={"Drop Time" + (dTime ? " ✓" : "")}>
+<FormInput value={dTime} onChange={setDTime} placeholder={stop ? "Stop se auto fill hoga..." : "e.g. 02:30 PM"} />
 </FormField>
 <FormField label="Parent Name">
 <FormInput value={pName} onChange={setPName} placeholder="Parent ka naam" />
@@ -12004,6 +12025,23 @@ const [docs, setDocs]     = React.useState({ rc: initial?.rc||null, insurance: i
 const [expiries, setExp]  = React.useState({ rcExpiry: initial?.rcExpiry||"", insuranceExpiry: initial?.insuranceExpiry||"", fitnessExpiry: initial?.fitnessExpiry||"" });
 const [driverSugg, setDriverSugg] = React.useState([]);
 const [condSugg, setCondSugg]     = React.useState([]);
+// ── Stop Library ──
+const stopLibKey = "ss_stopLib_" + (initial?.schoolId || window.currentSchoolId || "default");
+const [stopLib, setStopLib] = React.useState(function() {
+try { return JSON.parse(localStorage.getItem(stopLibKey) || "[]"); } catch(e) { return []; }
+});
+const saveStopLib = function(stops) {
+var merged = stopLib.slice();
+stops.forEach(function(s) {
+if (!s.name) return;
+var idx = merged.findIndex(function(m) { return m.name === s.name; });
+var entry = { name: s.name, lat: s.lat || null, lng: s.lng || null, radius: s.radius || 40 };
+if (idx >= 0) merged[idx] = entry;
+else merged.push(entry);
+});
+setStopLib(merged);
+try { localStorage.setItem(stopLibKey, JSON.stringify(merged)); } catch(e) {}
+};
 const getEmpSuggestions = (role, typed) => {
 if (!typed || typed.length < 2) return [];
 try {
@@ -12044,6 +12082,7 @@ time: geo?.time || "",
 dropTime: geo?.dropTime || "",
 };
 });
+saveStopLib(stops);
 onSave({ ...d, stops, driverPhoto: pp, ...docs, ...expiries });
 };
 const tabStyle = (t) => ({
@@ -12147,6 +12186,45 @@ return existing || { name, lat: null, lng: null, radius: 40, time: "", dropTime:
 }));
 }} placeholder="e.g. Gandhi Nagar, Shyam Nagar, Market, School Gate" />
 </FormField>
+{/* 📚 Saved Stop Library */}
+{stopLib.length > 0 && (
+<div style={{marginBottom:10}}>
+<p style={{fontSize:11, color:T.textMuted, fontWeight:700, marginBottom:6}}>📚 Saved Stops — Tap to Add</p>
+<div style={{display:"flex", flexWrap:"wrap", gap:6}}>
+{stopLib.map(function(lib, li) {
+var alreadyIn = (d.stopsRaw||"").split(",").map(function(x){return x.trim();}).indexOf(lib.name) >= 0;
+return (
+<button key={li}
+onClick={function() {
+if (alreadyIn) return;
+var newRaw = d.stopsRaw ? d.stopsRaw + ", " + lib.name : lib.name;
+setD(function(p) { return Object.assign({}, p, {stopsRaw: newRaw}); });
+setGeoStops(function(prev) {
+var names = newRaw.split(",").map(function(s){return s.trim();}).filter(Boolean);
+return names.map(function(name) {
+var existing = prev.find(function(g){return g.name===name;});
+if (existing) return existing;
+var libMatch = stopLib.find(function(m){return m.name===name;});
+if (libMatch) return { name: name, lat: libMatch.lat||null, lng: libMatch.lng||null, radius: libMatch.radius||40, time:"", dropTime:"" };
+return { name: name, lat: null, lng: null, radius: 40, time:"", dropTime:"" };
+});
+});
+}}
+style={{
+padding:"5px 12px", borderRadius:99, fontSize:11, fontWeight:700,
+border: "1.5px solid " + (alreadyIn ? T.green : T.accent),
+background: alreadyIn ? (T.green+"20") : (T.accent+"15"),
+color: alreadyIn ? T.green : T.accent,
+cursor: alreadyIn ? "default" : "pointer",
+fontFamily:"Outfit,sans-serif"
+}}>
+{lib.lat ? "📡 " : "📍 "}{lib.name}{alreadyIn ? " ✓" : " +"}
+</button>
+);
+})}
+</div>
+</div>
+)}
 {/* 📡 Geo-Tagging + Stop Timing */}
 {geoStops.length > 0 && (
 <div style={{background:`${T.accent}08`, border:`1px solid ${T.accent}20`, borderRadius:10, padding:"12px 14px", marginBottom:10}}>
