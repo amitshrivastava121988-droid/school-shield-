@@ -11223,7 +11223,7 @@ border:`1px solid ${principalRouteDir==="arrival"?T.accent:T.green}30`}}>
 {kidsHere.map((c, ci) => (
 <span key={ci} style={{fontSize:10, background:`${T.accent}18`, color:T.accent,
 borderRadius:99, padding:"2px 9px", border:`1px solid ${T.accent}30`, fontWeight:600}}>
-👦 {c.studentName}{c.pickupTime ? ` ⏰${c.pickupTime}` : ""}
+👦 {c.studentName}{principalRouteDir==="arrival" ? (c.pickupTime ? ` ⏰${c.pickupTime}` : "") : (c.dropTime ? ` ⏰${c.dropTime}` : "")}
 </span>
 ))}
 </div>
