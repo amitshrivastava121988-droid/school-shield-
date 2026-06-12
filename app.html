@@ -571,6 +571,13 @@ const ALL_PERM_SECTIONS = [
 {key:"healthcheckin",      label:"Health Check-in",    icon:"🌡️"},
 {key:"healthgrowth",       label:"Child Health & Growth", icon:"📏"},
 {key:"onlineclasses",     label:"Online Classes",     icon:"🎥"},
+{key:"employees",         label:"Employees",          icon:"👔"},
+{key:"staffdirectory",    label:"Staff Directory",    icon:"📋"},
+{key:"inventory",         label:"Inventory",          icon:"📦"},
+{key:"allpickup",         label:"Authorized Pickup",  icon:"🚗"},
+{key:"tripmanagement",    label:"Trip Management",    icon:"🗺️"},
+{key:"analytics",         label:"Analytics",          icon:"📈"},
+{key:"meetingmanager",    label:"Meeting Manager",    icon:"📋"},
 ];
 const ALL_VP_SECTIONS        = ALL_PERM_SECTIONS;
 const ALL_STAFF_SECTIONS     = ALL_PERM_SECTIONS;
@@ -2638,6 +2645,7 @@ founder: [
 {key:"library",icon:"📚",label:"Library"},{key:"disciplinereport",icon:"📋",label:"Discipline Report"},
 {key:"classsettings",icon:"🏷️",label:"Class Settings"},{key:"webcam",icon:"📹",label:"Live Cameras"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
+{key:"meetingmanager",icon:"📋",label:"Meeting Manager"},
 ],
 principal: [
 {key:"dashboard",icon:"📊",label:"dashboard"}, {key:"students",icon:"👨‍🎓",label:"students"},
@@ -2658,6 +2666,7 @@ principal: [
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
 {key:"staffdirectory",icon:"📋",label:"Staff Directory"},
 {key:"inventory",icon:"📦",label:"Inventory"},
+{key:"meetingmanager",icon:"📋",label:"Meeting Manager"},
 ],
 vice_principal: "__VP_DYNAMIC__",
 staff: [
@@ -3493,6 +3502,7 @@ if (section === "allpickup") return <AllPickupSection ctx={ctx} />;
 if (section === "tripmanagement") return <TripManagementSection ctx={ctx} />;
 if (section === "onlineclasses") return <OnlineClassesSection ctx={ctx} />;
 if (section === "inventory") return <InventorySection ctx={ctx} />;
+if (section === "meetingmanager") return <MeetingManagerSection ctx={ctx} />;
 return <div style={{color:T.textMuted}}>Section: {section}</div>;
 }
 // ─── OFFLINE STATUS CARD ─────────────────────────────────────────────────────
@@ -9303,7 +9313,10 @@ var html = "<!DOCTYPE html><html><head><title>Fee Slip</title>"
 + "table{width:100%;border-collapse:collapse}"
 + "@media print{body{margin:0}}</style></head><body>"
 + "<div style='text-align:center;border-bottom:2px solid #1a2a6c;padding-bottom:12px;margin-bottom:16px'>"
-+ "<h2 style='color:#1a2a6c;margin:0;font-size:20px'>" + schoolName + "</h2>"
++ (currentSchool && currentSchool.logo && currentSchool.logo.startsWith("http") ? "<img src='"+currentSchool.logo+"' style='height:60px;margin-bottom:6px;display:block;margin-left:auto;margin-right:auto' />" : "<div style='font-size:40px;margin-bottom:4px'>"+(currentSchool && currentSchool.logo ? currentSchool.logo : "🏫")+"</div>")
++ "<h2 style='color:#1a2a6c;margin:0 0 4px 0;font-size:20px'>" + schoolName + "</h2>"
++ (currentSchool && currentSchool.address ? "<p style='margin:2px 0;color:#555;font-size:12px'>" + currentSchool.address + (currentSchool.city ? ", " + currentSchool.city : "") + "</p>" : "")
++ "<p style='margin:2px 0;color:#888;font-size:12px'>Academic Session: " + session + "</p>"
 + "<p style='margin:4px 0;color:#555;font-size:13px'>Fee Receipt / Slip</p></div>"
 + "<table style='margin-bottom:16px;font-size:13px'>"
 + "<tr><td style='padding:4px 8px;color:#666'>Student Name</td><td style='padding:4px 8px;font-weight:700'>" + stu.name + "</td></tr>"
@@ -33636,8 +33649,264 @@ cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:14}}>
 );
 }
 
+// ─── MEETING MANAGER ──────────────────────────────────────────────────────────
+function MeetingManagerSection({ ctx }) {
+const { role, loggedInUser, toast, setModal, notices, setNotices } = ctx;
+const mySchoolId = (loggedInUser && loggedInUser.schoolId) || null;
+const canEdit = ["principal","vice_principal","founder"].includes(role);
+const [meetings, setMeetings] = React.useState([]);
+const [tab, setTab] = React.useState("upcoming");
+const [form, setForm] = React.useState(null); // null = closed, {} = new, {..data} = edit
+
+// Firebase sync
+React.useEffect(function() {
+if (!window.firebaseReady || !mySchoolId) return;
+var ref = window.db.ref("schoolshield/schools/" + mySchoolId + "/meetings");
+ref.on("value", function(snap) {
+var val = snap.val();
+if (val) {
+try {
+var data = typeof val === "string" ? JSON.parse(val) : val;
+if (Array.isArray(data)) setMeetings(data);
+} catch(e) {}
+} else { setMeetings([]); }
+});
+return function() { ref.off(); };
+}, [mySchoolId]);
+
+var saveMeetings = function(list) {
+setMeetings(list);
+if (window.firebaseReady && mySchoolId) {
+try { window.db.ref("schoolshield/schools/" + mySchoolId + "/meetings").set(JSON.stringify(list)); } catch(e) {}
+}
+};
+
+var today = new Date(); today.setHours(0,0,0,0);
+var upcoming = meetings.filter(function(m){ return new Date(m.date) >= today; }).sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+var past = meetings.filter(function(m){ return new Date(m.date) < today; }).sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+
+var handleSave = function(data) {
+if (!data.title || !data.date) { toast("Title and Date are required!", "error"); return; }
+var list;
+var isNew = !data.id;
+if (!isNew) {
+list = meetings.map(function(m){ return m.id === data.id ? data : m; });
+toast("Meeting updated!", "success");
+} else {
+list = [Object.assign({}, data, { id: Date.now(), schoolId: mySchoolId, createdAt: new Date().toISOString() })].concat(meetings);
+toast("Meeting added!", "success");
+}
+saveMeetings(list);
+if (data.sendAsNotice && setNotices) {
+var nb = "Meeting: " + data.title;
+if (data.date) nb += "\nDate: " + data.date + (data.time ? " at " + data.time : "");
+if (data.venue) nb += "\nVenue: " + data.venue;
+if (data.attendees) nb += "\nAttendees: " + data.attendees;
+if (data.agenda) nb += "\n\nAgenda:\n" + data.agenda;
+if (data.decision) nb += "\n\nDecision / Summary:\n" + data.decision;
+setNotices(function(p) {
+return [{
+id: Date.now() + 1,
+title: "Meeting Summary: " + data.title,
+body: nb.trim(),
+date: new Date().toISOString().slice(0,10),
+schoolId: mySchoolId,
+type: "meeting",
+postedBy: (loggedInUser && (loggedInUser.name || loggedInUser.username)) || "Principal"
+}].concat(p || []);
+});
+toast("Meeting saved & notice published!", "success");
+}
+setForm(null);
+};
+
+var handleDelete = function(id) {
+if (!window.confirm("Are you sure you want to delete this meeting?")) return;
+saveMeetings(meetings.filter(function(m){ return m.id !== id; }));
+toast("Meeting deleted!", "success");
+};
+
+var fmt = function(d) {
+if (!d) return "-";
+try { return new Date(d).toLocaleDateString("en-IN", {day:"2-digit", month:"short", year:"numeric"}); } catch(e) { return d; }
+};
+
+// ── Form Modal ──
+if (form !== null) {
+var fd = form;
+var setFd = function(k, v) { setForm(function(p){ return Object.assign({}, p, {[k]: v}); }); };
+return (
+<div className="fadeUp">
+<SectionHeader title={fd.id ? "✏️ Edit Meeting" : "➕ New Meeting"} />
+<div style={{background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:18, display:"grid", gap:12}}>
+<div>
+<label style={{fontSize:11,color:T.textMuted,display:"block",marginBottom:4}}>📌 Meeting Title *</label>
+<input value={fd.title||""} onChange={function(e){setFd("title",e.target.value);}}
+placeholder="e.g. Staff Meeting, Parent-Teacher Meet"
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+<div>
+<label style={{fontSize:11,color:T.textMuted,display:"block",marginBottom:4}}>📅 Date *</label>
+<input type="date" value={fd.date||""} onChange={function(e){setFd("date",e.target.value);}}
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,fontFamily:"Outfit,sans-serif"}} />
+</div>
+<div>
+<label style={{fontSize:11,color:T.textMuted,display:"block",marginBottom:4}}>⏰ Time</label>
+<input type="time" value={fd.time||""} onChange={function(e){setFd("time",e.target.value);}}
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,fontFamily:"Outfit,sans-serif"}} />
+</div>
+</div>
+<div>
+<label style={{fontSize:11,color:T.textMuted,display:"block",marginBottom:4}}>📍 Venue</label>
+<input value={fd.venue||""} onChange={function(e){setFd("venue",e.target.value);}}
+placeholder="e.g. Principal Office, Conference Hall"
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
+</div>
+<div>
+<label style={{fontSize:11,color:T.textMuted,display:"block",marginBottom:4}}>Agenda / Purpose</label>
+<textarea value={fd.agenda||""} onChange={function(e){setFd("agenda",e.target.value);}}
+rows={3} placeholder="Write the purpose and agenda of this meeting..."
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,resize:"vertical",boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
+</div>
+<div>
+<label style={{fontSize:11,color:T.textMuted,display:"block",marginBottom:4}}>👥 Attendees</label>
+<input value={fd.attendees||""} onChange={function(e){setFd("attendees",e.target.value);}}
+placeholder="e.g. All Teachers, Class 5 Parents, Management"
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
+</div>
+<div>
+<label style={{fontSize:11,color:T.textMuted,display:"block",marginBottom:4}}>✅ Decision / Summary</label>
+<textarea value={fd.decision||""} onChange={function(e){setFd("decision",e.target.value);}}
+rows={4} placeholder="Write the decisions taken and summary of the meeting..."
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,resize:"vertical",boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
+</div>
+<div style={{background:T.accent+"12",border:"1px solid "+T.accent+"30",borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+<div style={{flex:1,paddingRight:12}}>
+<p style={{fontWeight:700,fontSize:13,color:T.text}}>Publish as Notice</p>
+<p style={{fontSize:11,color:T.textMuted,marginTop:2}}>Send meeting summary to Alerts & Notices — visible to all staff and parents</p>
+</div>
+<button onClick={function(){setFd("sendAsNotice", !fd.sendAsNotice);}} style={{
+width:48,height:26,borderRadius:99,border:"none",cursor:"pointer",
+background: fd.sendAsNotice ? T.accent : T.border,
+position:"relative",transition:"background 0.3s",flexShrink:0,outline:"none"
+}}>
+<div style={{
+position:"absolute",top:3,
+left: fd.sendAsNotice ? 24 : 3,
+width:20,height:20,borderRadius:"50%",background:"#fff",
+transition:"left 0.3s",boxShadow:"0 1px 4px rgba(0,0,0,0.3)"
+}} />
+</button>
+</div>
+<div style={{display:"flex",gap:10,marginTop:4}}>
+<Btn onClick={function(){setForm(null);}} color={T.surface} full>Cancel</Btn>
+<Btn onClick={function(){handleSave(fd);}} color={T.accent} full>{fd.id ? "Update" : "Save Meeting"}</Btn>
+</div>
+</div>
+</div>
+);
+}
+
+var MeetingCard = function(m) {
+var isPast = new Date(m.date) < today;
+return (
+<div key={m.id} style={{background:T.card, border:"1px solid "+(isPast ? T.border : T.accent+"40"), borderRadius:14, padding:"14px 16px", marginBottom:12}}>
+<div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8}}>
+<div style={{flex:1, minWidth:0}}>
+<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
+<p style={{fontWeight:800, fontSize:15, color:T.text, margin:0}}>{m.title}</p>
+{m.sendAsNotice && <span style={{fontSize:9,background:T.accent+"20",color:T.accent,borderRadius:4,padding:"2px 6px",fontWeight:700}}>Notice Sent</span>}
+</div>
+<div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+<span style={{fontSize:11, color:isPast?T.textMuted:T.accent, fontWeight:600}}>📅 {fmt(m.date)}{m.time ? " • ⏰ "+m.time : ""}</span>
+{m.venue && <span style={{fontSize:11, color:T.textMuted}}>📍 {m.venue}</span>}
+</div>
+</div>
+{canEdit && (
+<div style={{display:"flex", gap:6, marginLeft:8}}>
+<button onClick={function(){setForm(Object.assign({},m,{sendAsNotice:false}));}}
+style={{background:T.accent+"20",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,color:T.accent,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontWeight:700}}>✏️</button>
+<button onClick={function(){handleDelete(m.id);}}
+style={{background:"#F7555520",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,color:"#F75555",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontWeight:700}}>🗑️</button>
+</div>
+)}
+</div>
+{m.attendees && (
+<div style={{marginBottom:6}}>
+<span style={{fontSize:11,color:T.textMuted}}>👥 </span>
+<span style={{fontSize:11,color:T.text}}>{m.attendees}</span>
+</div>
+)}
+{m.agenda && (
+<div style={{background:T.surface, borderRadius:8, padding:"8px 10px", marginBottom:6}}>
+<p style={{fontSize:10,color:T.textMuted,fontWeight:700,marginBottom:2}}>📋 AGENDA</p>
+<p style={{fontSize:12,color:T.text,lineHeight:1.5}}>{m.agenda}</p>
+</div>
+)}
+{m.decision && (
+<div style={{background:T.green+"12", border:"1px solid "+T.green+"30", borderRadius:8, padding:"8px 10px"}}>
+<p style={{fontSize:10,color:T.green,fontWeight:700,marginBottom:2}}>✅ DECISION / SUMMARY</p>
+<p style={{fontSize:12,color:T.text,lineHeight:1.5}}>{m.decision}</p>
+</div>
+)}
+{!m.decision && isPast && (
+<div style={{background:T.yellow+"15", border:"1px solid "+T.yellow+"30", borderRadius:8, padding:"6px 10px"}}>
+<p style={{fontSize:11,color:T.yellow}}>Decision / Summary not yet added</p>
+</div>
+)}
+</div>
+);
+};
+
+return (
+<div className="fadeUp">
+<div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16}}>
+<SectionHeader title="📋 Meeting Manager" />
+{canEdit && (
+<Btn onClick={function(){setForm({title:"",date:"",time:"",venue:"",agenda:"",attendees:"",decision:"",sendAsNotice:false});}} color={T.accent}>+ New Meeting</Btn>
+)}
+</div>
+{meetings.length === 0 ? (
+<div style={{background:T.card,border:"1px dashed "+T.border,borderRadius:14,padding:"32px 24px",textAlign:"center"}}>
+<p style={{fontSize:32,marginBottom:8}}>📋</p>
+<p style={{color:T.textMuted,fontSize:13}}>No meetings recorded yet</p>
+{canEdit && <Btn onClick={function(){setForm({title:"",date:"",time:"",venue:"",agenda:"",attendees:"",decision:"",sendAsNotice:false});}} color={T.accent} style={{marginTop:12}}>+ Add First Meeting</Btn>}
+</div>
+) : (
+<div>
+<div style={{display:"flex", gap:8, marginBottom:16}}>
+<button onClick={function(){setTab("upcoming");}} style={{
+flex:1,padding:"9px 0",borderRadius:10,border:"none",cursor:"pointer",
+fontWeight:700,fontSize:13,fontFamily:"Outfit,sans-serif",
+background:tab==="upcoming"?T.accent:T.surface,
+color:tab==="upcoming"?"#fff":T.textMuted
+}}>🔜 Upcoming ({upcoming.length})</button>
+<button onClick={function(){setTab("past");}} style={{
+flex:1,padding:"9px 0",borderRadius:10,border:"none",cursor:"pointer",
+fontWeight:700,fontSize:13,fontFamily:"Outfit,sans-serif",
+background:tab==="past"?T.accent:T.surface,
+color:tab==="past"?"#fff":T.textMuted
+}}>📁 Past ({past.length})</button>
+</div>
+{tab==="upcoming" && (upcoming.length === 0 ? (
+<div style={{background:T.card,border:"1px dashed "+T.border,borderRadius:12,padding:24,textAlign:"center"}}>
+<p style={{color:T.textMuted,fontSize:13}}>No upcoming meetings scheduled</p>
+</div>
+) : upcoming.map(function(m){ return MeetingCard(m); }))}
+{tab==="past" && (past.length === 0 ? (
+<div style={{background:T.card,border:"1px dashed "+T.border,borderRadius:12,padding:24,textAlign:"center"}}>
+<p style={{color:T.textMuted,fontSize:13}}>No past meeting records found</p>
+</div>
+) : past.map(function(m){ return MeetingCard(m); }))}
+</div>
+)}
+</div>
+);
+}
+
 function InventorySection({ ctx }) {
-const { role, loggedInUser, toast, setModal } = ctx;
+const { role, loggedInUser, toast, setModal, notices, setNotices } = ctx;
 const mySchoolId = loggedInUser?.schoolId || null;
 const isPrincipal = ["principal","founder","superadmin","vice_principal"].includes(role);
 const FB_BASE = mySchoolId ? ("schoolshield/inventory/" + mySchoolId) : null;
