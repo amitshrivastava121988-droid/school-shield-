@@ -10665,8 +10665,8 @@ if (watchIdRef.current !== null) return; // already watching
 const id = navigator.geolocation.watchPosition(
 (pos) => {
 const { latitude, longitude, speed: gpsSpeed } = pos.coords;
-var speedKmh = (gpsSpeed != null && gpsSpeed >= 0) ? Math.round(gpsSpeed * 3.6) : 0;
-setCurSpeed(speedKmh);
+var speedKmh = (gpsSpeed != null && gpsSpeed >= 0) ? Math.round(gpsSpeed * 3.6) : -1;
+setCurSpeed(speedKmh >= 0 ? speedKmh : 0);
 setLocEnabled(true);
 setUpdateCount(c => c + 1);
 const data = {
@@ -10868,8 +10868,8 @@ console.warn("GPS temporary error:", err.message);
 },
 {
 enableHighAccuracy: true,
-maximumAge: 10000,
-timeout: Infinity
+maximumAge: 0,
+timeout: 30000
 }
 );
 watchIdRef.current = id;
@@ -11504,11 +11504,11 @@ return (
 <div style={{ borderTop: `1px solid ${T.border}`, padding: "14px 16px", background: T.surface }}>
 {/* Action Buttons */}
 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-<Btn onClick={() => setModal(<BusForm initial={b} onSave={d => { updateBus(b.id, d); setModal(null); toast("Bus updated ✓","success"); }} onClose={() => setModal(null)} />)} color={T.yellow} small>✏️ Edit Bus</Btn>
+{role !== "driver" && <Btn onClick={() => setModal(<BusForm initial={b} onSave={d => { updateBus(b.id, d); setModal(null); toast("Bus updated ✓","success"); }} onClose={() => setModal(null)} />)} color={T.yellow} small>✏️ Edit Bus</Btn>}
 <Btn onClick={() => toggleStatus(b.id)} color={b.status === "running" ? T.yellow : T.green} small>{b.status === "running" ? "✅ Mark Parked" : "🚌 Mark Running"}</Btn>
-<Btn onClick={() => setModal(<AddChildToRouteModal bus={b} students={students} onAdd={cd => { addChildToRoute(b.id, cd); setModal(null); }} onClose={() => setModal(null)} />)} color={T.accent} small>➕ Add Child</Btn>
+{role !== "driver" && <Btn onClick={() => setModal(<AddChildToRouteModal bus={b} students={students} onAdd={cd => { addChildToRoute(b.id, cd); setModal(null); }} onClose={() => setModal(null)} />)} color={T.accent} small>➕ Add Child</Btn>}
 <Btn onClick={() => setModal(<BusLiveMap bus={b} onClose={() => setModal(null)} />)} color="#0ECB81" small>🛰️ Full Map</Btn>
-<Btn onClick={() => deleteBus(b.id)} color={T.red} small>🗑️ Delete</Btn>
+{role !== "driver" && <Btn onClick={() => deleteBus(b.id)} color={T.red} small>🗑️ Delete</Btn>}
 </div>
 {/* 🛰️ Inline Satellite Map */}
 <BusSatelliteMapCard myBus={b} currentStopName={b.currentStop || ""} currentSchool={currentSchool} />
@@ -21534,11 +21534,14 @@ const getPayment = (emp) => {
 try { const s = localStorage.getItem(paymentKey(emp.id, bulkMonth)); return s ? JSON.parse(s) : null; } catch { return null; }
 };
 const handleBulkPay = () => {
-if (bulkSelected.length === 0) { toast("Koi employee select nahi kiya", "error"); return; }
+if (bulkSelected.length === 0) { toast("No employee selected", "error"); return; }
 let count = 0;
 bulkSelected.forEach(id => {
 const emp = employees.find(e => e.id === id);
-if (emp && !isPaid(emp)) { markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Bank Transfer"); count++; }
+if (emp && !isPaid(emp)) {
+var mode = emp.upi ? "UPI" : emp.bankAccount ? "Bank Transfer" : "Cash";
+markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, mode); count++;
+}
 });
 setBulkDone(true);
 setBulkSelected([]);
@@ -21717,7 +21720,7 @@ Pay
 </button>
 )}
 {canEdit && !paid && !emp.bankAccount && (
-<button onClick={() => { markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Cash"); saveEmployees([...employees]); toast(`✅ ${emp.name} cash payment done`, "success"); }}
+<button onClick={() => { markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Cash"); saveEmployees([...employees]); toast(`✅ ${emp.name} cash payment recorded!`, "success"); }}
 style={{background:T.yellow||"#F5A623", color:"#fff", border:"none", borderRadius:7, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
 💵 Cash
 </button>
@@ -21790,27 +21793,29 @@ return (
 </div>
 );
 })()}
-{/* Select All */}
+{/* Select All + Employee List */}
 {canEdit && (() => {
-const unpaid = employees.filter(e => e.active !== false && !isPaid(e) && e.bankAccount);
-if (unpaid.length === 0) return <p style={{color:T.green, fontSize:13, textAlign:"center", padding:16}}>✅ Is mahine sabki payment ho gayi!</p>;
-const allSelected = unpaid.every(e => bulkSelected.includes(e.id));
+const unpaid = employees.filter(function(e){ return e.active !== false && !isPaid(e); });
+const allSelected = unpaid.length > 0 && unpaid.every(function(e){ return bulkSelected.includes(e.id); });
 return (<>
-<div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
+{unpaid.length === 0
+? <p style={{color:T.green, fontSize:13, textAlign:"center", padding:"8px 0 12px"}}>✅ All payments done this month!</p>
+: <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
 <label style={{display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontSize:13, color:T.text, fontWeight:700}}>
 <input type="checkbox" checked={allSelected}
-onChange={() => setBulkSelected(allSelected ? [] : unpaid.map(e=>e.id))}
+onChange={function(){ setBulkSelected(allSelected ? [] : unpaid.map(function(e){return e.id;})); }}
 style={{width:16, height:16, cursor:"pointer"}} />
 Select All Pending ({unpaid.length})
 </label>
 {bulkSelected.length > 0 && (
 <p style={{fontSize:12, color:T.accent, fontWeight:700}}>
-₹{bulkSelected.reduce((s,id)=>{ const e=employees.find(x=>x.id===id); return s+(parseFloat(e?.salary)||0);},0).toLocaleString("en-IN")} selected
+{"₹"+bulkSelected.reduce(function(s,id){ var e=employees.find(function(x){return x.id===id;}); return s+(parseFloat(e&&e.salary)||0);},0).toLocaleString("en-IN")+" selected"}
 </p>
 )}
 </div>
-{/* Employee list with checkboxes */}
-{employees.filter(e => e.active !== false).map(emp => {
+}
+{/* Employee list - ALWAYS show all */}
+{employees.filter(function(e){ return e.active !== false; }).map(function(emp) {
 const paid = isPaid(emp);
 const pmt = getPayment(emp);
 const noBankDetails = !emp.bankAccount;
@@ -21821,9 +21826,9 @@ border:`1px solid ${paid ? T.green+"40" : isChecked ? T.accent+"60" : T.border}`
 opacity: paid ? 0.7 : 1}}>
 <div style={{display:"flex", alignItems:"center", gap:12}}>
 {!paid && (
-<input type="checkbox" checked={isChecked} disabled={noBankDetails}
+<input type="checkbox" checked={isChecked}
 onChange={() => setBulkSelected(p => isChecked ? p.filter(x=>x!==emp.id) : [...p, emp.id])}
-style={{width:18, height:18, cursor: noBankDetails ? "not-allowed" : "pointer"}} />
+style={{width:18, height:18, cursor:"pointer"}} />
 )}
 {paid && <span style={{fontSize:18}}>✅</span>}
 <div style={{flex:1}}>
@@ -21832,17 +21837,111 @@ style={{width:18, height:18, cursor: noBankDetails ? "not-allowed" : "pointer"}}
 <p style={{fontWeight:800, color: paid ? T.green : T.text, fontSize:13}}>₹{emp.salary ? parseFloat(emp.salary).toLocaleString("en-IN") : "—"}</p>
 </div>
 <p style={{fontSize:11, color:T.textMuted}}>{emp.empRole} • {emp.empId||"—"}</p>
-{emp.bankAccount
-? <p style={{fontSize:11, color:T.accent}}>🏦 {emp.bankName||"Bank"} • {emp.bankAccount}{emp.ifsc ? ` • ${emp.ifsc}` : ""}</p>
+{emp.upi
+? <p style={{fontSize:11, color:T.purple}}>📱 UPI: {emp.upi}</p>
+: emp.bankAccount
+? <p style={{fontSize:11, color:T.accent}}>🏦 {emp.bankName||"Bank"} • {emp.bankAccount}{emp.ifsc ? " • "+emp.ifsc : ""}</p>
 : <p style={{fontSize:11, color:T.yellow}}>💵 Cash Payment</p>}
-{paid && pmt && <p style={{fontSize:11, color:T.green, marginTop:2}}>Paid: {pmt.date} • {pmt.mode}</p>}
+{paid && pmt && (
+<div style={{marginTop:6, padding:"6px 10px", background:T.green+"12", borderRadius:8, border:"1px solid "+T.green+"30"}}>
+<p style={{fontSize:12, color:T.green, fontWeight:700}}>✅ Payment Complete</p>
+<p style={{fontSize:11, color:T.textMuted, marginTop:2}}>📅 Date: {pmt.date} {pmt.time ? "• "+pmt.time : ""}</p>
+<p style={{fontSize:11, color:T.textMuted}}>💳 Mode: {pmt.mode || "—"} • ₹{pmt.amount ? parseFloat(pmt.amount).toLocaleString("en-IN") : "—"}</p>
 </div>
-{/* Cash pay button for no-bank employees */}
-{!paid && !emp.bankAccount && canEdit && (
-<button onClick={() => { markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Cash"); saveEmployees([...employees]); toast(`✅ ${emp.name} cash payment done`, "success"); }}
-style={{background:T.yellow||"#F5A623", color:"#fff", border:"none", borderRadius:8, padding:"6px 12px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"Outfit,sans-serif", flexShrink:0}}>
-💵 Cash
+)}
+</div>
+{/* Pay buttons with confirmation modal */}
+{!paid && canEdit && (
+<div style={{flexShrink:0}}>
+{emp.upi && (
+<button onClick={function(){
+setModal(
+<ModalBox title="📱 UPI Payment" onClose={function(){setModal(null);}}>
+<div style={{padding:"4px 0 12px"}}>
+<p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>{emp.name} — UPI Payment</p>
+<div style={{background:T.surface,borderRadius:10,padding:"12px 14px",marginBottom:12,border:"1px solid "+T.border}}>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:4}}>UPI ID:</p>
+<p style={{fontSize:16,fontWeight:800,color:T.accent}}>{emp.upi}</p>
+<p style={{fontSize:13,color:T.text,marginTop:6}}>Amount: <b style={{color:T.green}}>₹{parseFloat(emp.salary).toLocaleString("en-IN")}</b></p>
+</div>
+<Btn onClick={function(){
+var upiUrl = "upi://pay?pa="+emp.upi+"&pn="+encodeURIComponent(emp.name)+"&am="+parseFloat(emp.salary)+"&cu=INR&tn="+encodeURIComponent("Salary "+bulkMonth);
+window.open(upiUrl, "_blank");
+}} color={T.purple} full>📱 Open UPI App</Btn>
+<div style={{margin:"10px 0",textAlign:"center",fontSize:11,color:T.textMuted}}>— Confirm after making payment —</div>
+<Btn onClick={function(){
+markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "UPI");
+saveEmployees([...employees]);
+setModal(null);
+toast("✅ "+emp.name+" UPI payment recorded!", "success");
+}} color={T.green} full>✅ Yes, Payment Done</Btn>
+</div>
+</ModalBox>
+);
+}} style={{background:T.purple,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",marginBottom:4,display:"block",width:"100%"}}>
+📱 UPI Pay
 </button>
+)}
+{emp.bankAccount && (
+<button onClick={function(){
+setModal(
+<ModalBox title="🏦 Bank Transfer" onClose={function(){setModal(null);}}>
+<div style={{padding:"4px 0 12px"}}>
+<p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>{emp.name} — Bank Transfer</p>
+<div style={{background:T.surface,borderRadius:10,padding:"12px 14px",marginBottom:12,border:"1px solid "+T.border}}>
+<p style={{fontSize:11,color:T.textMuted}}>Bank</p>
+<p style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:8}}>{emp.bankName||"—"}</p>
+<p style={{fontSize:11,color:T.textMuted}}>Account Number</p>
+<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+<p style={{fontSize:15,fontWeight:800,color:T.accent,flex:1}}>{emp.bankAccount}</p>
+<button onClick={function(){ navigator.clipboard&&navigator.clipboard.writeText(emp.bankAccount); toast("Account no. copied!","success"); }}
+style={{background:T.accent+"20",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,color:T.accent,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>📋 Copy</button>
+</div>
+{emp.ifsc && (<><p style={{fontSize:11,color:T.textMuted}}>IFSC Code</p>
+<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+<p style={{fontSize:14,fontWeight:700,color:T.text,flex:1}}>{emp.ifsc}</p>
+<button onClick={function(){ navigator.clipboard&&navigator.clipboard.writeText(emp.ifsc); toast("IFSC copied!","success"); }}
+style={{background:T.accent+"20",border:"none",borderRadius:6,padding:"4px 8px",fontSize:11,color:T.accent,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>📋 Copy</button>
+</div></>)}
+<p style={{fontSize:13,color:T.text,marginTop:4}}>Amount: <b style={{color:T.green}}>₹{parseFloat(emp.salary).toLocaleString("en-IN")}</b></p>
+</div>
+<div style={{margin:"10px 0",textAlign:"center",fontSize:11,color:T.textMuted}}>— Confirm after bank transfer —</div>
+<Btn onClick={function(){
+markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Bank Transfer");
+saveEmployees([...employees]);
+setModal(null);
+toast("✅ "+emp.name+" bank transfer recorded!", "success");
+}} color={T.green} full>✅ Yes, Transfer Done</Btn>
+</div>
+</ModalBox>
+);
+}} style={{background:T.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",marginBottom:4,display:"block",width:"100%"}}>
+🏦 Bank Pay
+</button>
+)}
+{!emp.bankAccount && !emp.upi && (
+<button onClick={function(){
+setModal(
+<ModalBox title="💵 Cash Payment" onClose={function(){setModal(null);}}>
+<div style={{padding:"4px 0 12px"}}>
+<p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>{emp.name} — Cash Payment</p>
+<div style={{background:T.surface,borderRadius:10,padding:"12px 14px",marginBottom:12,border:"1px solid "+T.border}}>
+<p style={{fontSize:13,color:T.text}}>Amount: <b style={{color:T.green}}>₹{parseFloat(emp.salary||0).toLocaleString("en-IN")}</b></p>
+</div>
+<Btn onClick={function(){
+markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Cash");
+saveEmployees([...employees]);
+setModal(null);
+toast("✅ "+emp.name+" cash payment recorded!", "success");
+}} color={T.green} full>✅ Yes, Cash Paid</Btn>
+</div>
+</ModalBox>
+);
+}} style={{background:T.yellow||"#F5A623",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Outfit,sans-serif",display:"block",width:"100%"}}>
+💵 Cash Pay
+</button>
+)}
+</div>
 )}
 {/* Edit/Delete payment buttons */}
 {paid && canEdit && (
@@ -21876,11 +21975,29 @@ toast(`🗑️ Payment removed`, "success");
 {/* Pay button */}
 {bulkSelected.length > 0 && (
 <div style={{position:"sticky", bottom:16, marginTop:16}}>
-<button onClick={handleBulkPay}
+<button onClick={function(){
+var totalAmt = bulkSelected.reduce(function(s,id){ var e=employees.find(function(x){return x.id===id;}); return s+(parseFloat(e&&e.salary)||0); },0);
+setModal(
+<ModalBox title="💸 Bulk Payment Confirm" onClose={function(){setModal(null);}}>
+<div style={{padding:"4px 0 12px"}}>
+<p style={{fontSize:13,color:T.textMuted,marginBottom:12}}>{bulkSelected.length} employees payment confirm?</p>
+<div style={{background:T.surface,borderRadius:10,padding:"12px 14px",marginBottom:14,border:"1px solid "+T.border}}>
+<p style={{fontSize:13,color:T.text}}>Total Employees: <b style={{color:T.accent}}>{bulkSelected.length}</b></p>
+<p style={{fontSize:15,fontWeight:800,color:T.green,marginTop:4}}>Total Amount: ₹{totalAmt.toLocaleString("en-IN")}</p>
+<p style={{fontSize:11,color:T.textMuted,marginTop:4}}>Note: Bank — Bank Transfer, UPI — UPI, Others — Cash</p>
+</div>
+<Btn onClick={function(){
+handleBulkPay();
+setModal(null);
+}} color={T.green} full>✅ Yes, Pay All</Btn>
+</div>
+</ModalBox>
+);
+}}
 style={{width:"100%", padding:"14px", background:"linear-gradient(135deg,#0ECB81,#0BA368)", color:"#fff",
 border:"none", borderRadius:14, fontSize:15, fontWeight:800, cursor:"pointer",
 fontFamily:"Outfit,sans-serif", boxShadow:"0 4px 20px #0ECB8140"}}>
-💸 Pay {bulkSelected.length} Employees — ₹{bulkSelected.reduce((s,id)=>{ const e=employees.find(x=>x.id===id); return s+(parseFloat(e?.salary)||0);},0).toLocaleString("en-IN")}
+{"💸 Pay "+bulkSelected.length+" Employees — ₹"+bulkSelected.reduce(function(s,id){ var e=employees.find(function(x){return x.id===id;}); return s+(parseFloat(e&&e.salary)||0);},0).toLocaleString("en-IN")}
 </button>
 </div>
 )}
