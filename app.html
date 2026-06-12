@@ -572,7 +572,6 @@ const ALL_PERM_SECTIONS = [
 {key:"healthgrowth",       label:"Child Health & Growth", icon:"📏"},
 {key:"onlineclasses",     label:"Online Classes",     icon:"🎥"},
 {key:"employees",         label:"Employees",          icon:"👔"},
-{key:"employeetransport",  label:"Employee Transport",  icon:"🚌"},
 {key:"staffdirectory",    label:"Staff Directory",    icon:"📋"},
 {key:"inventory",         label:"Inventory",          icon:"📦"},
 {key:"allpickup",         label:"Authorized Pickup",  icon:"🚗"},
@@ -2635,7 +2634,7 @@ superadmin: [
 ],
 founder: [
 {key:"dashboard",icon:"📊",label:"dashboard"}, {key:"students",icon:"👨‍🎓",label:"students"},
-{key:"teachers",icon:"👨‍🏫",label:"teachers"}, {key:"employees",icon:"👔",label:"Employees"},{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+{key:"teachers",icon:"👨‍🏫",label:"teachers"}, {key:"employees",icon:"👔",label:"Employees"},
 {key:"leaves",icon:"📋",label:"leaveApplications"}, {key:"fees",icon:"💳",label:"fees"},
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"}, {key:"transport",icon:"🚌",label:"transport"},
 {key:"timetable",icon:"📅",label:"timetable"}, {key:"canteen",icon:"🍱",label:"canteen"},
@@ -2650,7 +2649,7 @@ founder: [
 ],
 principal: [
 {key:"dashboard",icon:"📊",label:"dashboard"}, {key:"students",icon:"👨‍🎓",label:"students"},
-{key:"teachers",icon:"👨‍🏫",label:"teachers"}, {key:"employees",icon:"👔",label:"Employees"},{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+{key:"teachers",icon:"👨‍🏫",label:"teachers"}, {key:"employees",icon:"👔",label:"Employees"},
 {key:"leaves",icon:"📋",label:"leaveApplications"}, {key:"fees",icon:"💳",label:"fees"},
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"}, {key:"transport",icon:"🚌",label:"transport"},
 {key:"timetable",icon:"📅",label:"timetable"}, {key:"canteen",icon:"🍱",label:"canteen"},
@@ -2676,7 +2675,8 @@ staff: [
 {key:"unifiedcalendar",icon:"📅",label:"Calendar & Attendance"},
 {key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"visitors",icon:"🚪",label:"Visitors"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+
+{key:"busroute",icon:"🚌",label:"busRoute"},
 ],
 reception: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"students",icon:"👨‍🎓",label:"students"},
@@ -2686,7 +2686,8 @@ reception: [
 {key:"visitors",icon:"🚪",label:"Visitors"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"allpickup",icon:"🚗",label:"Authorized Pickup"},
 {key:"letterscerts",icon:"🗂️",label:"Letters & Certificates"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+
+{key:"busroute",icon:"🚌",label:"busRoute"},
 ],
 accountant: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"expenses",icon:"💰",label:"Expenses"},
@@ -2697,7 +2698,8 @@ accountant: [
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"},{key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"reachedhome",icon:"🏠",label:"Reached Home"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+
+{key:"busroute",icon:"🚌",label:"busRoute"},
 ],
 librarian: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"library",icon:"📚",label:"Library"},
@@ -2707,7 +2709,8 @@ librarian: [
 {key:"disciplinereport",icon:"📋",label:"Discipline Report"},
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"},{key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"reachedhome",icon:"🏠",label:"Reached Home"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+
+{key:"busroute",icon:"🚌",label:"busRoute"},
 ],
 teacher: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"students",icon:"👨‍🎓",label:"students"},
@@ -2722,7 +2725,8 @@ teacher: [
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+
+{key:"busroute",icon:"🚌",label:"busRoute"},
 ],
 parent: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"mychild",icon:"👶",label:"myChild"},
@@ -2746,7 +2750,6 @@ driver: [
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"},{key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"leaves",icon:"📋",label:"leaveApplications"},
 {key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"reachedhome",icon:"🏠",label:"Reached Home"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
 ],
 coordinator: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"students",icon:"👨‍🎓",label:"students"},
@@ -2755,13 +2758,13 @@ coordinator: [
 {key:"homework",icon:"📝",label:"homework"},{key:"exams",icon:"📝",label:"Exams"},
 {key:"disciplinereport",icon:"📋",label:"Discipline Report"},
 {key:"schoolpage",icon:"🏫",label:"School Page"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
+
+{key:"busroute",icon:"🚌",label:"busRoute"},
 ],
 transport_head: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"transport",icon:"🚌",label:"transport"},
 {key:"students",icon:"👨‍🎓",label:"students"},
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"},{key:"schoolpage",icon:"🏫",label:"School Page"},
-{key:"employeetransport",icon:"🚌",label:"Employee Transport"},
 ],
 };
 // ── Helper: resolve navItems for any role ─────────────────────────────────────
@@ -3485,7 +3488,6 @@ if (section === "supportsettings") return <SupportSettingsSection />;
 if (section === "backup") return <SuperAdminBackupSection ctx={ctx} />;
 if (section === "changepassword") return <SuperAdminChangePasswordSection ctx={ctx} />;
 if (section === "employees") return <EmployeesSection ctx={ctx} />;
-if (section === "employeetransport") return <EmployeeTransportSection ctx={ctx} />;
 if (section === "staffdirectory") return <StaffDirectorySection ctx={ctx} />;
 if (section === "revenue") return <RevenueSection ctx={ctx} />;
 if (section === "analytics") return <AnalyticsSection ctx={ctx} />;
@@ -11348,7 +11350,7 @@ display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrin
 );
 }
 function TransportSection({ ctx }) {
-const { l, buses, setBuses, toast, setModal, setUserAccounts, currentSchool, students, setStudents, role, notices, setNotices, loggedInUser, stopRequests, setStopRequests } = ctx;
+const { l, buses, setBuses, toast, setModal, setUserAccounts, currentSchool, students, setStudents, role, notices, setNotices, loggedInUser, stopRequests, setStopRequests, teachers, employees } = ctx;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const myBuses = buses.filter(b => sameId(b.schoolId, mySchoolId));
 const canManageTransport = ["principal","founder","superadmin","vice_principal","transport_head"].includes(role);
@@ -11538,6 +11540,7 @@ return (
 {role !== "driver" && <Btn onClick={() => setModal(<BusForm initial={b} onSave={d => { updateBus(b.id, d); setModal(null); toast("Bus updated ✓","success"); }} onClose={() => setModal(null)} />)} color={T.yellow} small>✏️ Edit Bus</Btn>}
 <Btn onClick={() => toggleStatus(b.id)} color={b.status === "running" ? T.yellow : T.green} small>{b.status === "running" ? "✅ Mark Parked" : "🚌 Mark Running"}</Btn>
 {role !== "driver" && <Btn onClick={() => setModal(<AddChildToRouteModal bus={b} students={students} onAdd={cd => { addChildToRoute(b.id, cd); setModal(null); }} onClose={() => setModal(null)} />)} color={T.accent} small>➕ Add Child</Btn>}
+{role !== "driver" && <Btn onClick={() => setModal(<AddStaffToRouteModal bus={b} teachers={teachers||[]} employees={employees||[]} schoolId={mySchoolId} onAdd={function(sd){ addChildToRoute(b.id, sd); setModal(null); }} onClose={() => setModal(null)} />)} color={T.purple} small>👔 Add Staff</Btn>}
 <Btn onClick={() => setModal(<BusLiveMap bus={b} onClose={() => setModal(null)} />)} color="#0ECB81" small>🛰️ Full Map</Btn>
 {role !== "driver" && <Btn onClick={() => deleteBus(b.id)} color={T.red} small>🗑️ Delete</Btn>}
 </div>
@@ -11591,12 +11594,17 @@ return (
 {/* ── Stop-by-Stop Route Timeline ── */}
 <PrincipalBusRouteTimeline bus={b} currentSchool={currentSchool} />
 {/* Children on Route */}
-<p style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 8 }}>👦 Children on This Route ({routeKids.length})</p>
-{routeKids.length === 0 ? (
+{(function(){
+var studentKids = routeKids.filter(function(c){ return !c.isEmployee; });
+var staffKids = routeKids.filter(function(c){ return c.isEmployee; });
+return (
+<div>
+<p style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 8 }}>👦 Children on This Route ({studentKids.length})</p>
+{studentKids.length === 0 ? (
 <p style={{ fontSize: 12, color: T.textMuted, fontStyle: "italic", marginBottom: 8 }}>Koi child add nahi. "Add Child" dabao.</p>
 ) : (
 <div style={{ display: "grid", gap: 8, marginBottom: 8 }}>
-{routeKids.map((c, i) => {
+{studentKids.map((c, i) => {
 const stu = students.find(s => s.id === c.studentId);
 return (
 <div key={i} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 12px" }}>
@@ -11633,6 +11641,45 @@ return (
 })}
 </div>
 )}
+{staffKids.length > 0 && (
+<div style={{marginTop:12}}>
+<p style={{ fontSize: 13, fontWeight: 800, color: T.purple, marginBottom: 8 }}>👔 Staff on This Route ({staffKids.length})</p>
+<div style={{ display: "grid", gap: 8, marginBottom: 8 }}>
+{staffKids.map((c, i) => (
+<div key={i} style={{ background: T.card, border: `1px solid ${T.purple}30`, borderRadius: 10, padding: "10px 12px" }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+<div style={{ flex: 1 }}>
+<p style={{ fontSize: 13, fontWeight: 700, color: T.text }}>👔 {c.studentName}</p>
+<p style={{ fontSize: 11, color: T.textMuted }}>{c.empRole || "Staff"}</p>
+<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 6 }}>
+<div style={{ background: T.surface, borderRadius: 6, padding: "4px 8px" }}>
+<p style={{ fontSize: 9, color: T.textMuted }}>STOP</p>
+<p style={{ fontSize: 11, color: T.text, fontWeight: 600 }}>{c.stop || "—"}</p>
+</div>
+<div style={{ background: T.surface, borderRadius: 6, padding: "4px 8px" }}>
+<p style={{ fontSize: 9, color: T.textMuted }}>PHONE</p>
+<p style={{ fontSize: 11, color: T.accent, fontWeight: 600 }}>{c.phone || "—"}</p>
+</div>
+<div style={{ background: T.surface, borderRadius: 6, padding: "4px 8px" }}>
+<p style={{ fontSize: 9, color: T.textMuted }}>PICKUP TIME</p>
+<p style={{ fontSize: 11, color: T.text, fontWeight: 600 }}>{c.pickupTime || "—"}</p>
+</div>
+<div style={{ background: T.surface, borderRadius: 6, padding: "4px 8px" }}>
+<p style={{ fontSize: 9, color: T.textMuted }}>DROP TIME</p>
+<p style={{ fontSize: 11, color: T.text, fontWeight: 600 }}>{c.dropTime || "—"}</p>
+</div>
+</div>
+</div>
+<Btn onClick={() => removeChildFromRoute(b.id, c.studentId)} color={T.red} small>✕</Btn>
+</div>
+</div>
+))}
+</div>
+</div>
+)}
+</div>
+);
+})()}
 </div>
 )}
 </Card>
@@ -11645,6 +11692,103 @@ return (
 );
 }
 // ─── TRANSPORT STOP REQUESTS TAB ─────────────────────────────────────────────
+// ─── ADD STAFF TO ROUTE MODAL ────────────────────────────────────────────────
+function AddStaffToRouteModal({ bus, teachers, employees, schoolId, onAdd, onClose }) {
+var busSchoolId = bus.schoolId || schoolId || null;
+var allStaff = React.useMemo(function() {
+var tList = (teachers||[]).filter(function(t){ return !t.schoolId || sameId(t.schoolId, busSchoolId); }).map(function(t){ return Object.assign({}, t, { _label: t.subject || "Teacher" }); });
+var eList = (employees||[]).filter(function(e){ return !e.schoolId || sameId(e.schoolId, busSchoolId); }).map(function(e){ return Object.assign({}, e, { _label: e.empRole || "Staff" }); });
+return tList.concat(eList);
+}, [teachers, employees, busSchoolId]);
+var alreadyAdded = (bus.routeChildren||[]).filter(function(c){ return c.isEmployee; }).map(function(c){ return String(c.studentId); });
+var available = allStaff.filter(function(s){ return !alreadyAdded.includes(String(s.id)); });
+var stops = bus.stops || [];
+var [sel, setSel] = React.useState("");
+var [stop, setStop] = React.useState("");
+var [pTime, setPTime] = React.useState("");
+var [dTime, setDTime] = React.useState("");
+var [query, setQuery] = React.useState("");
+var [dropOpen, setDropOpen] = React.useState(false);
+var filtered = query.trim() === "" ? available : available.filter(function(s){
+return (s.name||"").toLowerCase().includes(query.toLowerCase()) || (s._label||"").toLowerCase().includes(query.toLowerCase());
+});
+var selObj = available.find(function(s){ return String(s.id) === sel; });
+React.useEffect(function(){
+if (!stop) return;
+var ms = stops.find(function(s){ return stopName(s) === stop; });
+if (ms && typeof ms === "object") {
+if (ms.time) setPTime(ms.time);
+if (ms.dropTime) setDTime(ms.dropTime);
+}
+}, [stop]);
+var doAdd = function(){
+if (!selObj) { alert("Please select a staff member"); return; }
+onAdd({
+studentId: selObj.id,
+studentName: selObj.name,
+empRole: selObj._label,
+phone: selObj.phone || "",
+stop: stop,
+pickupTime: pTime,
+dropTime: dTime,
+isEmployee: true,
+});
+};
+return (
+<ModalBox title={"👔 Add Staff — Bus " + bus.busNo} onClose={onClose} wide>
+<div style={{padding:"4px 0 12px"}}>
+<div style={{marginBottom:12, position:"relative"}}>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Search Staff / Teacher *</p>
+<input value={query} onChange={function(e){ setQuery(e.target.value); setSel(""); setDropOpen(true); }}
+onFocus={function(){ setDropOpen(true); }}
+placeholder="Type name to search..."
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
+{dropOpen && query && filtered.length > 0 && (
+<div style={{position:"absolute",top:"100%",left:0,right:0,background:T.card,border:"1px solid "+T.border,borderRadius:8,zIndex:99,maxHeight:160,overflowY:"auto"}}>
+{filtered.slice(0,10).map(function(s){
+return (
+<div key={s.id} onClick={function(){ setSel(String(s.id)); setQuery(s.name); setDropOpen(false); }}
+style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid "+T.border+"40",display:"flex",alignItems:"center",gap:8}}>
+<span>👔</span>
+<div>
+<p style={{fontSize:13,fontWeight:600,color:T.text,margin:0}}>{s.name}</p>
+<p style={{fontSize:11,color:T.textMuted,margin:0}}>{s._label}</p>
+</div>
+</div>
+);
+})}
+</div>
+)}
+</div>
+<div style={{marginBottom:12}}>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Bus Stop</p>
+<select value={stop} onChange={function(e){ setStop(e.target.value); }}
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}}>
+<option value="">— Select Stop —</option>
+{stops.map(function(s,i){ var sn = stopName(s); return <option key={i} value={sn}>{sn}</option>; })}
+</select>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+<div>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Pickup Time</p>
+<input type="time" value={pTime} onChange={function(e){ setPTime(e.target.value); }}
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}} />
+</div>
+<div>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Drop Time</p>
+<input type="time" value={dTime} onChange={function(e){ setDTime(e.target.value); }}
+style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}} />
+</div>
+</div>
+<div style={{display:"flex",gap:8}}>
+<Btn onClick={onClose} color={T.surface} full>Cancel</Btn>
+<Btn onClick={doAdd} color={T.purple} full>Add to Route</Btn>
+</div>
+</div>
+</ModalBox>
+);
+}
+
 function TransportStopRequestsTab({ myStopRequests, setStopRequests, myBuses, setBuses, students, toast, mySchoolId }) {
 const [filter, setFilter] = React.useState("all"); // all | pending | approved | rejected
 const [rejectModal, setRejectModal] = React.useState(null); // request being rejected
@@ -16900,16 +17044,29 @@ fontSize:12, color:T.textMuted, fontWeight:800
 );
 }
 function BusRouteSection({ ctx }) {
-const { l, buses, setBuses, students, setAlerts, loggedInUser, currentSchool, toast, setModal } = ctx;
+const { l, buses, setBuses, students, setAlerts, loggedInUser, currentSchool, toast, setModal, teachers, employees } = ctx;
 const role = loggedInUser?.role || "";
 const isParent = role === "parent";
-const viewOnlyRoles = ["principal","transport_head","teacher","staff","librarian","receptionist","accountant"];
-const [busTab, setBusTab] = React.useState(viewOnlyRoles.includes(role) ? "routes" : (role==="parent" ? "my" : "my"));
+const isEmployee = !isParent && !["principal","founder","superadmin","vice_principal","transport_head","driver"].includes(role);
+const viewOnlyRoles = ["principal","transport_head","teacher","staff","librarian","receptionist","accountant","coordinator","reception","librarian"];
+const [busTab, setBusTab] = React.useState(isParent || isEmployee ? "my" : "routes");
+
+// Employee: find their assigned bus from routeChildren
+var myEmployeeBus = React.useMemo(function() {
+if (!isEmployee) return null;
+var myId = loggedInUser && loggedInUser.id;
+var myName = loggedInUser && (loggedInUser.name || loggedInUser.username);
+return (buses||[]).find(function(b) {
+return (b.routeChildren||[]).some(function(c) {
+return c.isEmployee && (String(c.studentId) === String(myId) || c.studentName === myName);
+});
+}) || null;
+}, [isEmployee, buses, loggedInUser]);
+
 // ── PARENT VIEW ──
 if (isParent) {
 return (
 <div className="fadeUp">
-{/* Toggle: My Route | All Routes */}
 <div style={{display:"flex",background:"#1A2236",borderRadius:14,padding:4,marginBottom:14,gap:4}}>
 <button onClick={()=>setBusTab("my")}
 style={{flex:1,padding:"9px 0",borderRadius:10,border:"none",fontFamily:"Outfit,sans-serif",fontWeight:800,fontSize:13,cursor:"pointer",transition:"all .2s",
@@ -16925,6 +17082,37 @@ boxShadow:busTab==="routes"?`0 2px 10px ${T.green}50`:"none"}}>
 </button>
 </div>
 {busTab === "my" ? <ParentBusRouteView ctx={ctx} /> : <AllRoutesView ctx={ctx} />}
+</div>
+);
+}
+
+// ── EMPLOYEE VIEW (teacher, staff etc with bus assigned) ──
+if (isEmployee) {
+return (
+<div className="fadeUp">
+<SectionHeader title="🚌 My Bus Route" />
+{!myEmployeeBus ? (
+<div style={{background:T.card,border:"1px dashed "+T.border,borderRadius:14,padding:"32px 24px",textAlign:"center"}}>
+<p style={{fontSize:32,marginBottom:8}}>🚌</p>
+<p style={{color:T.textMuted,fontSize:13}}>You are not assigned to any bus route yet.</p>
+<p style={{color:T.textMuted,fontSize:11,marginTop:4}}>Contact your principal or transport head to get assigned.</p>
+</div>
+) : (
+<div>
+<div style={{background:T.card,border:"1px solid "+T.accent+"40",borderRadius:14,padding:"14px 16px",marginBottom:14}}>
+<p style={{fontWeight:800,fontSize:15,color:T.text,marginBottom:3}}>🚌 Bus {myEmployeeBus.busNo}</p>
+<p style={{fontSize:12,color:T.textMuted}}>{myEmployeeBus.route||"Route not set"}</p>
+{myEmployeeBus.driverName && <p style={{fontSize:12,color:T.textMuted}}>👤 Driver: {myEmployeeBus.driverName} {myEmployeeBus.driverPhone ? "• "+myEmployeeBus.driverPhone : ""}</p>}
+<div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+<span style={{fontSize:11,background:myEmployeeBus.status==="running"?T.green+"20":T.yellow+"20",color:myEmployeeBus.status==="running"?T.green:T.yellow,borderRadius:6,padding:"2px 8px",fontWeight:700}}>
+{myEmployeeBus.status==="running"?"🟢 Running":"🟡 Parked"}
+</span>
+</div>
+</div>
+<BusSatelliteMapCard myBus={myEmployeeBus} currentStopName={myEmployeeBus.currentStop||""} currentSchool={currentSchool} />
+<PrincipalBusRouteTimeline bus={myEmployeeBus} currentSchool={currentSchool} />
+</div>
+)}
 </div>
 );
 }
@@ -21280,236 +21468,6 @@ style={{width:"100%", padding:"13px", background:d.color||T.accent, border:"none
 </ModalBox>
 );
 }
-// ─── EMPLOYEE TRANSPORT SECTION ──────────────────────────────────────────────
-function EmployeeTransportSection({ ctx }) {
-const { role, loggedInUser, buses, setBuses, toast, setModal, currentSchool, teachers, employees } = ctx;
-const mySchoolId = (loggedInUser && loggedInUser.schoolId) || null;
-const canManage = ["principal","founder","vice_principal","transport_head"].includes(role);
-const isViewOnly = !canManage;
-
-// All employees + teachers combined
-var allStaff = React.useMemo(function() {
-var tList = (teachers||[]).filter(function(t){ return !t.schoolId || sameId(t.schoolId, mySchoolId); }).map(function(t){ return Object.assign({}, t, { _type: "teacher", _label: t.subject || "Teacher" }); });
-var eList = (employees||[]).filter(function(e){ return !e.schoolId || sameId(e.schoolId, mySchoolId); }).map(function(e){ return Object.assign({}, e, { _type: "employee", _label: e.empRole || "Staff" }); });
-return tList.concat(eList);
-}, [teachers, employees, mySchoolId]);
-
-var allBuses = (buses||[]).filter(function(b){ return !b.schoolId || sameId(b.schoolId, mySchoolId); });
-
-// View-only roles: sirf apni assigned bus dikhao
-var myBuses = React.useMemo(function() {
-if (canManage) return allBuses;
-// Find logged-in user's id — match in routeChildren as employee
-var myId = loggedInUser && loggedInUser.id;
-var myName = loggedInUser && (loggedInUser.name || loggedInUser.username);
-return allBuses.filter(function(b) {
-return (b.routeChildren||[]).some(function(c) {
-return c.isEmployee && (String(c.studentId) === String(myId) || c.studentName === myName);
-});
-});
-}, [allBuses, canManage, loggedInUser]);
-
-// Save buses to Firebase
-var saveBus = function(updated) {
-setBuses(updated);
-if (window.firebaseReady && mySchoolId) {
-try { window.db.ref("schoolshield/schools/" + mySchoolId + "/buses").set(JSON.stringify(updated)); } catch(e) {}
-}
-};
-
-var addEmpToRoute = function(busId, empData) {
-var updated = allBuses.map(function(b) {
-if (b.id !== busId) return b;
-var exists = (b.routeChildren||[]).find(function(c){ return String(c.studentId) === String(empData.studentId); });
-if (exists) { toast("Already added to this bus!", "error"); return b; }
-return Object.assign({}, b, { routeChildren: (b.routeChildren||[]).concat([empData]) });
-});
-saveBus(updated);
-toast("Employee added to route!", "success");
-};
-
-var removeEmpFromRoute = function(busId, empId) {
-var updated = allBuses.map(function(b) {
-if (b.id !== busId) return b;
-return Object.assign({}, b, { routeChildren: (b.routeChildren||[]).filter(function(c){ return String(c.studentId) !== String(empId); }) });
-});
-saveBus(updated);
-toast("Removed from route!", "success");
-};
-
-var [selectedBusId, setSelectedBusId] = React.useState(null);
-
-// Each bus — show employees separately
-return (
-<div className="fadeUp">
-<SectionHeader title="🚌 Employee Transport" />
-<p style={{color:T.textMuted,fontSize:12,marginBottom:16}}>Assign employees and teachers to bus routes — same as student transport</p>
-{myBuses.length === 0 ? (
-<div style={{background:T.card,border:"1px dashed "+T.border,borderRadius:14,padding:"32px 24px",textAlign:"center"}}>
-<p style={{fontSize:32,marginBottom:8}}>🚌</p>
-<p style={{color:T.textMuted,fontSize:13}}>{canManage ? "No buses added yet. Add buses in Transport section first." : "You are not assigned to any bus route yet. Contact your principal or transport head."}</p>
-</div>
-) : myBuses.map(function(b) {
-var empKids = (b.routeChildren||[]).filter(function(c){ return c.isEmployee === true; });
-var isOpen = selectedBusId === b.id;
-return (
-<div key={b.id} style={{background:T.card,border:"1px solid "+(isOpen?T.accent:T.border),borderRadius:14,marginBottom:12,overflow:"hidden"}}>
-<div onClick={function(){setSelectedBusId(isOpen?null:b.id);}} style={{padding:"14px 16px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-<div>
-<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-<p style={{fontWeight:800,fontSize:15,color:T.text}}>🚌 Bus {b.busNo}</p>
-<span style={{fontSize:11,background:T.accent+"20",color:T.accent,borderRadius:6,padding:"2px 8px",fontWeight:700}}>{empKids.length} Staff</span>
-</div>
-<p style={{fontSize:12,color:T.textMuted}}>{b.route||"Route not set"} {b.driverName ? "• "+b.driverName : ""}</p>
-</div>
-<span style={{color:T.textMuted,fontSize:18}}>{isOpen?"▲":"▼"}</span>
-</div>
-{isOpen && (
-<div style={{borderTop:"1px solid "+T.border,padding:"14px 16px",background:T.surface}}>
-{canManage && (
-<Btn onClick={function(){
-setModal(
-<ModalBox title={"Add Staff to Bus "+b.busNo} onClose={function(){setModal(null);}}>
-<AddEmpToRouteModal bus={b} allStaff={allStaff} onAdd={function(data){ addEmpToRoute(b.id, data); setModal(null); }} onClose={function(){setModal(null);}} />
-</ModalBox>
-);
-}} color={T.accent} small style={{marginBottom:12}}>+ Add Staff Member</Btn>
-)}
-{empKids.length === 0 ? (
-<p style={{color:T.textMuted,fontSize:12,fontStyle:"italic"}}>No staff assigned to this bus yet</p>
-) : (
-<div style={{display:"grid",gap:8}}>
-{empKids.map(function(c,i){
-var staffObj = allStaff.find(function(s){ return String(s.id)===String(c.studentId); });
-return (
-<div key={i} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 12px"}}>
-<div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-<div style={{flex:1}}>
-<p style={{fontSize:13,fontWeight:700,color:T.text}}>👔 {c.studentName}</p>
-<p style={{fontSize:11,color:T.textMuted}}>{staffObj ? (staffObj._label) : (c.empRole||"Staff")}</p>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginTop:6}}>
-<div style={{background:T.surface,borderRadius:6,padding:"4px 8px"}}>
-<p style={{fontSize:9,color:T.textMuted}}>STOP</p>
-<p style={{fontSize:11,color:T.text,fontWeight:600}}>{c.stop||"—"}</p>
-</div>
-<div style={{background:T.surface,borderRadius:6,padding:"4px 8px"}}>
-<p style={{fontSize:9,color:T.textMuted}}>PICKUP TIME</p>
-<p style={{fontSize:11,color:T.text,fontWeight:600}}>{c.pickupTime||"—"}</p>
-</div>
-<div style={{background:T.surface,borderRadius:6,padding:"4px 8px"}}>
-<p style={{fontSize:9,color:T.textMuted}}>PHONE</p>
-<p style={{fontSize:11,color:T.accent,fontWeight:600}}>{staffObj?staffObj.phone||"—":c.phone||"—"}</p>
-</div>
-<div style={{background:T.surface,borderRadius:6,padding:"4px 8px"}}>
-<p style={{fontSize:9,color:T.textMuted}}>DROP TIME</p>
-<p style={{fontSize:11,color:T.text,fontWeight:600}}>{c.dropTime||"—"}</p>
-</div>
-</div>
-</div>
-{canManage && (
-<Btn onClick={function(){ removeEmpFromRoute(b.id, c.studentId); }} color={T.red} small>✕</Btn>
-)}
-</div>
-</div>
-);
-})}
-</div>
-)}
-</div>
-)}
-</div>
-);
-})}
-</div>
-);
-}
-
-function AddEmpToRouteModal({ bus, allStaff, onAdd, onClose }) {
-var alreadyAdded = (bus.routeChildren||[]).map(function(c){ return String(c.studentId); });
-var available = allStaff.filter(function(s){ return !alreadyAdded.includes(String(s.id)); });
-var stops = bus.stops || [];
-var [sel, setSel] = React.useState("");
-var [stop, setStop] = React.useState("");
-var [pTime, setPTime] = React.useState("");
-var [dTime, setDTime] = React.useState("");
-var [query, setQuery] = React.useState("");
-var filtered = query.trim() === "" ? available : available.filter(function(s){
-return (s.name||"").toLowerCase().includes(query.toLowerCase()) || (s._label||"").toLowerCase().includes(query.toLowerCase());
-});
-var selObj = available.find(function(s){ return String(s.id)===sel; });
-React.useEffect(function(){
-if (!stop) return;
-var ms = stops.find(function(s){ return stopName(s)===stop; });
-if (ms && typeof ms === "object") {
-if (ms.time) setPTime(ms.time);
-if (ms.dropTime) setDTime(ms.dropTime);
-}
-}, [stop]);
-var doAdd = function(){
-if (!selObj) { alert("Please select a staff member"); return; }
-onAdd({
-studentId: selObj.id,
-studentName: selObj.name,
-empRole: selObj._label || selObj.empRole || selObj.subject || "Staff",
-phone: selObj.phone || "",
-stop: stop,
-pickupTime: pTime,
-dropTime: dTime,
-isEmployee: true,
-});
-};
-return (
-<div style={{padding:"4px 0 12px"}}>
-<div style={{marginBottom:12}}>
-<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Search Staff / Teacher</p>
-<input value={query} onChange={function(e){setQuery(e.target.value); setSel("");}}
-placeholder="Type name to search..."
-style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,boxSizing:"border-box",fontFamily:"Outfit,sans-serif"}} />
-{query && filtered.length > 0 && (
-<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,marginTop:4,maxHeight:160,overflowY:"auto"}}>
-{filtered.slice(0,10).map(function(s){
-return (
-<div key={s.id} onClick={function(){ setSel(String(s.id)); setQuery(s.name); }}
-style={{padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid "+T.border+"40",display:"flex",alignItems:"center",gap:8}}>
-<span style={{fontSize:14}}>👔</span>
-<div>
-<p style={{fontSize:13,fontWeight:600,color:T.text}}>{s.name}</p>
-<p style={{fontSize:11,color:T.textMuted}}>{s._label}</p>
-</div>
-</div>
-);
-})}
-</div>
-)}
-</div>
-<div style={{marginBottom:12}}>
-<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Bus Stop</p>
-<select value={stop} onChange={function(e){setStop(e.target.value);}}
-style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}}>
-<option value="">— Select Stop —</option>
-{stops.map(function(s,i){ var sn = stopName(s); return <option key={i} value={sn}>{sn}</option>; })}
-</select>
-</div>
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-<div>
-<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Pickup Time</p>
-<input type="time" value={pTime} onChange={function(e){setPTime(e.target.value);}}
-style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}} />
-</div>
-<div>
-<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>Drop Time</p>
-<input type="time" value={dTime} onChange={function(e){setDTime(e.target.value);}}
-style={{width:"100%",padding:"9px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}} />
-</div>
-</div>
-<div style={{display:"flex",gap:8}}>
-<Btn onClick={onClose} color={T.surface} full>Cancel</Btn>
-<Btn onClick={doAdd} color={T.accent} full>Add to Route</Btn>
-</div>
-</div>
-);
-}
-
 // ─── EMPLOYEES SECTION ────────────────────────────────────────────────────────
 const DEFAULT_EMPLOYEE_ROLES = ["Driver","Conductor","Cleaner","Sweeper","Security Guard","Gardener","Cook","Peon","Electrician","Plumber","Helper","Other"];
 const HIGHER_STAFF_ROLES = ["Vice Principal","Coordinator","Accountant","Receptionist","Transport Head","Librarian","Admin Staff","HR","IT Staff","Lab Assistant","Sports Coach","Counselor","Other (Higher)"];
