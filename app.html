@@ -2652,7 +2652,7 @@ principal: [
 {key:"library",icon:"📚",label:"Library"},{key:"disciplinereport",icon:"📋",label:"Discipline Report"},
 {key:"classsettings",icon:"🏷️",label:"Class Settings"},
 {key:"syllabus",icon:"📖",label:"Syllabus"},{key:"webcam",icon:"📹",label:"Live Cameras"},{key:"schoolpage",icon:"🏫",label:"School Page"},
-{key:"visitors",icon:"🚪",label:"Visitors"},{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"studentreachedhome",icon:"🏡",label:"Student Reached Home"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
+{key:"visitors",icon:"🚪",label:"Visitors"},{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"allpickup",icon:"🚗",label:"Authorized Pickup"},{key:"feedback",icon:"💌",label:"Parent Feedback"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
@@ -2705,7 +2705,7 @@ teacher: [
 {key:"canteen",icon:"🍱",label:"canteen"},{key:"exams",icon:"📝",label:"Exams"},
 {key:"syllabus",icon:"📖",label:"Syllabus"},{key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"chat",icon:"💬",label:"chat"},
-{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"studentreachedhome",icon:"🏡",label:"Student Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
+{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
 ],
@@ -2718,7 +2718,7 @@ parent: [
 {key:"chat",icon:"💬",label:"chat"},
 {key:"canteen",icon:"🍱",label:"canteen"},{key:"timetable",icon:"📅",label:"timetable"},
 {key:"examSyllabus",icon:"📝",label:"Exam & Syllabus"},{key:"unifiedcalendar",icon:"📅",label:"Calendar & Attendance"},
-{key:"studentreachedhome",icon:"🏡",label:"Student Reached Home"},{key:"busroute",icon:"🚌",label:"busRoute"},{key:"webcam",icon:"📹",label:"Live Cameras"},
+{key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"busroute",icon:"🚌",label:"busRoute"},{key:"webcam",icon:"📹",label:"Live Cameras"},
 {key:"feedback",icon:"💌",label:"Feedback"},{key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
@@ -3485,8 +3485,7 @@ if (section === "examSyllabus") return <ExamSyllabusSection ctx={ctx} />;
 if (section === "webcam")   return <WebcamSection ctx={ctx} />;
 if (section === "schoolpage") return <SchoolPageSection ctx={ctx} />;
 if (section === "visitors") return <VisitorManagementSection ctx={ctx} />;
-if (section === "reachedhome") return <TeacherReachedHomeSection ctx={ctx} />;
-if (section === "studentreachedhome") return <StudentReachedHomeSection ctx={ctx} />;
+if (section === "reachedhome" || section === "studentreachedhome") return <CombinedReachedHomeSection ctx={ctx} />;
 if (section === "staffpanic") return <StaffPanicSection ctx={ctx} />;
 if (section === "healthcheckin") return <HealthCheckinSection ctx={ctx} />;
 if (section === "healthgrowth") return <HealthGrowthSection ctx={ctx} />;
@@ -19455,16 +19454,18 @@ style={{display:"flex", justifyContent:"space-between", alignItems:"center", mar
 </div>
 {selectedEntry==="pl_fees" && (
 <div style={{marginBottom:6}}>
-{(fees||[]).filter(f=>{
+{(fees||[]).filter(function(f){
 if(!f.paidDate&&!f.date) return false;
-const d=new Date(f.paidDate||f.date);
+var d=new Date(f.paidDate||f.date);
 return d>=plStart&&d<=plEnd&&(f.paid||f.status==="paid");
-}).map(f=>(
-<div key={f.id} style={{display:"flex", justifyContent:"space-between", padding:"3px 6px", background:T.surface, borderRadius:4, marginBottom:2}}>
-<span style={{color:T.textMuted, fontSize:10}}>{f.studentName} ({f.month||"—"}) • {f.paidDate||f.date||"—"}</span>
-<span style={{color:"#0ECB81", fontSize:10, fontWeight:600}}>{fmt(f.paidAmount||f.amount||0)}</span>
+}).map(function(f){
+return (
+<div key={f.id} style={{display:"flex",justifyContent:"space-between",padding:"3px 6px",background:T.surface,borderRadius:4,marginBottom:2}}>
+<span style={{color:T.textMuted,fontSize:10}}>{f.studentName} ({f.month||"—"}) {"•"} {f.paidDate||f.date||"—"}</span>
+<span style={{color:"#0ECB81",fontSize:10,fontWeight:600}}>{fmt(f.paidAmount||f.amount||0)}</span>
 </div>
-))}
+);
+})}
 </div>
 )}
 </div>
@@ -19491,12 +19492,14 @@ style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin
 <span style={{color:T.textMuted,fontSize:10}}>{isOpen?"▲":"▼"}</span>
 </div>
 </div>
-{isOpen && g.items.map(e=>(
-<div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"3px 6px",background:T.surface,borderRadius:4,marginBottom:2}}>
-<span style={{color:T.textMuted,fontSize:10}}>{e.name} • {e.date||"—"}</span>
+{isOpen && g.items.map(function(e){
+return (
+<div key={e.id} onClick={function(){setSelectedEntry(e);}} style={{display:"flex",justifyContent:"space-between",padding:"3px 6px",background:T.surface,borderRadius:4,marginBottom:2,cursor:"pointer"}}>
+<span style={{color:T.textMuted,fontSize:10}}>{e.name} {"•"} {e.date||"—"}</span>
 <span style={{color:"#0ECB81",fontSize:10,fontWeight:600}}>{fmt(e.amount)}</span>
 </div>
-))}
+);
+})}
 </div>
 );
 });
@@ -19524,12 +19527,27 @@ style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin
 <span style={{color:T.textMuted,fontSize:10}}>{isOpen?"▲":"▼"}</span>
 </div>
 </div>
-{isOpen && items.map(e=>(
-<div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"3px 6px",background:T.surface,borderRadius:4,marginBottom:2}}>
-<span style={{color:T.textMuted,fontSize:10}}>{e.name} • {e.date||"—"}</span>
-<span style={{color:"#F75555",fontSize:10,fontWeight:600}}>-{fmt(e.amount)}</span>
+{isOpen && (function(){
+var seenKeys = {};
+return items.map(function(e){
+var isRuntimeDup = false;
+var isSalaryCat = e.category === "salary" || (e.type === "expense" && (e.name||"").toLowerCase().indexOf("salary") !== -1);
+if (isSalaryCat) {
+var nameKey = (e.name||"").toLowerCase().trim();
+if (seenKeys[nameKey]) { isRuntimeDup = true; } else { seenKeys[nameKey] = true; }
+}
+var showDup = e.isDuplicate || isRuntimeDup;
+return (
+<div key={e.id} onClick={function(){setSelectedEntry(e);}} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 6px",background:showDup?"#F7555515":T.surface,border:showDup?"1px solid #F75555":"1px solid transparent",borderRadius:4,marginBottom:2,cursor:"pointer"}}>
+<div style={{flex:1,minWidth:0}}>
+{showDup && <span style={{display:"inline-block",background:"#F75555",color:"#fff",fontSize:9,fontWeight:800,borderRadius:3,padding:"1px 5px",marginRight:5,letterSpacing:0.5}}>DUPLICATE</span>}
+<span style={{color:showDup?"#F75555":T.textMuted,fontSize:10}}>{e.name} {"\u2022"} {e.date||"\u2014"}</span>
 </div>
-))}
+<span style={{color:"#F75555",fontSize:10,fontWeight:600,whiteSpace:"nowrap",marginLeft:6}}>-{fmt(e.amount)}</span>
+</div>
+);
+});
+})()}
 </div>
 );
 })}
@@ -21493,45 +21511,66 @@ toast("Employee added ✓", "success");
 closeForm();
 };
 // ── Bulk Payment Logic ──────────────────────────────────────────────────────
-const paymentKey = (empId, month) => `ss_paid_${empId}_${month}`;
-const isPaid = (emp) => {
-try { return !!localStorage.getItem(paymentKey(emp.id, bulkMonth)); } catch { return false; }
+// salaryPaidLog stored in Firebase: { "empId_YYYY-MM": { amount, mode, date, time } }
+const [salaryPaidLog, setSalaryPaidLog] = React.useState({});
+React.useEffect(function() {
+if (!window.firebaseReady || !mySchoolId) return;
+var _ref = window.db.ref("schoolshield/schools/" + mySchoolId + "/salaryPaidLog");
+_ref.on("value", function(snap) {
+var val = snap.val();
+if (val) { try { setSalaryPaidLog(typeof val === "object" ? val : JSON.parse(val)); } catch(e) {} }
+});
+return function() { _ref.off(); };
+}, [mySchoolId]);
+const paymentKey = function(empId, month) { return empId + "_" + month; };
+const isPaid = function(emp) {
+return !!(salaryPaidLog && salaryPaidLog[paymentKey(emp.id, bulkMonth)]);
 };
-const markPaid = (empId, month, amount, mode) => {
-amount = parseFloat(amount) || 0; // ensure number, not string
-try {
-localStorage.setItem(paymentKey(empId, month), JSON.stringify({ amount, mode, date: new Date().toLocaleDateString("en-IN"), time: new Date().toLocaleTimeString("en-IN") }));
-} catch {}
-// ── AUTO: Expense mein salary entry add karo ──
-const emp = employees.find(e => e.id === empId);
-if (emp && setExpenses) {
-const [yr, mo] = month.split("-");
-const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const monthLabel = monthNames[parseInt(mo,10)-1] + " " + yr;
-const expEntry = {
+const markPaid = function(empId, month, amount, mode) {
+amount = parseFloat(amount) || 0;
+var logKey = paymentKey(empId, month);
+var entry = { amount: amount, mode: mode || "Bank", date: new Date().toLocaleDateString("en-IN"), time: new Date().toLocaleTimeString("en-IN") };
+var updatedLog = Object.assign({}, salaryPaidLog);
+updatedLog[logKey] = entry;
+setSalaryPaidLog(updatedLog);
+if (window.firebaseReady && mySchoolId) {
+try { window.db.ref("schoolshield/schools/" + mySchoolId + "/salaryPaidLog").set(updatedLog); } catch(e) { console.warn("salaryPaidLog Firebase write failed:", e); }
+}
+// ── AUTO: Expense mein salary entry add karo (duplicate flag) ──
+var empForSalary = employees.find(function(e) { return e.id === empId; });
+if (empForSalary && setExpenses) {
+var mParts = month.split("-"); var mYr = mParts[0]; var mMo = mParts[1];
+var monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var monthLabel = monthNames[parseInt(mMo,10)-1] + " " + mYr;
+var empNameLower = (empForSalary.name || "").toLowerCase();
+setExpenses(function(p) {
+var existing = (p || []);
+var alreadyExists = existing.some(function(ex) {
+return ex.category === "salary" && !ex.isDuplicate && (ex.name || "").toLowerCase().indexOf(empNameLower) !== -1 && (ex.name || "").indexOf(monthLabel) !== -1;
+});
+var expEntry = {
 id: genId(),
 schoolId: mySchoolId,
 type: "expense",
 category: "salary",
-name: `Salary — ${emp.name} (${emp.role || emp.designation || "Staff"}) · ${monthLabel}`,
+name: "Salary — " + empForSalary.name + " (" + (empForSalary.role || empForSalary.designation || "Staff") + ") · " + monthLabel,
 amount: amount,
 date: new Date().toISOString().split("T")[0],
 frequency: "monthly",
-note: `Auto-added on salary payment via ${mode || "Bank"}`,
+note: "Auto-added on salary payment via " + (mode || "Bank") + (alreadyExists ? " [DUPLICATE]" : ""),
+isDuplicate: alreadyExists,
 };
-setExpenses(p => {
-const updated = [...(p||[]), expEntry];
+var updated = [...existing, expEntry];
 if (window.firebaseReady && window.currentSchoolId) {
-try {
-window.db.ref(`schoolshield/schools/${window.currentSchoolId}/expenses`).set(JSON.stringify(updated));
-} catch(e) { console.warn("Expense Firebase write failed:", e); }
+try { window.db.ref("schoolshield/schools/" + window.currentSchoolId + "/expenses").set(JSON.stringify(updated)); } catch(e) { console.warn("Expense Firebase write failed:", e); }
 }
 return updated;
 });
 }
 };
-const getPayment = (emp) => {
-try { const s = localStorage.getItem(paymentKey(emp.id, bulkMonth)); return s ? JSON.parse(s) : null; } catch { return null; }
+const getPayment = function(emp) {
+var key = paymentKey(emp.id, bulkMonth);
+return (salaryPaidLog && salaryPaidLog[key]) ? salaryPaidLog[key] : null;
 };
 const handleBulkPay = () => {
 if (bulkSelected.length === 0) { toast("No employee selected", "error"); return; }
@@ -21733,18 +21772,24 @@ style={{background:T.yellow||"#F5A623", color:"#fff", border:"none", borderRadiu
 const newAmt = prompt("Enter new amount:", pmt?.amount || emp.salary);
 const newMode = prompt("Payment mode (Bank/Cash/UPI):", pmt?.mode || "Bank");
 if(newAmt && newMode) {
-try { localStorage.setItem(paymentKey(emp.id, bulkMonth), JSON.stringify({ amount: parseFloat(newAmt), mode: newMode, date: pmt?.date || new Date().toLocaleDateString("en-IN"), time: new Date().toLocaleTimeString("en-IN") })); } catch {}
+var _updatedLog2 = Object.assign({}, salaryPaidLog);
+_updatedLog2[paymentKey(emp.id, bulkMonth)] = { amount: parseFloat(newAmt), mode: newMode, date: pmt ? (pmt.date || new Date().toLocaleDateString("en-IN")) : new Date().toLocaleDateString("en-IN"), time: new Date().toLocaleTimeString("en-IN") };
+setSalaryPaidLog(_updatedLog2);
+if (window.firebaseReady && mySchoolId) { try { window.db.ref("schoolshield/schools/" + mySchoolId + "/salaryPaidLog").set(_updatedLog2); } catch(e) {} }
 saveEmployees([...employees]);
-toast(`✅ ${emp.name} payment updated`, "success");
+toast("✅ "+emp.name+" payment updated", "success");
 }
 }} style={{background:T.accent, color:"#fff", border:"none", borderRadius:5, padding:"3px 7px", fontSize:10, fontWeight:700, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
 ✏️
 </button>
 <button onClick={() => {
-if(window.confirm(`Are you sure you want to delete payment record for ${emp.name}?`)) {
-try { localStorage.removeItem(paymentKey(emp.id, bulkMonth)); } catch {}
+if(window.confirm("Are you sure you want to delete payment record for "+emp.name+"?")) {
+var _updatedLog3 = Object.assign({}, salaryPaidLog);
+delete _updatedLog3[paymentKey(emp.id, bulkMonth)];
+setSalaryPaidLog(_updatedLog3);
+if (window.firebaseReady && mySchoolId) { try { window.db.ref("schoolshield/schools/" + mySchoolId + "/salaryPaidLog").set(_updatedLog3); } catch(e) {} }
 saveEmployees([...employees]);
-toast(`🗑️ Payment removed`, "success");
+toast("🗑️ Payment removed", "success");
 }
 }} style={{background:T.red, color:"#fff", border:"none", borderRadius:5, padding:"3px 7px", fontSize:10, fontWeight:700, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
 🗑️
@@ -21870,6 +21915,32 @@ window.open(upiUrl, "_blank");
 }} color={T.purple} full>📱 Open UPI App</Btn>
 <div style={{margin:"10px 0",textAlign:"center",fontSize:11,color:T.textMuted}}>— Confirm after making payment —</div>
 <Btn onClick={function(){
+var _alreadyPaid = !!(salaryPaidLog && salaryPaidLog[paymentKey(emp.id, bulkMonth)]);
+if (_alreadyPaid) {
+var _pd = salaryPaidLog[paymentKey(emp.id, bulkMonth)];
+setModal(
+<ModalBox title="⚠️ Already Paid!" onClose={function(){setModal(null);}}>
+<div style={{padding:"8px 0 12px"}}>
+<div style={{background:"#F7555520",border:"2px solid #F75555",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+<p style={{color:"#F75555",fontWeight:800,fontSize:13,marginBottom:6}}>⚨️ {emp.name} ko {bulkMonth} mein salary pehle se di ja chuki hai!</p>
+<p style={{color:"#F75555",fontSize:12}}>Amount: ₹{(_pd.amount||0).toLocaleString("en-IN")} • Mode: {_pd.mode}</p>
+<p style={{color:"#F75555",fontSize:11,marginTop:4}}>Date: {_pd.date} {_pd.time||""}</p>
+</div>
+<p style={{color:"#F5A623",fontSize:12,marginBottom:14,fontWeight:600}}>⚠️ Dobara pay karne par DUPLICATE expense entry add hogi.</p>
+<div style={{display:"flex",gap:8}}>
+<Btn onClick={function(){setModal(null);}} color={T.surface} full>❌ Cancel</Btn>
+<Btn onClick={function(){
+markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "UPI");
+saveEmployees([...employees]);
+setModal(null);
+toast("✅ "+emp.name+" UPI payment recorded (duplicate)!", "success");
+}} color="#F75555" full>⚠️ Force Pay Anyway</Btn>
+</div>
+</div>
+</ModalBox>
+);
+return;
+}
 markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "UPI");
 saveEmployees([...employees]);
 setModal(null);
@@ -21907,6 +21978,32 @@ style={{background:T.accent+"20",border:"none",borderRadius:6,padding:"4px 8px",
 </div>
 <div style={{margin:"10px 0",textAlign:"center",fontSize:11,color:T.textMuted}}>— Confirm after bank transfer —</div>
 <Btn onClick={function(){
+var _alreadyPaid = !!(salaryPaidLog && salaryPaidLog[paymentKey(emp.id, bulkMonth)]);
+if (_alreadyPaid) {
+var _pd = salaryPaidLog[paymentKey(emp.id, bulkMonth)];
+setModal(
+<ModalBox title="⚠️ Already Paid!" onClose={function(){setModal(null);}}>
+<div style={{padding:"8px 0 12px"}}>
+<div style={{background:"#F7555520",border:"2px solid #F75555",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+<p style={{color:"#F75555",fontWeight:800,fontSize:13,marginBottom:6}}>⚨️ {emp.name} ko {bulkMonth} mein salary pehle se di ja chuki hai!</p>
+<p style={{color:"#F75555",fontSize:12}}>Amount: ₹{(_pd.amount||0).toLocaleString("en-IN")} • Mode: {_pd.mode}</p>
+<p style={{color:"#F75555",fontSize:11,marginTop:4}}>Date: {_pd.date} {_pd.time||""}</p>
+</div>
+<p style={{color:"#F5A623",fontSize:12,marginBottom:14,fontWeight:600}}>⚠️ Dobara pay karne par DUPLICATE expense entry add hogi.</p>
+<div style={{display:"flex",gap:8}}>
+<Btn onClick={function(){setModal(null);}} color={T.surface} full>❌ Cancel</Btn>
+<Btn onClick={function(){
+markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Bank Transfer");
+saveEmployees([...employees]);
+setModal(null);
+toast("✅ "+emp.name+" bank transfer recorded (duplicate)!", "success");
+}} color="#F75555" full>⚠️ Force Pay Anyway</Btn>
+</div>
+</div>
+</ModalBox>
+);
+return;
+}
 markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Bank Transfer");
 saveEmployees([...employees]);
 setModal(null);
@@ -21929,6 +22026,32 @@ setModal(
 <p style={{fontSize:13,color:T.text}}>Amount: <b style={{color:T.green}}>₹{parseFloat(emp.salary||0).toLocaleString("en-IN")}</b></p>
 </div>
 <Btn onClick={function(){
+var _alreadyPaid = !!(salaryPaidLog && salaryPaidLog[paymentKey(emp.id, bulkMonth)]);
+if (_alreadyPaid) {
+var _pd = salaryPaidLog[paymentKey(emp.id, bulkMonth)];
+setModal(
+<ModalBox title="⚠️ Already Paid!" onClose={function(){setModal(null);}}>
+<div style={{padding:"8px 0 12px"}}>
+<div style={{background:"#F7555520",border:"2px solid #F75555",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
+<p style={{color:"#F75555",fontWeight:800,fontSize:13,marginBottom:6}}>⚨️ {emp.name} ko {bulkMonth} mein salary pehle se di ja chuki hai!</p>
+<p style={{color:"#F75555",fontSize:12}}>Amount: ₹{(_pd.amount||0).toLocaleString("en-IN")} • Mode: {_pd.mode}</p>
+<p style={{color:"#F75555",fontSize:11,marginTop:4}}>Date: {_pd.date} {_pd.time||""}</p>
+</div>
+<p style={{color:"#F5A623",fontSize:12,marginBottom:14,fontWeight:600}}>⚠️ Dobara pay karne par DUPLICATE expense entry add hogi.</p>
+<div style={{display:"flex",gap:8}}>
+<Btn onClick={function(){setModal(null);}} color={T.surface} full>❌ Cancel</Btn>
+<Btn onClick={function(){
+markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Cash");
+saveEmployees([...employees]);
+setModal(null);
+toast("✅ "+emp.name+" cash payment recorded (duplicate)!", "success");
+}} color="#F75555" full>⚠️ Force Pay Anyway</Btn>
+</div>
+</div>
+</ModalBox>
+);
+return;
+}
 markPaid(emp.id, bulkMonth, parseFloat(emp.salary)||0, "Cash");
 saveEmployees([...employees]);
 setModal(null);
@@ -21950,18 +22073,24 @@ toast("✅ "+emp.name+" cash payment recorded!", "success");
 const newAmt = prompt("Enter new amount:", pmt?.amount || emp.salary);
 const newMode = prompt("Payment mode (Bank/Cash/UPI):", pmt?.mode || "Bank");
 if(newAmt && newMode) {
-try { localStorage.setItem(paymentKey(emp.id, bulkMonth), JSON.stringify({ amount: parseFloat(newAmt), mode: newMode, date: pmt?.date || new Date().toLocaleDateString("en-IN"), time: new Date().toLocaleTimeString("en-IN") })); } catch {}
+var _uLog = Object.assign({}, salaryPaidLog);
+_uLog[paymentKey(emp.id, bulkMonth)] = { amount: parseFloat(newAmt), mode: newMode, date: pmt ? (pmt.date || new Date().toLocaleDateString("en-IN")) : new Date().toLocaleDateString("en-IN"), time: new Date().toLocaleTimeString("en-IN") };
+setSalaryPaidLog(_uLog);
+if (window.firebaseReady && mySchoolId) { try { window.db.ref("schoolshield/schools/" + mySchoolId + "/salaryPaidLog").set(_uLog); } catch(e) {} }
 saveEmployees([...employees]);
-toast(`✅ Payment updated`, "success");
+toast("✅ Payment updated", "success");
 }
 }} style={{background:T.accent, color:"#fff", border:"none", borderRadius:7, padding:"5px 10px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
 ✏️ Edit
 </button>
 <button onClick={() => {
-if(window.confirm(`Are you sure you want to delete payment record for ${emp.name}?`)) {
-try { localStorage.removeItem(paymentKey(emp.id, bulkMonth)); } catch {}
+if(window.confirm("Are you sure you want to delete payment record for "+emp.name+"?")) {
+var _updatedLog3 = Object.assign({}, salaryPaidLog);
+delete _updatedLog3[paymentKey(emp.id, bulkMonth)];
+setSalaryPaidLog(_updatedLog3);
+if (window.firebaseReady && mySchoolId) { try { window.db.ref("schoolshield/schools/" + mySchoolId + "/salaryPaidLog").set(_updatedLog3); } catch(e) {} }
 saveEmployees([...employees]);
-toast(`🗑️ Payment removed`, "success");
+toast("🗑️ Payment removed", "success");
 }
 }} style={{background:T.red, color:"#fff", border:"none", borderRadius:7, padding:"5px 10px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
 🗑️ Delete
@@ -30701,7 +30830,52 @@ style={{padding:"6px 14px",borderRadius:20,border:`1.5px solid ${filter===k?T.ac
 );
 }
 // ─── TEACHER REACHED HOME FEATURE ─────────────────────────────────────────────
-function TeacherReachedHomeSection({ ctx }) {
+// ─── COMBINED REACHED HOME (Students + Employees) ────────────────────────────
+function CombinedReachedHomeSection({ ctx }) {
+const { role } = ctx;
+const [activeTab, setActiveTab] = React.useState("students");
+const isParent = role === "parent";
+const isTeacher = role === "teacher";
+const isCoordinator = role === "coordinator";
+// Parent: sirf apna button, koi tabs nahi
+if (isParent) {
+return <StudentReachedHomeSection ctx={ctx} _embedded={false} />;
+}
+// Teacher: sirf apni class ka student list, koi tabs nahi
+if (isTeacher) {
+return (
+<div className="fadeUp">
+<SectionHeader title="🏠 Reached Home" />
+<StudentReachedHomeSection ctx={ctx} _embedded={true} />
+</div>
+);
+}
+// Principal / VP / Coordinator / Founder: dono tabs
+return (
+<div className="fadeUp">
+<SectionHeader title="🏠 Reached Home" />
+<div style={{display:"flex",gap:8,marginBottom:18}}>
+<button onClick={function(){setActiveTab("students");}} style={{
+flex:1,padding:"9px 0",borderRadius:10,border:"none",cursor:"pointer",
+fontWeight:700,fontSize:13,fontFamily:"Outfit,sans-serif",
+background: activeTab==="students" ? T.accent : T.surface,
+color: activeTab==="students" ? "#fff" : T.textMuted,
+transition:"all 0.2s"
+}}>👦 Students</button>
+<button onClick={function(){setActiveTab("employees");}} style={{
+flex:1,padding:"9px 0",borderRadius:10,border:"none",cursor:"pointer",
+fontWeight:700,fontSize:13,fontFamily:"Outfit,sans-serif",
+background: activeTab==="employees" ? T.accent : T.surface,
+color: activeTab==="employees" ? "#fff" : T.textMuted,
+transition:"all 0.2s"
+}}>👨‍🏫 Employees</button>
+</div>
+{activeTab==="students" && <StudentReachedHomeSection ctx={ctx} _embedded={true} />}
+{activeTab==="employees" && <TeacherReachedHomeSection ctx={ctx} _embedded={true} />}
+</div>
+);
+}
+function TeacherReachedHomeSection({ ctx, _embedded }) {
 const { role, loggedInUser, teachers, alerts, setAlerts, toast } = ctx;
 const isTeacher = role === "teacher";
 const isPrincipal = ["principal","founder","vice_principal","superadmin"].includes(role);
@@ -30776,7 +30950,7 @@ return !reachedNames.includes(ua?.username || t.name);
 });
 return (
 <div className="fadeUp">
-<SectionHeader title="🏠 Teacher Reached Home" />
+{!_embedded && <SectionHeader title="🏠 Teacher Reached Home" />}
 <p style={{color:T.textMuted,fontSize:13,marginBottom:16}}>Late duty ke baad teachers apne ghar pahunchne ki confirmation dete hain</p>
 {/* Timeout settings */}
 <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:12,padding:"14px 16px",marginBottom:16}}>
@@ -30849,7 +31023,7 @@ style={{width:80,background:T.surface,border:`1px solid ${T.border}`,borderRadiu
 }
 return (
 <div className="fadeUp">
-<SectionHeader title="🏠 Reached Home" />
+{!_embedded && <SectionHeader title="🏠 Reached Home" />}
 <p style={{color:T.textMuted,fontSize:13,marginBottom:24}}>Late duty ke baad neeche button press karein taaki principal ko pata chale aap safely ghar pahunch gaye</p>
 {myTodayRecord ? (
 <div style={{background:`${T.green}15`,border:`1.5px solid ${T.green}40`,borderRadius:20,padding:"32px 24px",textAlign:"center",marginBottom:20}}>
@@ -30897,12 +31071,14 @@ animation: "pulse 2s infinite",
 );
 }
 // ─── STUDENT REACHED HOME ─────────────────────────────────────────────────────
-function StudentReachedHomeSection({ ctx }) {
+function StudentReachedHomeSection({ ctx, _embedded }) {
 const { role, loggedInUser, students, userAccounts, setAlerts, toast, setActiveSection } = ctx;
 const mySchoolId = (loggedInUser && loggedInUser.schoolId) || null;
 const isParent = role === "parent";
 const isTeacher = role === "teacher";
 const isPrincipal = ["principal","founder","vice_principal","superadmin"].includes(role);
+const isCoordinator = role === "coordinator";
+const coordAssignedClasses = isCoordinator ? (loggedInUser && loggedInUser.assignedClasses ? loggedInUser.assignedClasses : []) : [];
 
 // Teacher ki assigned class
 const myAssignedClass = React.useMemo(function() {
@@ -30948,11 +31124,12 @@ if (window.firebaseReady) ssSchoolRef("studentReachedHome").set(JSON.stringify(r
 const todayKey = new Date().toLocaleDateString("en-IN");
 const todayRecords = records.filter(function(r){ return r.date === todayKey && r.schoolId === mySchoolId; });
 
-// ── PRINCIPAL VIEW: Sirf toggle ──
-if (isPrincipal) {
+// ── PRINCIPAL / COORDINATOR VIEW ──
+if (isPrincipal || isCoordinator) {
 return (
 <div className="fadeUp">
-<SectionHeader title="🏡 Student Reached Home" />
+{!_embedded && <SectionHeader title="🏡 Student Reached Home" />}
+{isPrincipal && (
 <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:"18px 16px",marginBottom:16}}>
 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 <div>
@@ -30984,6 +31161,66 @@ transition:"left 0.3s",boxShadow:"0 1px 4px rgba(0,0,0,0.3)"
 </div>
 )}
 </div>
+)}
+{(function(){
+// Class-wise grouped display
+var allSchoolStudents = (students||[]).filter(function(s){ return !s.schoolId || String(s.schoolId)===String(mySchoolId); });
+var reachedIds = todayRecords.map(function(r){ return r.studentId || r.studentName; });
+var classes = [];
+allSchoolStudents.forEach(function(s){ if (s.class && classes.indexOf(s.class) < 0) classes.push(s.class); });
+// Coordinator: sirf apni assigned classes
+if (isCoordinator && coordAssignedClasses.length > 0) {
+classes = classes.filter(function(c){ return coordAssignedClasses.indexOf(c) >= 0; });
+}
+classes.sort();
+if (classes.length === 0) return null;
+return (
+<div style={{marginTop:14}}>
+<p style={{fontSize:12,fontWeight:700,color:T.textMuted,marginBottom:10,textTransform:"uppercase"}}>Class-wise Status — Aaj</p>
+{classes.map(function(cls){
+var clsStudents = allSchoolStudents.filter(function(s){ return s.class===cls; });
+var clsReached = clsStudents.filter(function(s){ return reachedIds.indexOf(s.id) >= 0 || reachedIds.indexOf(s.name) >= 0; });
+var clsPending = clsStudents.filter(function(s){ return reachedIds.indexOf(s.id) < 0 && reachedIds.indexOf(s.name) < 0; });
+var allDone = clsPending.length === 0 && clsStudents.length > 0;
+return (
+<div key={cls} style={{background:T.card,border:"1px solid "+(allDone ? T.green+"40" : T.border),borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+<p style={{fontWeight:700,fontSize:14,color:T.text}}>🏫 {cls}</p>
+<span style={{fontSize:11,fontWeight:700,color:allDone?T.green:T.textMuted,background:allDone?T.green+"15":T.surface,padding:"2px 8px",borderRadius:20}}>
+{clsReached.length}/{clsStudents.length} {allDone ? "✅ All Done" : ""}
+</span>
+</div>
+{clsReached.length > 0 && (
+<div style={{marginBottom:6}}>
+{clsReached.map(function(s){
+var rec = todayRecords.find(function(r){ return r.studentId===s.id || r.studentName===s.name; });
+return (
+<div key={s.id} style={{display:"flex",justifyContent:"space-between",padding:"4px 6px",background:T.green+"10",borderRadius:6,marginBottom:3}}>
+<span style={{fontSize:11,color:T.text}}>👦 {s.name}</span>
+<span style={{fontSize:11,color:T.green,fontWeight:700}}>🏠 {rec && rec.time}</span>
+</div>
+);
+})}
+</div>
+)}
+{clsPending.length > 0 && (
+<div>
+{clsPending.map(function(s){
+return (
+<div key={s.id} style={{display:"flex",justifyContent:"space-between",padding:"4px 6px",background:T.red+"08",borderRadius:6,marginBottom:3}}>
+<span style={{fontSize:11,color:T.textMuted}}>👦 {s.name}</span>
+<span style={{fontSize:11,color:T.red}}>⏳ Pending</span>
+</div>
+);
+})}
+</div>
+)}
+</div>
+);
+})}
+</div>
+);
+})()}
 </div>
 );
 }
@@ -30998,7 +31235,7 @@ var notReached = classStudents.filter(function(s){ return reachedIds.indexOf(s.i
 var reached = classStudents.filter(function(s){ return reachedIds.indexOf(s.id) >= 0; });
 return (
 <div className="fadeUp">
-<SectionHeader title={"🏡 Student Reached Home — " + (myAssignedClass||"My Class")} />
+{!_embedded && <SectionHeader title={"🏡 Student Reached Home — " + (myAssignedClass||"My Class")} />}
 <p style={{fontSize:12,color:T.textMuted,marginBottom:14}}>Aaj ke records — {todayKey}</p>
 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
 <div style={{background:T.green+"12",border:"1px solid "+T.green+"30",borderRadius:12,padding:14,textAlign:"center"}}>
@@ -31060,7 +31297,7 @@ return (
 var myTodayRecord = todayRecords.find(function(r){ return r.studentName === parentStudentName && r.date === todayKey; });
 return (
 <div className="fadeUp">
-<SectionHeader title="🏡 Ghar Pahunch Gaye?" />
+{!_embedded && <SectionHeader title="🏡 Ghar Pahunch Gaye?" />}
 <p style={{color:T.textMuted,fontSize:13,marginBottom:24}}>Bachcha ghar pahunch jaaye tab neeche button press karein — school ko notification jayegi</p>
 {!enabled ? (
 <Card style={{padding:28,textAlign:"center"}}>
