@@ -34708,8 +34708,8 @@ var paths={student:'students',teacher:'teachers',employee:'employees'};
 db.ref('schoolshield/schools/'+sid+'/'+paths[_logMode]).once('value').then(function(pSnap){
 db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(function(lSnap){
 var persons=[]; var pVal=pSnap.val();
-if(pVal){ var raw=Array.isArray(pVal)?pVal:Object.values(pVal); persons=raw.filter(function(p){ return p&&p.name&&typeof p.name==='string'&&p.name.trim()!==''; }); }
-var logs={}; try{ var lv=lSnap.val(); logs=lv?JSON.parse(lv):{};} catch(e){ logs=lSnap.val()||{}; }
+if(pVal){ if(typeof pVal==='string'){try{pVal=JSON.parse(pVal);}catch(e){pVal=null;}} if(pVal){ var raw=Array.isArray(pVal)?pVal:Object.values(pVal); persons=raw.filter(function(p){ return p&&p.name&&typeof p.name==='string'&&p.name.trim()!==''; }); } }
+var logs={}; try{ var lv=lSnap.val(); if(typeof lv==='string') logs=JSON.parse(lv); else if(lv) logs=lv; } catch(e){ logs={}; }
 var present=[];
 persons.forEach(function(p){
 var k=_logMode+'_'+p.id; var log=logs[k]&&logs[k][today];
@@ -34797,8 +34797,8 @@ var paths={student:'students',teacher:'teachers',employee:'employees'};
 db.ref('schoolshield/schools/'+sid+'/'+paths[_logMode]).once('value').then(function(pSnap){
 db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(function(lSnap){
 var persons=[]; var pVal=pSnap.val();
-if(pVal){ var raw=Array.isArray(pVal)?pVal:Object.values(pVal); persons=raw.filter(function(p){ return p&&p.name&&typeof p.name==='string'&&p.name.trim()!==''; }); }
-var logs={}; try{ var lv=lSnap.val(); logs=lv?JSON.parse(lv):{};} catch(e){ logs=lSnap.val()||{}; }
+if(pVal){ if(typeof pVal==='string'){try{pVal=JSON.parse(pVal);}catch(e){pVal=null;}} if(pVal){ var raw=Array.isArray(pVal)?pVal:Object.values(pVal); persons=raw.filter(function(p){ return p&&p.name&&typeof p.name==='string'&&p.name.trim()!==''; }); } }
+var logs={}; try{ var lv=lSnap.val(); if(typeof lv==='string') logs=JSON.parse(lv); else if(lv) logs=lv; } catch(e){ logs={}; }
 var present=[],absent=[];
 persons.forEach(function(p){
 var k=_logMode+'_'+p.id; var log=logs[k]&&logs[k][today];
@@ -35097,6 +35097,8 @@ db.ref('schoolshield/faceDescriptors/'+sid).once('value')
 ]).then(function(results){
 var snap=results[0]; var fdSnap=results[1];
 var val=snap.val();
+// Data is stored as JSON string in Firebase
+if(typeof val === 'string'){ try{ val=JSON.parse(val); }catch(e){ val=null; } }
 if(!val){_regPersons=[];}
 else {
 var raw=Array.isArray(val)?val:Object.values(val);
