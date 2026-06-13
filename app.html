@@ -34932,12 +34932,14 @@ setStatus('Recognized: '+(nm||key)+' — BLINK to confirm','info');
 if(db && sid){
 db.ref('schoolshield/schools/'+sid+'/faceAttendanceLocation').once('value').then(function(snap){
 var loc=snap.val();
+// No location set = kahi se bhi attendance
 if(!loc||!loc.lat){startCamera();return;}
+var radius=(loc.radius&&parseInt(loc.radius)>0)?parseInt(loc.radius):50;
 setStatus('Checking location...','info');
 navigator.geolocation.getCurrentPosition(function(pos){
 var dist=getDistance(pos.coords.latitude,pos.coords.longitude,loc.lat,loc.lng);
-if(dist<=50){startCamera();}
-else{setStatus('You are '+Math.round(dist)+'m away (max 50m). Move closer!','error');}
+if(dist<=radius){startCamera();}
+else{setStatus('You are '+Math.round(dist)+'m away (max '+radius+'m). Move closer!','error');}
 },function(){startCamera();},{enableHighAccuracy:true,timeout:10000});
 }).catch(function(){startCamera();});
 } else { startCamera(); }
@@ -35031,6 +35033,28 @@ style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px
 <div style="margin-top:14px;">
 <p style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:8px;">ALREADY REGISTERED</p>
 <div id="ss-reg-list" style="max-height:160px;overflow-y:auto;"></div>
+</div>
+<div id="ss-reg-location-section" style="margin-top:14px;display:none;">
+<p style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:8px;">📍 ATTENDANCE LOCATION SETTINGS</p>
+<div style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;">
+<p style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Set school location — attendance will only be allowed within this radius. Leave empty to allow from anywhere.</p>
+<div style="display:flex;gap:8px;margin-bottom:10px;">
+<button onclick="window.ssSetCurrentLocation()" style="flex:1;padding:9px;border:none;border-radius:8px;background:#3b82f6;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📍 Use Current Location</button>
+<button onclick="window.ssClearLocation()" style="flex:1;padding:9px;border:none;border-radius:8px;background:#ef444420;color:#ef4444;border:1px solid #ef444440;font-size:12px;font-weight:700;cursor:pointer;">🗑️ Clear</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+<div>
+<p style="font-size:10px;color:#64748b;margin-bottom:4px;">Radius (meters)</p>
+<input id="ss-loc-radius" type="number" min="10" max="500" value="50" placeholder="50"
+style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px;color:#e2e8f0;font-size:13px;box-sizing:border-box;"/>
+</div>
+<div>
+<p style="font-size:10px;color:#64748b;margin-bottom:4px;">Status</p>
+<div id="ss-loc-status" style="padding:8px;background:#1e293b;border-radius:8px;font-size:11px;color:#64748b;">Not set</div>
+</div>
+</div>
+<button onclick="window.ssSaveLocation()" style="width:100%;padding:10px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">💾 Save Location Settings</button>
+</div>
 </div>
 </div>
 </div>
@@ -35258,11 +35282,16 @@ registeredAt:new Date().toISOString()
 };
 db.ref('schoolshield/faceDescriptors/'+sid+'/'+key).set(data).then(function(){
 _regDescriptors[key]=data;
-setRegStatus('✅ '+_regPerson.name+' registered successfully!','success');
+setRegStatus('✅ '+_regPerson.name+' registered! Select next person or close.','success');
 ssRegStopCamera();
 document.getElementById('ss-reg-btn-capture').style.display='none';
 document.getElementById('ss-reg-btn-retake').style.display='none';
-document.getElementById('ss-reg-btn-cam').style.display='block';
+// Reset for next person — keep models loaded
+_regPerson=null;
+document.getElementById('ss-reg-search').value='';
+document.getElementById('ss-reg-dropdown').style.display='none';
+document.getElementById('ss-reg-selected').style.display='none';
+document.getElementById('ss-reg-btn-cam').style.display='none';
 _regCaptured=true;
 renderRegList();
 }).catch(function(e){setRegStatus('Save failed: '+e.message,'error');});
@@ -35294,6 +35323,14 @@ var btn=document.getElementById('ss-reg-type-'+t);
 if(btn){btn.style.background=t==='student'?'#3b82f6':'#1e3a5f';btn.style.color=t==='student'?'#fff':'#94a3b8';}
 });
 setRegStatus('Loading persons...','info');
+// Show location settings for principal/founder/VP
+var userRole = (function(){ try{ var u=localStorage.getItem('ss_session_user'); return u?JSON.parse(u).role||'':''; }catch(e){return '';} })();
+var locSection = document.getElementById('ss-reg-location-section');
+if(locSection){
+var canManageLoc = ['principal','founder','vice_principal','superadmin'].indexOf(userRole) >= 0;
+locSection.style.display = canManageLoc ? 'block' : 'none';
+if(canManageLoc) loadLocationSettings();
+}
 // Load persons immediately when modal opens
 loadPersons(function(){
 setRegStatus('Type a name to search','info');
@@ -35311,6 +35348,54 @@ ssRegStopCamera();
 var overlay=document.getElementById('ss-reg-overlay');
 if(overlay) overlay.style.display='none';
 };
+
+// Location settings
+var _savedLat=null, _savedLng=null;
+window.ssSetCurrentLocation = function(){
+var statusEl=document.getElementById('ss-loc-status');
+if(statusEl) statusEl.textContent='Getting location...';
+navigator.geolocation.getCurrentPosition(function(pos){
+_savedLat=pos.coords.latitude;
+_savedLng=pos.coords.longitude;
+if(statusEl) statusEl.textContent='Lat: '+_savedLat.toFixed(4)+', Lng: '+_savedLng.toFixed(4);
+},function(e){
+if(statusEl) statusEl.textContent='Error: '+e.message;
+},{enableHighAccuracy:true,timeout:15000});
+};
+window.ssClearLocation = function(){
+_savedLat=null; _savedLng=null;
+var db=getDB(); var sid=getSchoolId();
+if(db&&sid) db.ref('schoolshield/schools/'+sid+'/faceAttendanceLocation').remove();
+var statusEl=document.getElementById('ss-loc-status');
+if(statusEl) statusEl.textContent='Cleared — attendance allowed from anywhere';
+};
+window.ssSaveLocation = function(){
+var db=getDB(); var sid=getSchoolId();
+if(!db||!sid){ alert('No school data!'); return; }
+var radiusEl=document.getElementById('ss-loc-radius');
+var radius=radiusEl?parseInt(radiusEl.value)||50:50;
+if(radius<10) radius=10; if(radius>500) radius=500;
+var data=_savedLat?{lat:_savedLat,lng:_savedLng,radius:radius}:{radius:radius};
+db.ref('schoolshield/schools/'+sid+'/faceAttendanceLocation').set(data).then(function(){
+var statusEl=document.getElementById('ss-loc-status');
+if(statusEl) statusEl.textContent=_savedLat?('Saved! Radius: '+radius+'m'):'Radius saved (no location — allows from anywhere)';
+alert('✅ Location settings saved!');
+}).catch(function(e){ alert('Error: '+e.message); });
+};
+// Load existing location settings on open
+function loadLocationSettings(){
+var db=getDB(); var sid=getSchoolId();
+if(!db||!sid) return;
+db.ref('schoolshield/schools/'+sid+'/faceAttendanceLocation').once('value').then(function(snap){
+var loc=snap.val();
+if(!loc) return;
+if(loc.lat){_savedLat=loc.lat;_savedLng=loc.lng;}
+var statusEl=document.getElementById('ss-loc-status');
+var radiusEl=document.getElementById('ss-loc-radius');
+if(radiusEl&&loc.radius) radiusEl.value=loc.radius;
+if(statusEl) statusEl.textContent=loc.lat?('Lat: '+loc.lat.toFixed(4)+', Lng: '+loc.lng.toFixed(4)+' | Radius: '+(loc.radius||50)+'m'):'Radius: '+(loc.radius||50)+'m (no location)';
+});
+}
 
 document.getElementById('ss-reg-overlay').addEventListener('click',function(e){
 if(e.target===this) window.ssCloseRegister();
