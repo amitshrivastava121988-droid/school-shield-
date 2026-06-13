@@ -34626,7 +34626,7 @@ var _blink = {}, _desc = {}, _matcher = null, _modelsOk = false;
 var _logMode = 'student', _curTab = 'scan', _tabletMode = false;
 
 function getSchoolId(){
-try { return localStorage.getItem('ss_currentSchoolId') || localStorage.getItem('ss_face_school') || ''; } catch(e){ return ''; }
+try { return window.currentSchoolId || localStorage.getItem('ss_currentSchoolId') || localStorage.getItem('ss_face_school') || ''; } catch(e){ return window.currentSchoolId || ''; }
 }
 function getDB(){ return window.db || null; }
 function getTodayDate(){ return new Date().toISOString().slice(0,10); }
@@ -35045,7 +35045,7 @@ var _regPersons = [];
 var _regDescriptors = {};
 
 function getSchoolId(){
-try{ return localStorage.getItem('ss_currentSchoolId')||localStorage.getItem('ss_face_school')||''; }catch(e){return '';}
+try{ return window.currentSchoolId||localStorage.getItem('ss_currentSchoolId')||localStorage.getItem('ss_face_school')||''; }catch(e){return window.currentSchoolId||'';}
 }
 function getDB(){ return window.db||null; }
 
