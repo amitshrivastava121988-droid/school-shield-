@@ -3697,8 +3697,7 @@ style={{background:`${opt.color}10`, border:`1.5px solid ${opt.color}40`, border
 </div>
 </button>
 ))}
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
-onClick={function(){localStorage.setItem("ss_face_school",schoolId||"");localStorage.setItem("ss_face_ts",Date.now().toString());}}
+<a href="#" onClick={function(e){e.preventDefault();window.ssOpenFaceAttendance();}}
 style={{background:"#A78BFA10",border:"1.5px solid #A78BFA40",borderRadius:14,padding:"16px 18px",
 cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left",
 width:"100%",fontFamily:"Outfit,sans-serif",textDecoration:"none"}}>
@@ -3706,6 +3705,16 @@ width:"100%",fontFamily:"Outfit,sans-serif",textDecoration:"none"}}>
 <div>
 <p style={{fontSize:14,fontWeight:700,color:"#A78BFA",fontFamily:"Outfit,sans-serif"}}>{"Face Recognition"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginTop:3,fontFamily:"Outfit,sans-serif"}}>{"AI face + blink detection — auto marks attendance"}</p>
+</div>
+</a>
+<a href="#" onClick={function(e){e.preventDefault();window.ssOpenFaceRegister();}}
+style={{background:"#10b98110",border:"1.5px solid #10b98140",borderRadius:14,padding:"16px 18px",
+cursor:"pointer",display:"flex",alignItems:"center",gap:14,textAlign:"left",
+width:"100%",fontFamily:"Outfit,sans-serif",textDecoration:"none",marginTop:8}}>
+<span style={{fontSize:32}}>{"📸"}</span>
+<div>
+<p style={{fontSize:14,fontWeight:700,color:"#10b981",fontFamily:"Outfit,sans-serif"}}>{"Register Faces"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginTop:3,fontFamily:"Outfit,sans-serif"}}>{"Add student/teacher/employee face for recognition"}</p>
 </div>
 </a>
 </div>
@@ -4705,6 +4714,33 @@ const isAlertForRole = (a, userRole, user) => {
 if (window.__SS_ALERT_DEBUG) {
 console.log("[Alert Filter]", { id: a.id, type: a.type, target_roles: a.target_roles, forRoles: a.forRoles, forRole: a.forRole, forParent: a.forParent, forTeacher: a.forTeacher, userRole });
 }
+
+// ── bus_board / school_exit — SIRF parents ko, student-specific ──
+if (a.type === "bus_board" || a.type === "school_exit") {
+if (userRole !== "parent") return false;
+if (!a.forStudentName && !a.forStudentId) return true; // old alerts without targeting
+// Match parent to their child
+if (user && a.forStudentId && user.linkedStudentId) return String(a.forStudentId) === String(user.linkedStudentId);
+if (user && a.forStudentName && user.studentName) return a.forStudentName === user.studentName;
+return true;
+}
+
+// ── bus_stop_reached / bus_one_stop_away — parent (child ka stop) OR employee (apna stop) ──
+if (a.type === "bus_stop_reached" || a.type === "bus_one_stop_away") {
+if (userRole === "parent") {
+if (!a.forParent) return false;
+// Match to parent's child
+if (user && a.forStudentId && user.linkedStudentId) return String(a.forStudentId) === String(user.linkedStudentId);
+if (user && a.forStudentName && user.studentName) return a.forStudentName === user.studentName;
+return a.forParent === true;
+}
+// Employee/Teacher — sirf agar forEmployee:true aur unka ID match kare
+if (a.forEmployee === true && user && a.forEmployeeId) {
+return String(a.forEmployeeId) === String(user.id);
+}
+return false; // kisi aur ko nahi
+}
+
 if (Array.isArray(a.target_roles) && a.target_roles.length > 0) {
 return a.target_roles.includes(userRole);
 }
@@ -4721,7 +4757,8 @@ if (a.forUserId && user?.id) return String(a.forUserId) === String(user.id);
 if (a.forTeacherId && user?.teacherId) return String(a.forTeacherId) === String(user.teacherId);
 if (DRIVER_ALERT_TYPES.includes(a.type)) {
 if (a.type === "PANIC" || a.isPanic) return ["principal","founder","vice_principal","superadmin","teacher"].includes(userRole);
-return userRole === "driver" || userRole === "transport_head";
+// bus_board/school_exit already handled above — remaining DRIVER types
+return ["driver","transport_head"].includes(userRole);
 }
 if (["late_alert","bus_breakdown","speed_alert","student_absent_bus","route_change","pickup_change","drop_change"].includes(a.type)) {
 return userRole === "transport_head";
@@ -10368,12 +10405,32 @@ const DRIVER_ALERT_TYPES = ["bus_board","school_exit","route_change","pickup_cha
 const filteredAlerts = alerts.filter(a => {
 const schoolMatch = !a.schoolId || sameId(a.schoolId, currentSchool?.id);
 if (!schoolMatch) return false;
-if (role === "driver") return DRIVER_ALERT_TYPES.includes(a.type);
+if (role === "driver") return DRIVER_ALERT_TYPES.includes(a.type) && a.type !== "bus_board" && a.type !== "school_exit";
 if (role === "parent") {
+// bus_board / school_exit — sirf apne bachche ka
+if (a.type === "bus_board" || a.type === "school_exit") {
+if (a.forStudentId && loggedInUser?.linkedStudentId) return String(a.forStudentId) === String(loggedInUser.linkedStudentId);
+if (a.forStudentName && loggedInUser?.studentName) return a.forStudentName === loggedInUser.studentName;
+return a.studentName === loggedInUser?.studentName;
+}
+// bus_stop_reached / bus_one_stop_away — sirf apne bachche ka stop
+if (a.type === "bus_stop_reached" || a.type === "bus_one_stop_away") {
+if (!a.forParent) return false;
+if (a.forStudentId && loggedInUser?.linkedStudentId) return String(a.forStudentId) === String(loggedInUser.linkedStudentId);
+const myStudent = students.find(s=>s.id===loggedInUser?.studentId||s.id===loggedInUser?.linkedStudentId);
+return a.forStudentName === loggedInUser?.studentName || a.forStudentName === myStudent?.name;
+}
 const myStudent = students.find(s=>s.id===loggedInUser?.studentId);
 return a.studentName===loggedInUser?.studentName || a.studentName===myStudent?.name;
 }
 if (role === "teacher") return !a.forTeacherId||(a.forTeacherId===loggedInUser?.id);
+// bus_board / school_exit — driver/transport_head/principal ko nahi
+if (a.type === "bus_board" || a.type === "school_exit") return false;
+// bus_stop_reached / bus_one_stop_away — employee apne stop ka hi
+if (a.type === "bus_stop_reached" || a.type === "bus_one_stop_away") {
+if (a.forEmployee && loggedInUser?.id) return String(a.forEmployeeId) === String(loggedInUser.id);
+return false;
+}
 return true;
 });
 const generateParentLink = () => {
@@ -10809,11 +10866,17 @@ busNo: bus.busNo, schoolId: bus.schoolId,
 read: false, ts: Date.now(), time: timeStr2
 };
 kidsHere.forEach(kid => {
+var isEmp = kid.isEmployee === true;
 window.db.ref(`schoolshield/schools/SCH_${bus.schoolId}/alerts`).push({
 ...alertBase,
 type: "bus_stop_reached",
 stopName: sn,
 studentName: kid.studentName,
+forParent: !isEmp,
+forStudentName: kid.studentName,
+forStudentId: kid.studentId || null,
+forEmployee: isEmp,
+forEmployeeId: isEmp ? (kid.studentId||null) : null,
 title: `🚌 Bus ${bus.busNo} — ${sn} par pahunchi`,
 body: `${timeStr2} — ${kid.studentName} ka stop aayi! 📍 ${mapLink}`,
 }).catch(()=>{});
@@ -10822,6 +10885,9 @@ window.db.ref("schoolshield/fcmTriggers").push({
 type: "bus_stop_reached",
 stopName: sn,
 studentName: kid.studentName,
+forParent: !isEmp,
+forStudentName: kid.studentName,
+forStudentId: kid.studentId || null,
 title: `🚌 Bus pahunchi — ${sn}`,
 body: `${kid.studentName} ka stop aa gaya! ${timeStr2}`,
 triggeredAt: Date.now(), processed: false
@@ -10830,12 +10896,18 @@ triggeredAt: Date.now(), processed: false
 // ── 4. "Ek stop pehle" alert — next stop ke bacchon ke parents ko ──
 if (nextStopName && kidsNextStop.length > 0) {
 kidsNextStop.forEach(kid => {
+var isEmp = kid.isEmployee === true;
 window.db.ref(`schoolshield/schools/SCH_${bus.schoolId}/alerts`).push({
 ...alertBase,
 type: "bus_one_stop_away",
 stopName: nextStopName,
 prevStopName: sn,
 studentName: kid.studentName,
+forParent: !isEmp,
+forStudentName: kid.studentName,
+forStudentId: kid.studentId || null,
+forEmployee: isEmp,
+forEmployeeId: isEmp ? (kid.studentId||null) : null,
 title: `⏰ Bus ek stop door — ${nextStopName} aane wali hai!`,
 body: `Bus abhi ${sn} par hai — ${kid.studentName} ready raho! 📍 ${mapLink}`,
 }).catch(()=>{});
@@ -10844,6 +10916,9 @@ window.db.ref("schoolshield/fcmTriggers").push({
 type: "bus_one_stop_away",
 stopName: nextStopName,
 studentName: kid.studentName,
+forParent: !isEmp,
+forStudentName: kid.studentName,
+forStudentId: kid.studentId || null,
 title: `⏰ Bus ek stop door — ${nextStopName}`,
 body: `${kid.studentName} ready raho! Bus abhi ${sn} par hai.`,
 triggeredAt: Date.now(), processed: false
@@ -11484,6 +11559,40 @@ mySchoolId={mySchoolId}
 <>
 {/* Late Alert Monitor */}
 <LateAlertMonitor buses={myBuses} schoolId={mySchoolId} setAlerts={ctx.setAlerts} toast={toast} />
+{/* Bus-wise Boarded Count — Transport Head only */}
+{isTransportHead && myBuses.length > 0 && (
+<div style={{background:T.card,border:"1px solid "+T.accent+"30",borderRadius:14,padding:14,marginBottom:14}}>
+<p style={{fontWeight:800,fontSize:13,color:T.accent,marginBottom:10}}>📊 Today's Boarding Count</p>
+<div style={{display:"grid",gap:8}}>
+{myBuses.map(function(b){
+var total = (b.routeChildren||[]).filter(function(c){ return !c.isEmployee; }).length;
+var boardedAlerts = (ctx.alerts||[]).filter(function(a){
+return a.type === "bus_board" && a.busNo === b.busNo &&
+a.schoolId && sameId(a.schoolId, mySchoolId);
+});
+var boarded = boardedAlerts.length;
+var pct = total > 0 ? Math.round((boarded/total)*100) : 0;
+return (
+<div key={b.id} style={{background:T.surface,borderRadius:10,padding:"10px 12px"}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+<div>
+<p style={{fontSize:13,fontWeight:700,color:T.text}}>🚌 Bus {b.busNo}</p>
+<p style={{fontSize:11,color:T.textMuted}}>{b.route||"Route not set"}</p>
+</div>
+<span style={{fontSize:13,fontWeight:800,color:boarded===total&&total>0?T.green:T.accent}}>
+{boarded}/{total} boarded
+</span>
+</div>
+<div style={{background:T.border,borderRadius:99,height:6}}>
+<div style={{background:boarded===total&&total>0?T.green:T.accent,height:6,borderRadius:99,width:pct+"%",transition:"width 0.3s"}} />
+</div>
+<p style={{fontSize:10,color:T.textMuted,marginTop:4}}>{pct}% boarded today</p>
+</div>
+);
+})}
+</div>
+</div>
+)}
 {/* Bus List */}
 <div style={{ display: "grid", gap: 12 }}>
 {myBuses.length === 0 && (
@@ -17158,7 +17267,14 @@ schoolId: currentSchool?.id||null, read: false, ts: Date.now()
 const trigger = (type, studentName) => {
 const now = new Date();
 const s = students.find(st=>st.name===studentName);
-setAlerts(p=>[{id:Date.now(),type,studentName,time:`${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`,read:false,schoolId:currentSchool?.id||null},...p]);
+// bus_board / school_exit → sirf us student ke parent ko, kisi aur ko nahi
+setAlerts(p=>[{
+id:Date.now(), type, studentName,
+time:`${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`,
+read:false, schoolId:currentSchool?.id||null,
+forParent:true, forStudentName:studentName,
+forStudentId: s ? s.id : null,
+},...p]);
 toast(`${type==="bus_board"?"🚌 Board":"⬇️ Drop"} — ${studentName}`, "success");
 if(s) sendFCMParentAlert(type, s);
 if (type === "bus_board") setBoardedSet(prev => new Set([...prev, studentName]));
@@ -20361,8 +20477,7 @@ display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexS
 <span style={{marginLeft:"auto", fontSize:18, color:T.textMuted}}>›</span>
 </button>
 ))}
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
-onClick={function(){localStorage.setItem("ss_face_school",mySchoolId||"");localStorage.setItem("ss_face_ts",Date.now().toString());}}
+<a href="#" onClick={function(e){e.preventDefault();window.ssOpenFaceAttendance();}}
 style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",
 background:"#A78BFA12",border:"1.5px solid #A78BFA40",
 borderRadius:14,cursor:"pointer",textAlign:"left",width:"100%",
@@ -21088,8 +21203,7 @@ return evThisMonth.length>0?(
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:14,marginBottom:14}}>
 <p style={{fontSize:13,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"My Attendance (Face Recognition)"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:10}}>{"Location verified — must be within 50m of school"}</p>
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
-onClick={function(){localStorage.setItem("ss_face_school",mySchoolId||"");localStorage.setItem("ss_face_ts",Date.now().toString());}}
+<a href="#" onClick={function(e){e.preventDefault();window.ssOpenFaceAttendance();}}
 style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
 cursor:"pointer",width:"100%",boxSizing:"border-box",fontFamily:"Outfit,sans-serif",textDecoration:"none"}}>
@@ -21153,8 +21267,7 @@ onMouseLeave={e=>e.currentTarget.style.border=`1px solid ${T.border}`}>
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
 <p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
-onClick={function(){localStorage.setItem("ss_face_school",mySchoolId||"");localStorage.setItem("ss_face_ts",Date.now().toString());}}
+<a href="#" onClick={function(e){e.preventDefault();window.ssOpenFaceAttendance();}}
 style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
 cursor:"pointer",width:"100%",boxSizing:"border-box",fontFamily:"Outfit,sans-serif",textDecoration:"none"}}>
@@ -21176,8 +21289,7 @@ staffPerson
 <div style={{background:T.card,border:"1px solid #A78BFA40",borderRadius:14,padding:16,marginBottom:14}}>
 <p style={{fontSize:14,fontWeight:800,color:"#A78BFA",marginBottom:4}}>{"Mark Today's Attendance"}</p>
 <p style={{fontSize:11,color:T.textMuted,marginBottom:12}}>{"Face Recognition + Location verified (50m radius)"}</p>
-<a href={"/face-attendance/face_attendance.html"} target="_blank" rel="noopener noreferrer"
-onClick={function(){localStorage.setItem("ss_face_school",mySchoolId||"");localStorage.setItem("ss_face_ts",Date.now().toString());}}
+<a href="#" onClick={function(e){e.preventDefault();window.ssOpenFaceAttendance();}}
 style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",
 background:"#A78BFA15",border:"1.5px solid #A78BFA50",borderRadius:12,
 cursor:"pointer",width:"100%",boxSizing:"border-box",fontFamily:"Outfit,sans-serif",textDecoration:"none"}}>
@@ -34436,6 +34548,756 @@ return <div key={v.id} style={{background:T.card,border:"1px solid "+T.border,bo
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(App));
+</script>
+
+<!-- Face Attendance — Plain JS (outside Babel/React) -->
+<div id="ss-face-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;padding:12px;">
+<div id="ss-face-box" style="background:#1e293b;border-radius:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;padding:20px;position:relative;transition:max-width 0.3s;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+<h2 style="color:#fff;font-size:17px;font-weight:800;margin:0;">🧠 Face Recognition</h2>
+<div style="display:flex;gap:6px;">
+<button onclick="window.ssFaceToggleTablet()" id="ss-btn-tablet" style="background:#7c3aed20;border:1px solid #7c3aed60;color:#a78bfa;border-radius:8px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:700;">📺 Tablet</button>
+<button onclick="window.ssCloseFaceAttendance()" style="background:#ef444420;border:none;color:#ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:700;">✕</button>
+</div>
+</div>
+<!-- Normal mode tabs -->
+<div id="ss-normal-tabs" style="display:flex;gap:6px;margin-bottom:14px;">
+<button onclick="window.ssFaceTab('scan')" id="ss-tab-scan" style="flex:1;padding:9px 0;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:13px;background:#3b82f6;color:#fff;">📷 Scan</button>
+<button onclick="window.ssFaceTab('today')" id="ss-tab-today" style="flex:1;padding:9px 0;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:13px;background:#1e3a5f;color:#94a3b8;">📋 Today</button>
+</div>
+<!-- Tablet mode layout -->
+<div id="ss-tablet-layout" style="display:none;">
+<div style="display:flex;gap:12px;">
+<!-- Left: Camera -->
+<div style="flex:1;min-width:0;">
+<div style="background:#0f172a;border-radius:12px;overflow:hidden;margin-bottom:8px;position:relative;min-height:220px;display:flex;align-items:center;justify-content:center;">
+<video id="ss-face-video-t" style="width:100%;display:none;border-radius:12px;" playsinline muted></video>
+<div id="ss-face-placeholder-t" style="display:flex;flex-direction:column;align-items:center;gap:6px;"><span style="font-size:36px;">🎯</span><p style="color:#94a3b8;font-size:11px;margin:0;">Camera</p></div>
+<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100px;height:130px;border:2px solid #3b82f6;border-radius:50%;pointer-events:none;"></div>
+</div>
+<div id="ss-face-status-t" style="padding:8px 10px;border-radius:8px;margin-bottom:8px;font-size:12px;font-weight:600;text-align:center;background:#1e40af33;color:#60a5fa;border:1px solid #1e40af55;">Loading...</div>
+<div id="ss-face-result-t" style="display:none;border-radius:10px;padding:10px;text-align:center;margin-bottom:8px;"></div>
+<div style="display:flex;gap:6px;">
+<button id="ss-btn-start-t" onclick="window.ssFaceStartScan()" style="flex:1;padding:10px;border:none;border-radius:10px;background:#3b82f6;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:none;">▶ Start</button>
+<button id="ss-btn-stop-t" onclick="window.ssFaceStopScan()" style="flex:1;padding:10px;border:none;border-radius:10px;background:#ef4444;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:none;">⏹ Stop</button>
+</div>
+</div>
+<!-- Right: Live list -->
+<div style="flex:1;min-width:0;">
+<div style="display:flex;gap:4px;margin-bottom:8px;">
+<button onclick="window.ssFaceLogMode('student')" id="ss-tlog-student" style="flex:1;padding:5px 0;border-radius:6px;border:none;cursor:pointer;font-weight:700;font-size:10px;background:#3b82f6;color:#fff;">S</button>
+<button onclick="window.ssFaceLogMode('teacher')" id="ss-tlog-teacher" style="flex:1;padding:5px 0;border-radius:6px;border:none;cursor:pointer;font-weight:700;font-size:10px;background:#1e3a5f;color:#94a3b8;">T</button>
+<button onclick="window.ssFaceLogMode('employee')" id="ss-tlog-employee" style="flex:1;padding:5px 0;border-radius:6px;border:none;cursor:pointer;font-weight:700;font-size:10px;background:#1e3a5f;color:#94a3b8;">E</button>
+</div>
+<p id="ss-tablet-count" style="font-size:11px;color:#34d399;font-weight:700;margin-bottom:6px;">✅ Present: 0</p>
+<div id="ss-tablet-live-list" style="max-height:280px;overflow-y:auto;"></div>
+</div>
+</div>
+</div>
+<!-- Normal scan panel -->
+<div id="ss-face-scan-panel">
+<div style="background:#0f172a;border-radius:12px;overflow:hidden;margin-bottom:10px;position:relative;min-height:180px;display:flex;align-items:center;justify-content:center;">
+<video id="ss-face-video" style="width:100%;display:none;border-radius:12px;" playsinline muted></video>
+<div id="ss-face-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;"><span style="font-size:48px;">🎯</span><p style="color:#94a3b8;font-size:12px;margin:0;">Camera appears here</p></div>
+<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:140px;height:180px;border:3px solid #3b82f6;border-radius:50%;pointer-events:none;" id="ss-face-oval"></div>
+</div>
+<div id="ss-face-status" style="padding:10px 14px;border-radius:10px;margin-bottom:10px;font-size:13px;font-weight:600;text-align:center;background:#1e40af33;color:#60a5fa;border:1px solid #1e40af55;">Loading AI models...</div>
+<div id="ss-face-result" style="display:none;border-radius:14px;padding:14px;text-align:center;margin-bottom:10px;"></div>
+<div style="display:flex;gap:8px;">
+<button id="ss-btn-start" onclick="window.ssFaceStartScan()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#3b82f6;color:#fff;font-size:15px;font-weight:700;cursor:pointer;display:none;">▶ Start Scan</button>
+<button id="ss-btn-stop" onclick="window.ssFaceStopScan()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#ef4444;color:#fff;font-size:15px;font-weight:700;cursor:pointer;display:none;">⏹ Stop</button>
+</div>
+</div>
+<div id="ss-face-today-panel" style="display:none;">
+<div style="display:flex;gap:6px;margin-bottom:10px;">
+<button onclick="window.ssFaceLogMode('student')" id="ss-log-student" style="flex:1;padding:7px 0;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:11px;background:#3b82f6;color:#fff;">Students</button>
+<button onclick="window.ssFaceLogMode('teacher')" id="ss-log-teacher" style="flex:1;padding:7px 0;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:11px;background:#1e3a5f;color:#94a3b8;">Teachers</button>
+<button onclick="window.ssFaceLogMode('employee')" id="ss-log-employee" style="flex:1;padding:7px 0;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:11px;background:#1e3a5f;color:#94a3b8;">Employees</button>
+</div>
+<div id="ss-face-today-list" style="max-height:320px;overflow-y:auto;"></div>
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+var _stream = null, _timer = null, _scanning = false, _cool = false;
+var _blink = {}, _desc = {}, _matcher = null, _modelsOk = false;
+var _logMode = 'student', _curTab = 'scan', _tabletMode = false;
+
+function getSchoolId(){
+try {
+return window.currentSchoolId || localStorage.getItem('ss_currentSchoolId') || localStorage.getItem('ss_face_school') || '';
+} catch(e){ return window.currentSchoolId || ''; }
+}
+function getDB(){ return window.db || null; }
+function getTodayDate(){ return new Date().toISOString().slice(0,10); }
+function getDistance(lat1,lon1,lat2,lon2){
+var R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function eyeAR(eye){
+function d(a,b){return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));}
+return (d(eye[1],eye[5])+d(eye[2],eye[4]))/(2*d(eye[0],eye[3]));
+}
+
+// Get active video element based on mode
+function getVideo(){ return document.getElementById(_tabletMode ? 'ss-face-video-t' : 'ss-face-video'); }
+function getPlaceholder(){ return document.getElementById(_tabletMode ? 'ss-face-placeholder-t' : 'ss-face-placeholder'); }
+function getBtnStart(){ return document.getElementById(_tabletMode ? 'ss-btn-start-t' : 'ss-btn-start'); }
+function getBtnStop(){ return document.getElementById(_tabletMode ? 'ss-btn-stop-t' : 'ss-btn-stop'); }
+
+function setStatus(msg,type){
+var ids = _tabletMode ? ['ss-face-status-t'] : ['ss-face-status'];
+// Always update both if both visible
+['ss-face-status','ss-face-status-t'].forEach(function(id){
+var el=document.getElementById(id);
+if(!el) return;
+var colors={info:'#60a5fa',success:'#34d399',error:'#f87171',warning:'#fbbf24'};
+var bgs={info:'#1e40af33',success:'#065f4633',error:'#7f1d1d33',warning:'#78350f33'};
+el.style.color=colors[type]||colors.info;
+el.style.background=bgs[type]||bgs.info;
+el.style.borderColor=(colors[type]||colors.info)+'55';
+el.textContent=msg;
+});
+}
+
+function showResult(name,time,status){
+var id = _tabletMode ? 'ss-face-result-t' : 'ss-face-result';
+var el=document.getElementById(id);
+if(!el) return;
+el.style.display='block';
+var icon=status==='success'?'✅':status==='already'?'ℹ️':'❌';
+var color=status==='success'?'#10b981':status==='already'?'#3b82f6':'#ef4444';
+var bg=status==='success'?'#065f4633':status==='already'?'#1e40af33':'#7f1d1d33';
+var msg=status==='success'?'Attendance Marked':status==='already'?'Already marked today':'Error saving';
+el.style.background=bg; el.style.border='2px solid '+color; el.style.borderRadius='12px'; el.style.padding='10px';
+el.innerHTML='<span style="font-size:28px;">'+icon+'</span><p style="font-size:14px;font-weight:800;color:#fff;margin:4px 0 2px;">'+name+'</p><p style="font-size:10px;color:#94a3b8;margin:0 0 4px;">'+msg+'</p><p style="font-size:16px;font-weight:900;color:'+color+';margin:0;">'+time+'</p>';
+// Update live list in tablet mode
+if(_tabletMode && status==='success') updateTabletLiveList(name, time);
+}
+
+function hideResult(){
+['ss-face-result','ss-face-result-t'].forEach(function(id){
+var el=document.getElementById(id); if(el) el.style.display='none';
+});
+}
+
+// Tablet live list update — add newly marked person at top
+function updateTabletLiveList(name, time){
+var list = document.getElementById('ss-tablet-live-list');
+var count = document.getElementById('ss-tablet-count');
+if(!list) return;
+var item = '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;margin-bottom:4px;background:#0f172a;border-left:3px solid #10b981;">'
++'<div style="width:24px;height:24px;border-radius:50%;background:#065f46;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">✅</div>'
++'<div style="flex:1;"><p style="font-size:12px;font-weight:700;color:#fff;margin:0;">'+name+'</p></div>'
++'<span style="font-size:10px;color:#34d399;font-weight:700;">'+time+'</span></div>';
+list.innerHTML = item + list.innerHTML;
+// Update count
+var existing = list.querySelectorAll('[style*="border-left"]');
+if(count) count.textContent = '✅ Present: ' + existing.length;
+}
+
+// Load full today list for tablet live panel
+function loadTabletList(){
+var list = document.getElementById('ss-tablet-live-list');
+var count = document.getElementById('ss-tablet-count');
+if(!list) return;
+var db=getDB(); var sid=getSchoolId(); var today=getTodayDate();
+if(!db||!sid){list.innerHTML='<p style="color:#94a3b8;font-size:11px;text-align:center;">No data</p>';return;}
+var paths={student:'students',teacher:'teachers',employee:'employees'};
+db.ref('schoolshield/schools/'+sid+'/'+paths[_logMode]).once('value').then(function(pSnap){
+db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(function(lSnap){
+var persons=[]; var pVal=pSnap.val();
+if(pVal){ if(Array.isArray(pVal)) persons=pVal; else persons=Object.values(pVal); }
+var logs={}; try{ var lv=lSnap.val(); logs=lv?JSON.parse(lv):{};} catch(e){ logs=lSnap.val()||{}; }
+var present=[];
+persons.forEach(function(p){
+var k=_logMode+'_'+p.id; var log=logs[k]&&logs[k][today];
+if(log&&log.status==='present') present.push({p:p,time:log.inTime||''});
+});
+if(count) count.textContent='✅ Present: '+present.length;
+var html='';
+present.forEach(function(x){
+html+='<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;margin-bottom:4px;background:#0f172a;border-left:3px solid #10b981;">'
++'<div style="width:24px;height:24px;border-radius:50%;background:#065f46;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">✅</div>'
++'<div style="flex:1;"><p style="font-size:12px;font-weight:700;color:#fff;margin:0;">'+x.p.name+'</p></div>'
++'<span style="font-size:10px;color:#34d399;font-weight:700;">'+x.time+'</span></div>';
+});
+if(!present.length) html='<p style="color:#94a3b8;font-size:11px;text-align:center;padding:12px;">No one marked yet</p>';
+list.innerHTML=html;
+});
+});
+}
+
+window.ssFaceToggleTablet = function(){
+_tabletMode = !_tabletMode;
+var box = document.getElementById('ss-face-box');
+var normal = document.getElementById('ss-normal-tabs');
+var tablet = document.getElementById('ss-tablet-layout');
+var scanPanel = document.getElementById('ss-face-scan-panel');
+var todayPanel = document.getElementById('ss-face-today-panel');
+var btn = document.getElementById('ss-btn-tablet');
+if(_tabletMode){
+box.style.maxWidth = '820px';
+normal.style.display = 'none';
+scanPanel.style.display = 'none';
+todayPanel.style.display = 'none';
+tablet.style.display = 'block';
+if(btn){btn.style.background='#7c3aed40';btn.style.color='#c4b5fd';}
+// Copy AI ready state
+var startT = document.getElementById('ss-btn-start-t');
+if(startT && _matcher) startT.style.display='block';
+setStatus(_matcher ? 'Ready — Click Start' : 'Loading AI...', _matcher ? 'info' : 'info');
+loadTabletList();
+} else {
+box.style.maxWidth = '420px';
+normal.style.display = 'flex';
+scanPanel.style.display = 'block';
+todayPanel.style.display = 'none';
+tablet.style.display = 'none';
+if(btn){btn.style.background='#7c3aed20';btn.style.color='#a78bfa';}
+// Sync start button state
+var startN = document.getElementById('ss-btn-start');
+if(startN && _matcher) startN.style.display='block';
+}
+// Stop scan when switching modes
+window.ssFaceStopScan();
+};
+
+window.ssFaceTab = function(tab){
+_curTab=tab;
+document.getElementById('ss-face-scan-panel').style.display=tab==='scan'?'block':'none';
+document.getElementById('ss-face-today-panel').style.display=tab==='today'?'block':'none';
+var scanBtn=document.getElementById('ss-tab-scan');
+var todayBtn=document.getElementById('ss-tab-today');
+if(scanBtn){scanBtn.style.background=tab==='scan'?'#3b82f6':'#1e3a5f';scanBtn.style.color=tab==='scan'?'#fff':'#94a3b8';}
+if(todayBtn){todayBtn.style.background=tab==='today'?'#3b82f6':'#1e3a5f';todayBtn.style.color=tab==='today'?'#fff':'#94a3b8';}
+if(tab==='today') window.ssFaceRenderToday();
+};
+
+window.ssFaceLogMode = function(mode){
+_logMode=mode;
+['student','teacher','employee'].forEach(function(m){
+var btn=document.getElementById('ss-log-'+m);
+if(btn){btn.style.background=m===mode?'#3b82f6':'#1e3a5f';btn.style.color=m===mode?'#fff':'#94a3b8';}
+var tbtn=document.getElementById('ss-tlog-'+m);
+if(tbtn){tbtn.style.background=m===mode?'#3b82f6':'#1e3a5f';tbtn.style.color=m===mode?'#fff':'#94a3b8';}
+});
+if(_tabletMode) loadTabletList();
+else window.ssFaceRenderToday();
+};
+
+window.ssFaceRenderToday = function(){
+var container=document.getElementById('ss-face-today-list');
+if(!container) return;
+var db=getDB(); var sid=getSchoolId(); var today=getTodayDate();
+if(!db||!sid){container.innerHTML='<p style="color:#94a3b8;font-size:12px;text-align:center;padding:16px;">No school data</p>';return;}
+container.innerHTML='<p style="color:#94a3b8;font-size:12px;text-align:center;">Loading...</p>';
+var paths={student:'students',teacher:'teachers',employee:'employees'};
+db.ref('schoolshield/schools/'+sid+'/'+paths[_logMode]).once('value').then(function(pSnap){
+db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(function(lSnap){
+var persons=[]; var pVal=pSnap.val();
+if(pVal){ if(Array.isArray(pVal)) persons=pVal; else persons=Object.values(pVal); }
+var logs={}; try{ var lv=lSnap.val(); logs=lv?JSON.parse(lv):{};} catch(e){ logs=lSnap.val()||{}; }
+var present=[],absent=[];
+persons.forEach(function(p){
+var k=_logMode+'_'+p.id; var log=logs[k]&&logs[k][today];
+if(log&&log.status==='present') present.push({p:p,time:log.inTime||''});
+else absent.push(p);
+});
+var html='';
+if(present.length){html+='<p style="font-size:11px;color:#34d399;font-weight:700;margin-bottom:6px;">✅ Present ('+present.length+')</p>';}
+present.forEach(function(x){html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:#0f172a;"><div style="width:28px;height:28px;border-radius:50%;background:#065f46;display:flex;align-items:center;justify-content:center;font-size:13px;">✅</div><div style="flex:1;"><p style="font-size:12px;font-weight:700;color:#fff;margin:0;">'+x.p.name+'</p><p style="font-size:10px;color:#64748b;margin:0;">'+(x.p.class||x.p.designation||'')+'</p></div><span style="font-size:10px;font-weight:700;color:#34d399;">'+x.time+'</span></div>';});
+if(absent.length){html+='<p style="font-size:11px;color:#f87171;font-weight:700;margin:8px 0 6px;">❌ Absent ('+absent.length+')</p>';}
+absent.forEach(function(p){html+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:#0f172a;opacity:0.6;"><div style="width:28px;height:28px;border-radius:50%;background:#7f1d1d;display:flex;align-items:center;justify-content:center;font-size:13px;">❌</div><div style="flex:1;"><p style="font-size:12px;font-weight:700;color:#fff;margin:0;">'+p.name+'</p><p style="font-size:10px;color:#64748b;margin:0;">'+(p.class||p.designation||'')+'</p></div></div>';});
+if(!persons.length) html='<p style="color:#94a3b8;font-size:12px;text-align:center;padding:16px;">No '+_logMode+'s found</p>';
+container.innerHTML=html;
+}).catch(function(){container.innerHTML='<p style="color:#f87171;">Error loading logs</p>';});
+}).catch(function(){container.innerHTML='<p style="color:#f87171;">Error loading data</p>';});
+};
+
+function loadFaceApi(cb){
+if(window.faceapi){cb();return;}
+var ex=document.getElementById('__ss_faceapi__');
+if(ex){var iv=setInterval(function(){if(window.faceapi){clearInterval(iv);cb();}},300);return;}
+var s=document.createElement('script');
+s.id='__ss_faceapi__';
+s.src='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+s.onload=function(){cb();};
+s.onerror=function(){setStatus('Failed to load AI library. Check internet.','error');};
+document.head.appendChild(s);
+}
+function loadModelsAndDescriptors(){
+setStatus('Loading AI models...','info');
+var MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+Promise.all([
+window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+]).then(function(){
+_modelsOk=true;
+setStatus('Loading face data...','info');
+var db=getDB(); var sid=getSchoolId();
+if(!db||!sid){setStatus('No school data found.','error');return;}
+db.ref('schoolshield/faceDescriptors/'+sid).once('value').then(function(snap){
+_desc=snap.val()||{};
+var labeled=[];
+Object.keys(_desc).forEach(function(key){
+var f=_desc[key]; if(!f||!f.descriptor) return;
+labeled.push(new window.faceapi.LabeledFaceDescriptors(key,[new Float32Array(f.descriptor)]));
+});
+if(labeled.length>0){
+_matcher=new window.faceapi.FaceMatcher(labeled,0.5);
+setStatus('Ready — Click Start Scan','info');
+var btn=document.getElementById('ss-btn-start');
+if(btn) btn.style.display='block';
+var btnT=document.getElementById('ss-btn-start-t');
+if(btnT) btnT.style.display='block';
+} else {
+setStatus('No faces registered. Register faces first.','warning');
+var btn=document.getElementById('ss-btn-start');
+if(btn) btn.style.display='block';
+var btnT=document.getElementById('ss-btn-start-t');
+if(btnT) btnT.style.display='block';
+}
+}).catch(function(e){setStatus('Error loading faces: '+e.message,'error');});
+}).catch(function(e){setStatus('Model load failed: '+e.message,'error');});
+}
+
+window.ssOpenFaceAttendance = function(){
+var overlay=document.getElementById('ss-face-overlay');
+if(!overlay) return;
+overlay.style.display='flex';
+hideResult();
+setStatus('Loading AI models...','info');
+document.getElementById('ss-btn-start').style.display='none';
+document.getElementById('ss-btn-stop').style.display='none';
+document.getElementById('ss-face-video').style.display='none';
+document.getElementById('ss-face-placeholder').style.display='flex';
+loadFaceApi(function(){ loadModelsAndDescriptors(); });
+};
+
+window.ssCloseFaceAttendance = function(){
+window.ssFaceStopScan();
+var overlay=document.getElementById('ss-face-overlay');
+if(overlay) overlay.style.display='none';
+};
+
+window.ssFaceStartScan = function(){
+if(!_matcher){setStatus('No faces registered!','error');return;}
+var sid=getSchoolId();
+var db=getDB();
+// GPS check
+function startCamera(){
+navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}}).then(function(stream){
+_stream=stream;
+var vid=getVideo(); var ph=getPlaceholder();
+if(vid){vid.srcObject=stream;vid.play();vid.style.display='block';}
+if(ph) ph.style.display='none';
+var bs=getBtnStart(); var bp=getBtnStop();
+if(bs) bs.style.display='none';
+if(bp) bp.style.display='block';
+_scanning=true; _cool=false; _blink={};
+setStatus('Look at camera and BLINK once','info');
+_timer=setInterval(function(){
+if(!_scanning||_cool) return;
+var vid=getVideo();
+if(!vid||!window.faceapi||!_matcher) return;
+window.faceapi.detectAllFaces(vid,new window.faceapi.TinyFaceDetectorOptions({inputSize:160}))
+.withFaceLandmarks(true).withFaceDescriptors().then(function(dets){
+if(!dets.length){setStatus('No face detected — look at camera','info');return;}
+for(var i=0;i<dets.length;i++){
+var det=dets[i];
+var match=_matcher.findBestMatch(det.descriptor);
+if(match.distance>0.5){setStatus('Face not recognized — not registered?','warning');continue;}
+var key=match.label;
+if(!_blink[key]) _blink[key]={closed:false};
+var lm=det.landmarks;
+var ear=(eyeAR(lm.getLeftEye())+eyeAR(lm.getRightEye()))/2;
+if(ear<0.22){ _blink[key].closed=true; }
+else if(_blink[key].closed&&ear>0.28){
+_blink[key].closed=false;
+markAtt(key);
+break;
+} else {
+var nm=_desc[key]&&_desc[key].name;
+setStatus('Recognized: '+(nm||key)+' — BLINK to confirm','info');
+}
+}
+}).catch(function(){});
+},200);
+}).catch(function(e){setStatus('Camera error: '+e.message,'error');});
+}
+// Check GPS if school location set
+if(db && sid){
+db.ref('schoolshield/schools/'+sid+'/faceAttendanceLocation').once('value').then(function(snap){
+var loc=snap.val();
+if(!loc||!loc.lat){startCamera();return;}
+setStatus('Checking location...','info');
+navigator.geolocation.getCurrentPosition(function(pos){
+var dist=getDistance(pos.coords.latitude,pos.coords.longitude,loc.lat,loc.lng);
+if(dist<=50){startCamera();}
+else{setStatus('You are '+Math.round(dist)+'m away (max 50m). Move closer!','error');}
+},function(){startCamera();},{enableHighAccuracy:true,timeout:10000});
+}).catch(function(){startCamera();});
+} else { startCamera(); }
+};
+
+window.ssFaceStopScan = function(){
+_scanning=false;
+if(_timer){clearInterval(_timer);_timer=null;}
+if(_stream){_stream.getTracks().forEach(function(t){t.stop();});_stream=null;}
+// Reset both video elements
+['ss-face-video','ss-face-video-t'].forEach(function(id){
+var v=document.getElementById(id);
+if(v){v.style.display='none';v.srcObject=null;}
+});
+['ss-face-placeholder','ss-face-placeholder-t'].forEach(function(id){
+var p=document.getElementById(id); if(p) p.style.display='flex';
+});
+var bs=getBtnStart(); if(bs) bs.style.display='block';
+var bp=getBtnStop(); if(bp) bp.style.display='none';
+setStatus('Camera stopped. Click Start to scan again.','info');
+};
+
+function markAtt(key){
+if(_cool) return;
+_cool=true;
+var fd=_desc[key]; if(!fd){_cool=false;return;}
+var type=fd.type||'student',pid=fd.personId||key,name=fd.name||key;
+var timeStr=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+var attKey=type+'_'+pid;
+var db=getDB(); var sid=getSchoolId(); var today=getTodayDate();
+if(!db||!sid){showResult(name,timeStr,'error');_cool=false;return;}
+db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(function(snap){
+var logs={}; try{ var v=snap.val(); logs=v?JSON.parse(v):{};} catch(e){ logs=snap.val()||{}; }
+if(logs[attKey]&&logs[attKey][today]&&logs[attKey][today].status==='present'){
+showResult(name,timeStr,'already');
+setTimeout(function(){hideResult();_cool=false;_blink={};setStatus('Look at camera and BLINK once','info');},3000);
+return;
+}
+if(!logs[attKey]) logs[attKey]={};
+logs[attKey][today]={status:'present',inTime:timeStr,outTime:'',markedBy:'face-recognition'};
+db.ref('schoolshield/schools/'+sid+'/attendanceLogs').set(JSON.stringify(logs)).then(function(){
+showResult(name,timeStr,'success');
+setTimeout(function(){hideResult();_cool=false;_blink={};setStatus('Look at camera and BLINK once','info');},3000);
+}).catch(function(){showResult(name,timeStr,'error');_cool=false;});
+}).catch(function(){showResult(name,timeStr,'error');_cool=false;});
+}
+
+// Close on overlay click outside box
+document.getElementById('ss-face-overlay').addEventListener('click',function(e){
+if(e.target===this) window.ssCloseFaceAttendance();
+});
+})();
+</script>
+<!-- Face Registration — Plain JS -->
+<div id="ss-reg-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;padding:12px;">
+<div style="background:#1e293b;border-radius:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;padding:20px;position:relative;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+<h2 style="color:#fff;font-size:17px;font-weight:800;margin:0;">📸 Register Face</h2>
+<button onclick="window.ssCloseRegister()" style="background:#ef444420;border:none;color:#ef4444;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:700;">✕ Close</button>
+</div>
+<!-- Type selector -->
+<div style="display:flex;gap:6px;margin-bottom:14px;">
+<button onclick="window.ssRegType('student')" id="ss-reg-type-student" style="flex:1;padding:8px 0;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:12px;background:#3b82f6;color:#fff;">👦 Students</button>
+<button onclick="window.ssRegType('teacher')" id="ss-reg-type-teacher" style="flex:1;padding:8px 0;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:12px;background:#1e3a5f;color:#94a3b8;">👩‍🏫 Teachers</button>
+<button onclick="window.ssRegType('employee')" id="ss-reg-type-employee" style="flex:1;padding:8px 0;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:12px;background:#1e3a5f;color:#94a3b8;">👔 Employees</button>
+</div>
+<!-- Search & select person -->
+<div style="margin-bottom:12px;position:relative;">
+<input id="ss-reg-search" type="text" placeholder="Search name..." oninput="window.ssRegSearch(this.value)"
+style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>
+<div id="ss-reg-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #334155;border-radius:10px;margin-top:4px;max-height:160px;overflow-y:auto;z-index:10;"></div>
+</div>
+<div id="ss-reg-selected" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 14px;margin-bottom:12px;">
+<p id="ss-reg-selected-name" style="font-size:13px;font-weight:700;color:#fff;margin:0;"></p>
+<p id="ss-reg-selected-sub" style="font-size:11px;color:#64748b;margin:0;"></p>
+</div>
+<!-- Camera -->
+<div style="background:#0f172a;border-radius:12px;overflow:hidden;margin-bottom:10px;position:relative;min-height:200px;display:flex;align-items:center;justify-content:center;">
+<video id="ss-reg-video" style="width:100%;display:none;border-radius:12px;" playsinline muted></video>
+<canvas id="ss-reg-canvas" style="display:none;"></canvas>
+<div id="ss-reg-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:8px;"><span style="font-size:48px;">📸</span><p style="color:#94a3b8;font-size:12px;margin:0;">Camera will appear here</p></div>
+<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:140px;height:180px;border:3px solid #10b981;border-radius:50%;pointer-events:none;opacity:0;" id="ss-reg-oval"></div>
+</div>
+<div id="ss-reg-status" style="padding:10px 14px;border-radius:10px;margin-bottom:10px;font-size:13px;font-weight:600;text-align:center;background:#1e40af33;color:#60a5fa;border:1px solid #1e40af55;">Select a person to register</div>
+<div style="display:flex;gap:8px;">
+<button id="ss-reg-btn-cam" onclick="window.ssRegStartCamera()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#10b981;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:none;">📷 Open Camera</button>
+<button id="ss-reg-btn-capture" onclick="window.ssRegCapture()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#3b82f6;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:none;">✅ Capture & Save</button>
+<button id="ss-reg-btn-retake" onclick="window.ssRegRetake()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#f59e0b;color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:none;">🔄 Retake</button>
+</div>
+<!-- Registered list -->
+<div style="margin-top:14px;">
+<p style="font-size:12px;color:#64748b;font-weight:700;margin-bottom:8px;">ALREADY REGISTERED</p>
+<div id="ss-reg-list" style="max-height:160px;overflow-y:auto;"></div>
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+var _regType = 'student';
+var _regStream = null;
+var _regPerson = null;
+var _regCaptured = false;
+var _regPersons = [];
+var _regDescriptors = {};
+
+function getSchoolId(){
+try{ return window.currentSchoolId||localStorage.getItem('ss_currentSchoolId')||localStorage.getItem('ss_face_school')||''; }catch(e){return window.currentSchoolId||'';}
+}
+function getDB(){ return window.db||null; }
+
+function setRegStatus(msg,type){
+var el=document.getElementById('ss-reg-status'); if(!el) return;
+var colors={info:'#60a5fa',success:'#34d399',error:'#f87171',warning:'#fbbf24'};
+var bgs={info:'#1e40af33',success:'#065f4633',error:'#7f1d1d33',warning:'#78350f33'};
+el.style.color=colors[type]||colors.info;
+el.style.background=bgs[type]||bgs.info;
+el.style.borderColor=(colors[type]||colors.info)+'55';
+el.textContent=msg;
+}
+
+function loadFaceApiReg(cb){
+if(window.faceapi){cb();return;}
+var ex=document.getElementById('__ss_faceapi__');
+if(ex){var iv=setInterval(function(){if(window.faceapi){clearInterval(iv);cb();}},300);return;}
+var s=document.createElement('script');
+s.id='__ss_faceapi__';
+s.src='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+s.onload=function(){cb();};
+s.onerror=function(){setRegStatus('Failed to load AI. Check internet.','error');};
+document.head.appendChild(s);
+}
+
+function loadRegModels(cb){
+if(window.__faceModelsLoaded){cb();return;}
+setRegStatus('Loading AI models...','info');
+var MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+Promise.all([
+window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+]).then(function(){ window.__faceModelsLoaded=true; cb(); })
+.catch(function(e){setRegStatus('Model load failed: '+e.message,'error');});
+}
+
+var _personsLoaded = false;
+var _personsLoading = false;
+function loadPersons(cb){
+var db=getDB(); var sid=getSchoolId();
+if(!db||!sid){
+setRegStatus('School not found. Please login first.','error');
+return;
+}
+if(_personsLoading){ if(cb) setTimeout(function(){if(cb)cb();},600); return; }
+_personsLoading=true;
+var paths={student:'students',teacher:'teachers',employee:'employees'};
+Promise.all([
+db.ref('schoolshield/schools/'+sid+'/'+paths[_regType]).once('value'),
+db.ref('schoolshield/faceDescriptors/'+sid).once('value')
+]).then(function(results){
+var snap=results[0]; var fdSnap=results[1];
+var val=snap.val();
+if(!val){_regPersons=[];}
+else if(Array.isArray(val)) _regPersons=val;
+else _regPersons=Object.values(val);
+_regDescriptors=fdSnap.val()||{};
+_personsLoaded=true;
+_personsLoading=false;
+renderRegList();
+if(cb) cb();
+}).catch(function(){ _personsLoading=false; });
+}
+
+function renderRegList(){
+var list=document.getElementById('ss-reg-list'); if(!list) return;
+var registered=_regPersons.filter(function(p){
+return !!_regDescriptors[_regType+'_'+p.id];
+});
+if(!registered.length){list.innerHTML='<p style="color:#475569;font-size:12px;text-align:center;padding:8px;">No faces registered yet</p>';return;}
+var html='';
+registered.forEach(function(p){
+html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;margin-bottom:4px;background:#0f172a;">'
++'<div><p style="font-size:12px;font-weight:700;color:#fff;margin:0;">'+p.name+'</p>'
++'<p style="font-size:10px;color:#64748b;margin:0;">'+(p.class||p.designation||p.empRole||'')+'</p></div>'
++'<button onclick="window.ssRegDelete(\''+_regType+'_'+p.id+'\',\''+p.name+'\')" style="background:#ef444420;border:none;color:#ef4444;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;font-weight:700;">Delete</button>'
++'</div>';
+});
+list.innerHTML=html;
+}
+
+window.ssRegDelete = function(key, name){
+if(!confirm('Delete face registration for '+name+'?')) return;
+var db=getDB(); var sid=getSchoolId();
+if(!db||!sid) return;
+db.ref('schoolshield/faceDescriptors/'+sid+'/'+key).remove().then(function(){
+delete _regDescriptors[key];
+renderRegList();
+setRegStatus(name+' face deleted!','success');
+});
+};
+
+window.ssRegType = function(type){
+_regType=type; _personsLoaded=false; _personsLoading=false;
+['student','teacher','employee'].forEach(function(t){
+var btn=document.getElementById('ss-reg-type-'+t);
+if(btn){btn.style.background=t===type?'#3b82f6':'#1e3a5f';btn.style.color=t===type?'#fff':'#94a3b8';}
+});
+_regPerson=null; _regCaptured=false;
+document.getElementById('ss-reg-selected').style.display='none';
+document.getElementById('ss-reg-search').value='';
+document.getElementById('ss-reg-dropdown').style.display='none';
+document.getElementById('ss-reg-btn-cam').style.display='none';
+document.getElementById('ss-reg-btn-capture').style.display='none';
+document.getElementById('ss-reg-btn-retake').style.display='none';
+ssRegStopCamera();
+loadPersons();
+};
+
+window.ssRegSearch = function(q){
+var dd=document.getElementById('ss-reg-dropdown');
+if(!q.trim()){dd.style.display='none';return;}
+function doSearch(){
+var filtered=_regPersons.filter(function(p){ return p.name&&p.name.toLowerCase().includes(q.toLowerCase()); });
+if(!filtered.length){dd.style.display='none';return;}
+dd.innerHTML=filtered.slice(0,10).map(function(p){
+var sub=p.class||p.designation||p.empRole||'';
+var alreadyReg=!!_regDescriptors[_regType+'_'+p.id];
+return '<div onclick="window.ssRegSelect(\''+p.id+'\',\''+encodeURIComponent(p.name)+'\',\''+encodeURIComponent(sub)+'\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">'
++'<div><p style="font-size:13px;font-weight:700;color:#e2e8f0;margin:0;">'+p.name+'</p>'
++'<p style="font-size:10px;color:#64748b;margin:0;">'+sub+'</p></div>'
++(alreadyReg?'<span style="font-size:9px;background:#10b98120;color:#10b981;border-radius:4px;padding:2px 6px;font-weight:700;">Registered</span>':'')
++'</div>';
+}).join('');
+dd.style.display='block';
+}
+if(!_personsLoaded){
+setRegStatus('Loading...','info');
+loadPersons(function(){ doSearch(); setRegStatus('Select a person to register','info'); });
+} else {
+doSearch();
+}
+};
+
+window.ssRegSelect = function(id, name, sub){
+name=decodeURIComponent(name); sub=decodeURIComponent(sub);
+_regPerson={id:id,name:name,sub:sub};
+document.getElementById('ss-reg-search').value=name;
+document.getElementById('ss-reg-dropdown').style.display='none';
+document.getElementById('ss-reg-selected').style.display='block';
+document.getElementById('ss-reg-selected-name').textContent=name;
+document.getElementById('ss-reg-selected-sub').textContent=sub;
+document.getElementById('ss-reg-btn-cam').style.display='block';
+document.getElementById('ss-reg-btn-capture').style.display='none';
+document.getElementById('ss-reg-btn-retake').style.display='none';
+var alreadyReg=!!_regDescriptors[_regType+'_'+id];
+setRegStatus(alreadyReg?'⚠️ Already registered — capture again to update':'✅ Person selected! Click "Open Camera" to capture face','info');
+};
+
+function ssRegStopCamera(){
+if(_regStream){_regStream.getTracks().forEach(function(t){t.stop();});_regStream=null;}
+var vid=document.getElementById('ss-reg-video');
+var ph=document.getElementById('ss-reg-placeholder');
+var oval=document.getElementById('ss-reg-oval');
+if(vid){vid.style.display='none';vid.srcObject=null;}
+if(ph) ph.style.display='flex';
+if(oval) oval.style.opacity='0';
+}
+
+window.ssRegStartCamera = function(){
+if(!_regPerson){setRegStatus('Select a person first!','error');return;}
+loadFaceApiReg(function(){
+loadRegModels(function(){
+navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}}).then(function(stream){
+_regStream=stream; _regCaptured=false;
+var vid=document.getElementById('ss-reg-video');
+var ph=document.getElementById('ss-reg-placeholder');
+var oval=document.getElementById('ss-reg-oval');
+if(vid){vid.srcObject=stream;vid.play();vid.style.display='block';}
+if(ph) ph.style.display='none';
+if(oval) oval.style.opacity='0.6';
+document.getElementById('ss-reg-btn-cam').style.display='none';
+document.getElementById('ss-reg-btn-capture').style.display='block';
+setRegStatus('Position face in oval, then click Capture','info');
+}).catch(function(e){setRegStatus('Camera error: '+e.message,'error');});
+});
+});
+};
+
+window.ssRegCapture = function(){
+if(!_regPerson){setRegStatus('No person selected!','error');return;}
+var vid=document.getElementById('ss-reg-video');
+if(!vid||!_regStream){setRegStatus('Camera not ready!','error');return;}
+setRegStatus('Detecting face...','info');
+window.faceapi.detectSingleFace(vid, new window.faceapi.TinyFaceDetectorOptions({inputSize:160}))
+.withFaceLandmarks(true).withFaceDescriptor().then(function(det){
+if(!det){setRegStatus('No face detected! Position face properly and try again.','error');return;}
+var descriptor=Array.from(det.descriptor);
+var key=_regType+'_'+_regPerson.id;
+var db=getDB(); var sid=getSchoolId();
+if(!db||!sid){setRegStatus('No school data!','error');return;}
+var data={
+name:_regPerson.name,
+type:_regType,
+personId:_regPerson.id,
+descriptor:descriptor,
+registeredAt:new Date().toISOString()
+};
+db.ref('schoolshield/faceDescriptors/'+sid+'/'+key).set(data).then(function(){
+_regDescriptors[key]=data;
+setRegStatus('✅ '+_regPerson.name+' registered successfully!','success');
+ssRegStopCamera();
+document.getElementById('ss-reg-btn-capture').style.display='none';
+document.getElementById('ss-reg-btn-retake').style.display='none';
+document.getElementById('ss-reg-btn-cam').style.display='block';
+_regCaptured=true;
+renderRegList();
+}).catch(function(e){setRegStatus('Save failed: '+e.message,'error');});
+}).catch(function(e){setRegStatus('Detection error: '+e.message,'error');});
+};
+
+window.ssRegRetake = function(){
+ssRegStopCamera();
+document.getElementById('ss-reg-btn-capture').style.display='none';
+document.getElementById('ss-reg-btn-retake').style.display='none';
+document.getElementById('ss-reg-btn-cam').style.display='block';
+setRegStatus('Click "Open Camera" to try again','info');
+};
+
+window.ssOpenFaceRegister = function(){
+var overlay=document.getElementById('ss-reg-overlay');
+if(!overlay) return;
+overlay.style.display='flex';
+_regType='student'; _regPerson=null; _regCaptured=false;
+_personsLoaded=false; _personsLoading=false; _regPersons=[];
+document.getElementById('ss-reg-search').value='';
+document.getElementById('ss-reg-dropdown').style.display='none';
+document.getElementById('ss-reg-selected').style.display='none';
+document.getElementById('ss-reg-btn-cam').style.display='none';
+document.getElementById('ss-reg-btn-capture').style.display='none';
+document.getElementById('ss-reg-btn-retake').style.display='none';
+['student','teacher','employee'].forEach(function(t){
+var btn=document.getElementById('ss-reg-type-'+t);
+if(btn){btn.style.background=t==='student'?'#3b82f6':'#1e3a5f';btn.style.color=t==='student'?'#fff':'#94a3b8';}
+});
+setRegStatus('Select a person to register','info');
+loadPersons();
+};
+
+window.ssCloseRegister = function(){
+ssRegStopCamera();
+var overlay=document.getElementById('ss-reg-overlay');
+if(overlay) overlay.style.display='none';
+};
+
+document.getElementById('ss-reg-overlay').addEventListener('click',function(e){
+if(e.target===this) window.ssCloseRegister();
+});
+})();
 </script>
 </body>
 </html>
