@@ -35005,13 +35005,10 @@ if(e.target===this) window.ssCloseFaceAttendance();
 <button onclick="window.ssRegType('employee')" id="ss-reg-type-employee" style="flex:1;padding:8px 0;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:12px;background:#1e3a5f;color:#94a3b8;">👔 Employees</button>
 </div>
 <!-- Search & select person -->
-<div style="margin-bottom:12px;position:relative;">
-<input id="ss-reg-search" type="text" placeholder="Search name..." 
-oninput="window.ssRegSearch(this.value)" 
-onkeyup="window.ssRegSearch(this.value)"
-onfocus="if(this.value) window.ssRegSearch(this.value)"
+<div style="margin-bottom:12px;">
+<input id="ss-reg-search" type="text" placeholder="Type name to search..." 
 style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>
-<div id="ss-reg-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #334155;border-radius:10px;margin-top:4px;max-height:160px;overflow-y:auto;z-index:10;"></div>
+<div id="ss-reg-dropdown" style="background:#1e293b;border:1px solid #334155;border-radius:10px;margin-top:4px;max-height:200px;overflow-y:auto;display:none;"></div>
 </div>
 <div id="ss-reg-selected" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 14px;margin-bottom:12px;">
 <p id="ss-reg-selected-name" style="font-size:13px;font-weight:700;color:#fff;margin:0;"></p>
@@ -35142,7 +35139,7 @@ setRegStatus(name+' face deleted!','success');
 };
 
 window.ssRegType = function(type){
-_regType=type; _personsLoaded=false; _personsLoading=false;
+_regType=type; _personsLoaded=false; _personsLoading=false; _regPersons=[];
 ['student','teacher','employee'].forEach(function(t){
 var btn=document.getElementById('ss-reg-type-'+t);
 if(btn){btn.style.background=t===type?'#3b82f6':'#1e3a5f';btn.style.color=t===type?'#fff':'#94a3b8';}
@@ -35155,32 +35152,32 @@ document.getElementById('ss-reg-btn-cam').style.display='none';
 document.getElementById('ss-reg-btn-capture').style.display='none';
 document.getElementById('ss-reg-btn-retake').style.display='none';
 ssRegStopCamera();
-loadPersons();
+setRegStatus('Loading persons...','info');
+loadPersons(function(){ setRegStatus('Type a name to search','info'); });
 };
 
 window.ssRegSearch = function(q){
 var dd=document.getElementById('ss-reg-dropdown');
-if(!q.trim()){dd.style.display='none';return;}
-function doSearch(){
-var filtered=_regPersons.filter(function(p){ return p.name&&p.name.toLowerCase().includes(q.toLowerCase()); });
-if(!filtered.length){dd.style.display='none';return;}
+if(!q||!q.trim()){dd.style.display='none';return;}
+var filtered=_regPersons.filter(function(p){
+return p.name&&p.name.toLowerCase().indexOf(q.toLowerCase())!==-1;
+});
+if(!filtered.length){
+dd.innerHTML='<div style="padding:10px 14px;color:#64748b;font-size:13px;">No match found</div>';
+dd.style.display='block';
+return;
+}
 dd.innerHTML=filtered.slice(0,10).map(function(p){
 var sub=p.class||p.designation||p.empRole||'';
 var alreadyReg=!!_regDescriptors[_regType+'_'+p.id];
-return '<div onclick="window.ssRegSelect(\''+p.id+'\',\''+encodeURIComponent(p.name)+'\',\''+encodeURIComponent(sub)+'\')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">'
+return '<div onclick="window.ssRegSelect(\''+p.id+'\',\''+encodeURIComponent(p.name)+'\',\''+encodeURIComponent(sub)+'\')" '
++'style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">'
 +'<div><p style="font-size:13px;font-weight:700;color:#e2e8f0;margin:0;">'+p.name+'</p>'
 +'<p style="font-size:10px;color:#64748b;margin:0;">'+sub+'</p></div>'
-+(alreadyReg?'<span style="font-size:9px;background:#10b98120;color:#10b981;border-radius:4px;padding:2px 6px;font-weight:700;">Registered</span>':'')
++(alreadyReg?'<span style="font-size:9px;background:#10b98120;color:#10b981;border-radius:4px;padding:2px 6px;font-weight:700;">✓ Registered</span>':'')
 +'</div>';
 }).join('');
 dd.style.display='block';
-}
-if(!_personsLoaded){
-setRegStatus('Loading...','info');
-loadPersons(function(){ doSearch(); setRegStatus('Select a person to register','info'); });
-} else {
-doSearch();
-}
 };
 
 window.ssRegSelect = function(id, name, sub){
@@ -35287,8 +35284,17 @@ document.getElementById('ss-reg-btn-retake').style.display='none';
 var btn=document.getElementById('ss-reg-type-'+t);
 if(btn){btn.style.background=t==='student'?'#3b82f6':'#1e3a5f';btn.style.color=t==='student'?'#fff':'#94a3b8';}
 });
-setRegStatus('Select a person to register','info');
-loadPersons();
+setRegStatus('Loading persons...','info');
+// Load persons immediately when modal opens
+loadPersons(function(){
+setRegStatus('Type a name to search','info');
+});
+// Attach search listener
+var inp = document.getElementById('ss-reg-search');
+if(inp){
+inp.oninput = function(){ window.ssRegSearch(this.value); };
+inp.onkeyup = function(){ window.ssRegSearch(this.value); };
+}
 };
 
 window.ssCloseRegister = function(){
