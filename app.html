@@ -2313,48 +2313,8 @@ const roleCards = [
 { key:"driver", label:l("driver"), icon:"🚌", color:T.yellow },
 ];
 const handleLogin = () => {
-// ── OFFLINE LOGIN: Firebase nahi hai to localStorage cache se login karo ──
-if (!navigator.onLine) {
-// Superadmin offline login
-if (loginUsername === "superadmin") {
-var cachedSaPass = "super123";
-try { var lp2 = localStorage.getItem("ss_sa_pass"); if (lp2) cachedSaPass = lp2; } catch(e) {}
-if (pw === cachedSaPass) {
-setRole("superadmin");
-setLoggedInUser({ role:"superadmin", username:"superadmin", schoolId: null });
-setActiveSection("dashboard");
-toast("Welcome Super Admin 👑 (Offline Mode)", "success");
-} else {
-toast("Galat password ❌", "error");
-}
-return;
-}
-// Other users: cached userAccounts se try karo
-var cachedAccStr = localStorage.getItem("ss_cache_userAccounts");
-var cachedAccounts = [];
-try { cachedAccounts = cachedAccStr ? JSON.parse(cachedAccStr) : []; if (!Array.isArray(cachedAccounts)) cachedAccounts = Object.values(cachedAccounts||{}); } catch(e) { cachedAccounts = []; }
-var offlineAcc = cachedAccounts.find(function(a) { return a.username === loginUsername && a.password === pw && a.active; });
-if (offlineAcc) {
-if (offlineAcc.role === "vice_principal") { window.__vpUser = offlineAcc; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; }
-else if (offlineAcc.role === "staff") { window.__staffUser = offlineAcc; window.__vpUser = null; window.__receptionUser = null; window.__accountantUser = null; }
-else if (offlineAcc.role === "reception") { window.__receptionUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__accountantUser = null; }
-else if (offlineAcc.role === "accountant") { window.__accountantUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__coordinatorUser = null; window.__transportHeadUser = null; }
-else if (offlineAcc.role === "coordinator") { window.__coordinatorUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__transportHeadUser = null; }
-else if (offlineAcc.role === "transport_head") { window.__transportHeadUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__coordinatorUser = null; }
-else if (offlineAcc.role === "founder") { window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__founderUser = offlineAcc; }
-else { window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__founderUser = null; }
-setRole(offlineAcc.role);
-setLoggedInUser(offlineAcc);
-if (offlineAcc.schoolId) {
-var cleanId2 = String(offlineAcc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
-setCurrentSchoolId("SCH_" + cleanId2);
-} else { setCurrentSchoolId(null); }
-setActiveSection("dashboard");
-toast("Welcome " + offlineAcc.name + "! 📦 Offline Mode — Loading from cached data", "success");
-return;
-}
-toast("You are offline and no cached data found for this account. Please login online first.", "error");
-return;
+if (!navigator.onLine && !window.firebaseReady) {
+console.log("[Offline] Attempting offline login from localStorage...");
 }
 if (loginUsername === "superadmin") {
 const checkPass = async () => {
@@ -2416,22 +2376,6 @@ setLoggedInUser(acc);
 if (acc.schoolId) {
 const cleanSchoolId = String(acc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
 setCurrentSchoolId("SCH_" + cleanSchoolId);
-// ── CACHE WARMING: Login ke baad critical data localStorage mein save karo offline ke liye ──
-if (window.firebaseReady && navigator.onLine) {
-const schoolPath = "schoolshield/schools/SCH_" + cleanSchoolId;
-const WARM_KEYS = ["students","teachers","fees","feeStructure","userAccounts","employees","buses","alerts","notices","timetable","leaves","attendanceLogs"];
-WARM_KEYS.forEach(function(wk) {
-try {
-const wPath = wk === "userAccounts" ? "schoolshield/userAccounts" : (schoolPath + "/" + wk);
-window.db.ref(wPath).once("value").then(function(snap) {
-if (snap.val() !== null) {
-const cKey = wk === "userAccounts" ? "ss_cache_userAccounts" : ("ss_cache_SCH_" + cleanSchoolId + "_" + wk);
-try { localStorage.setItem(cKey, JSON.stringify(snap.val())); } catch(e) {}
-}
-}).catch(function(){});
-} catch(e) {}
-});
-}
 } else {
 setCurrentSchoolId(null);
 }
@@ -3321,34 +3265,24 @@ return (
 {!isOnline && (
 <div style={{
 background:"linear-gradient(90deg,#F75555,#F5A623)",
-padding:"7px 16px",
+padding:"6px 20px",
 display:"flex", alignItems:"center", justifyContent:"center", gap:8,
 fontSize:12, fontWeight:700, color:"#fff",
-letterSpacing:0.3, flexWrap:"wrap",
+letterSpacing:0.3,
 }}>
-<span style={{fontSize:15}}>📵</span>
-<span>Offline Mode — Working from cached data</span>
-{getOfflineQueue().length > 0 && (
-<span style={{background:"rgba(0,0,0,0.25)", borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:600}}>
-{"⏳ " + getOfflineQueue().length + " changes pending sync"}
-</span>
-)}
-{getOfflineQueue().length === 0 && (
-<span style={{background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"2px 10px", fontSize:11}}>
-📦 Data cached locally
-</span>
-)}
+<span style={{fontSize:16, animation:"pulse 1s infinite"}}>📶</span>
+<span>Offline Mode — Data locally saved, net aane par auto-sync hoga</span>
+<span style={{background:"rgba(255,255,255,0.2)", borderRadius:20, padding:"2px 10px", fontSize:11}}>⏳ Pending Sync</span>
 </div>
 )}
 {isOnline && getOfflineQueue().length > 0 && (
 <div style={{
-background:"linear-gradient(90deg,#0ECB81,#4F8EF7)",
-padding:"6px 16px",
+background:"linear-gradient(90deg,#0ECB8180,#4F8EF780)",
+padding:"5px 20px",
 display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-fontSize:12, fontWeight:700, color:"#fff",
+fontSize:11, fontWeight:600, color:"#fff",
 }}>
-<span>🔄</span>
-<span>{"Back online! Syncing " + getOfflineQueue().length + " pending changes to Firebase..."}</span>
+<span>✅ Net mila! Data sync ho raha hai...</span>
 </div>
 )}
 {/* ── School Banner (non-superadmin only) ── */}
@@ -3597,12 +3531,12 @@ display:"flex", alignItems:"center", gap:14
 <span style={{fontSize:28}}>{isOnline ? "🔄" : "📶"}</span>
 <div style={{flex:1}}>
 <p style={{fontWeight:800, fontSize:14, color: isOnline ? "#0ECB81" : "#F75555"}}>
-{isOnline ? "Back Online — Syncing now" : "You are Offline"}
+{isOnline ? "Net mila — Sync ho raha hai" : "Aap Offline hain"}
 </p>
 <p style={{fontSize:12, color:"#9AA3B8", marginTop:3}}>
 {isOnline
-? `${queueLen} pending change${queueLen>1?"s":""} syncing to Firebase...`
-: "No worries! Everything still works. Data is saved locally and will auto-sync when back online."
+? `${queueLen} pending change${queueLen>1?"s":""} sync ho rahe hain...`
+: "Koi baat nahi! Sab kaam chal raha hai. Data locally save ho raha hai. Net aate hi auto-sync hoga."
 }
 </p>
 </div>
@@ -14368,6 +14302,23 @@ return prefix + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random()
 function safeHtml(v) {
 return String(v == null ? "" : v).replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;","\"":"&quot;"}[c]));
 }
+// ── Reusable school header for all certificates ──────────────────────────────
+function buildSchoolHeader(school) {
+var sn = safeHtml(school && school.name ? school.name : "School Name");
+var sl = school && school.logoUrl ? school.logoUrl : "";
+var logoHtml = sl ? "<img src='" + sl + "' style='width:64px;height:64px;object-fit:contain;border-radius:4px;flex-shrink:0' />" : "<div class='logo-placeholder'>Logo</div>";
+var sdise  = safeHtml(school && school.diseCode ? school.diseCode : "");
+var sreg   = safeHtml(school && school.registrationNo ? school.registrationNo : "");
+var srunby = safeHtml(school && school.runBy ? school.runBy : "");
+var sphone = safeHtml(school && (school.schoolPhone || school.contact) ? (school.schoolPhone || school.contact) : "");
+var sa     = safeHtml(school && school.address ? school.address : "");
+return "<div class='school-header'><div class='logo-area'>" + logoHtml + "<div style='flex:1'>" +
+(sdise ? "<div class='school-dise'>Dise Code - " + sdise + "</div>" : "") +
+"<div class='school-name'>" + sn + "</div>" +
+(srunby ? "<div class='school-sub'>(Run By - " + srunby + (sreg ? " | Reg.No. " + sreg : "") + ")</div>" : (sreg ? "<div class='school-sub'>Reg.No. " + sreg + "</div>" : "")) +
+(sa ? "<div class='school-sub'>" + sa + (sphone ? " | Mob: " + sphone : "") + "</div>" : (sphone ? "<div class='school-sub'>Mob: " + sphone + "</div>" : "")) +
+"</div></div></div>";
+}
 function openPrintWin(titleStr, bodyHtml, schoolName) {
 const win = window.open("","","width=900,height=700");
 if (!win) { alert("Allow popups to print"); return; }
@@ -14382,6 +14333,7 @@ body{font-family:"Times New Roman",Times,serif;background:#fff;color:#000;paddin
 .logo-area{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:6px}
 .logo-placeholder{width:64px;height:64px;border:1px dashed #999;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;flex-shrink:0}
 .school-name{font-size:22px;font-weight:bold;letter-spacing:1px;text-transform:uppercase}
+.school-dise{font-size:10px;color:#666;margin-bottom:2px;letter-spacing:0.5px}
 .school-sub{font-size:12px;color:#444;margin-top:2px}
 .cert-title{text-align:center;font-size:17px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;text-decoration:underline;margin:12px 0}
 .cert-no-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:10px}
@@ -14561,23 +14513,9 @@ window.db.ref(`schoolshield/schools/SCH_${String(mySchoolId).replace(/[^a-zA-Z0-
 };
 const del = (id) => { setTransferCertificates(p => (p||[]).filter(t => t.id!==id)); toast("Deleted","success"); };
 const print = (t) => {
-const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
-const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
-const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
-const sa = safeHtml(currentSchool?.address||"");
 const body = `
 <div class="cert-wrap">
-<div class="school-header">
-<div class="logo-area">
-${logoHtml}
-<div>
-<div class="school-name">${sn}</div>
-${sa ? `<div class="school-sub">${sa}</div>` : ""}
-<div class="school-sub">Affiliated to CBSE | Estd. ____</div>
-</div>
-<div class="qr-placeholder">QR<br/>Code</div>
-</div>
-</div>
+${buildSchoolHeader(currentSchool)}
 <div class="cert-title">Transfer Certificate</div>
 <div class="cert-no-row">
 <span><b>TC No:</b> ${safeHtml(t.certNumber)}</span>
@@ -14727,11 +14665,9 @@ const approve = (id) => { setCharacterCertificates(p=>(p||[]).map(c=>c.id===id?{
 const del = (id) => { setCharacterCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
 const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
-const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
-const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
+${buildSchoolHeader(currentSchool)}
 <div class="cert-title">Character Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <div class="cert-para" style="margin-top:30px">
@@ -14798,11 +14734,9 @@ const approve = (id) => { setMigrationCertificates(p=>(p||[]).map(c=>c.id===id?{
 const del = (id) => { setMigrationCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
 const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
-const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
-const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
+${buildSchoolHeader(currentSchool)}
 <div class="cert-title">Migration Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <table class="fields" style="margin-top:20px"><tbody>
@@ -14871,11 +14805,9 @@ const approve = (id) => { setBonafideCertificates(p=>(p||[]).map(c=>c.id===id?{.
 const del = (id) => { setBonafideCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
 const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
-const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
-const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
+${buildSchoolHeader(currentSchool)}
 <div class="cert-title">Bonafide Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <div class="cert-para" style="margin-top:30px">
@@ -14941,11 +14873,9 @@ const approve = (id) => { setStudyCertificates(p=>(p||[]).map(c=>c.id===id?{...c
 const del = (id) => { setStudyCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
 const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
-const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
-const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
+${buildSchoolHeader(currentSchool)}
 <div class="cert-title">Study Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <div class="cert-para" style="margin-top:30px">
@@ -15009,11 +14939,9 @@ const approve = (id) => { setFeeClearanceCertificates(p=>(p||[]).map(c=>c.id===i
 const del = (id) => { setFeeClearanceCertificates(p=>(p||[]).filter(c=>c.id!==id)); toast("Deleted","success"); };
 const print = (c) => {
 const sn = safeHtml(currentSchool&&currentSchool.name ? currentSchool.name : "School Name");
-const sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
-const logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
 const body = `
 <div class="cert-wrap">
-<div class="school-header"><div class="logo-area">${logoHtml}<div><div class="school-name">${sn}</div></div></div></div>
+${buildSchoolHeader(currentSchool)}
 <div class="cert-title">Fee Clearance Certificate</div>
 <div class="cert-no-row"><span><b>Cert No:</b> ${safeHtml(c.certNumber)}</span><span><b>Date:</b> ${safeHtml(c.issueDate)}</span></div>
 <table class="fields" style="margin-top:20px"><tbody>
@@ -15120,14 +15048,18 @@ const print = function(c) {
   var sl = currentSchool&&currentSchool.logoUrl ? currentSchool.logoUrl : "";
   var logoHtml = sl ? "<img src='" + sl + "' style='width:60px;height:60px;object-fit:contain;border-radius:4px;' />" : "<div class='logo-placeholder'>Logo</div>";
   var sa = safeHtml(currentSchool&&currentSchool.address ? currentSchool.address : "");
-  var sp = safeHtml(currentSchool&&currentSchool.phone ? currentSchool.phone : "");
+  var sdise  = safeHtml(currentSchool&&currentSchool.diseCode ? currentSchool.diseCode : "");
+  var sreg   = safeHtml(currentSchool&&currentSchool.registrationNo ? currentSchool.registrationNo : "");
+  var srunby = safeHtml(currentSchool&&currentSchool.runBy ? currentSchool.runBy : "");
+  var sphone = safeHtml(currentSchool&&(currentSchool.schoolPhone||currentSchool.phone||currentSchool.contact) ? (currentSchool.schoolPhone||currentSchool.phone||currentSchool.contact) : "");
   var today = new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
   var body = "<div class='cert-wrap' style='font-family:Times New Roman,serif;'>"
   + "<div style='text-align:center;border-bottom:3px double #333;padding-bottom:16px;margin-bottom:16px;'>"
+  + (sdise ? "<div style='font-size:10px;color:#666;letter-spacing:0.5px;margin-bottom:4px;'>Dise Code - " + sdise + "</div>" : "")
   + (sl ? "<div style='margin-bottom:8px;'>" + logoHtml + "</div>" : "")
   + "<div style='font-size:22px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;'>" + sn + "</div>"
-  + "<div style='font-size:13px;color:#555;margin-top:4px;'>" + sa + "</div>"
-  + "<div style='font-size:12px;color:#555;'>Tel: " + sp + "</div>"
+  + (srunby ? "<div style='font-size:12px;color:#444;margin-top:3px;'>(Run By - " + srunby + (sreg ? " | Reg.No. " + sreg : "") + ")</div>" : (sreg ? "<div style='font-size:12px;color:#444;margin-top:3px;'>Reg.No. " + sreg + "</div>" : ""))
+  + (sa ? "<div style='font-size:12px;color:#555;margin-top:3px;'>" + sa + (sphone ? " | Mob: " + sphone : "") + "</div>" : (sphone ? "<div style='font-size:12px;color:#555;margin-top:3px;'>Mob: " + sphone + "</div>" : ""))
   + "</div>"
   + "<div style='text-align:center;margin:20px 0 24px;'>"
   + "<div style='display:inline-block;border:2px solid #333;padding:8px 36px;'>"
@@ -18989,6 +18921,12 @@ logoUrl: school.logoUrl||"",
 featurePlan: school.featurePlan||"basic",
 features: school.features || {...PLAN_FEATURES.basic.features},
 limits:   school.limits   || {...PLAN_FEATURES.basic.limits},
+diseCode: school.diseCode||"",
+schoolPhone: school.schoolPhone||"",
+registrationNo: school.registrationNo||"",
+runBy: school.runBy||"",
+founderName: school.founderName||"",
+founderMobile: school.founderMobile||"",
 } : {
 name:"", address:"", city:"", lat:"", lng:"", plan:"Monthly",
 joinDate:new Date().toISOString().slice(0,10), amount:4999, dueDate:"",
@@ -18997,6 +18935,8 @@ logoUrl:"",
 featurePlan:"basic",
 features: {...PLAN_FEATURES.basic.features},
 limits:   {...PLAN_FEATURES.basic.limits},
+diseCode:"", schoolPhone:"", registrationNo:"", runBy:"",
+founderName:"", founderMobile:"",
 });
 const [discCode, setDiscCode] = useState("");
 const [discInfo, setDiscInfo] = useState(null);
@@ -19059,6 +18999,37 @@ setD(p=>({...p, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.t
 <FormInput value={d.upiId||""} onChange={v=>setD(p=>({...p,upiId:v}))} placeholder="school@paytm / school@okicici" />
 </FormField>
 <p style={{fontSize:11, color:T.textMuted, marginTop:2}}>Parents ko online fee payment ka option milega is UPI ID pe</p>
+</div>
+{/* School Official Info */}
+<div style={{background:"#A78BFA10", border:"1px solid #A78BFA30", borderRadius:10, padding:"12px 14px", marginBottom:12}}>
+<p style={{fontSize:12, color:"#A78BFA", fontWeight:700, marginBottom:10}}>🏛️ School Official Information</p>
+<p style={{fontSize:11, color:T.textMuted, marginBottom:10}}>This information will appear on all certificates.</p>
+<div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8}}>
+<FormField label="DISE Code">
+<FormInput value={d.diseCode||""} onChange={v=>setD(p=>({...p,diseCode:v}))} placeholder="e.g. 23431116102" />
+</FormField>
+<FormField label="School Phone No.">
+<FormInput value={d.schoolPhone||""} onChange={v=>setD(p=>({...p,schoolPhone:v}))} placeholder="e.g. 9827667776" />
+</FormField>
+</div>
+<FormField label="Registration No.">
+<FormInput value={d.registrationNo||""} onChange={v=>setD(p=>({...p,registrationNo:v}))} placeholder="e.g. Reg.no.04/17/01/17078/15" />
+</FormField>
+<FormField label="Run By (Managing Trust / Society Name)">
+<FormInput value={d.runBy||""} onChange={v=>setD(p=>({...p,runBy:v}))} placeholder="e.g. Shri Rudra Samarth Samiti Chhindwara" />
+</FormField>
+</div>
+{/* Founder Details */}
+<div style={{background:"#F5A62310", border:"1px solid #F5A62330", borderRadius:10, padding:"12px 14px", marginBottom:12}}>
+<p style={{fontSize:12, color:"#F5A623", fontWeight:700, marginBottom:10}}>👤 Founder Details</p>
+<div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
+<FormField label="Founder Name">
+<FormInput value={d.founderName||""} onChange={v=>setD(p=>({...p,founderName:v}))} placeholder="Founder full name" />
+</FormField>
+<FormField label="Founder Mobile">
+<FormInput value={d.founderMobile||""} onChange={v=>setD(p=>({...p,founderMobile:v}))} placeholder="10-digit mobile" />
+</FormField>
+</div>
 </div>
 <div style={{background:T.surface,border:"1px solid "+T.border,borderRadius:10,padding:"12px 14px",marginBottom:12}}>
 <p style={{fontSize:12,color:T.accent,fontWeight:700,marginBottom:8}}>{"🏫 School Logo (for Certificates)"}</p>
