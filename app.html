@@ -35071,16 +35071,19 @@ s.onerror=function(){setRegStatus('Failed to load AI. Check internet.','error');
 document.head.appendChild(s);
 }
 
+var _modelsLoading = false;
 function loadRegModels(cb){
 if(window.__faceModelsLoaded){cb();return;}
-setRegStatus('Loading AI models...','info');
+if(_modelsLoading){ var iv=setInterval(function(){ if(window.__faceModelsLoaded){clearInterval(iv);cb();} },500); return; }
+_modelsLoading=true;
+setRegStatus('Loading AI models... please wait','info');
 var MODEL_URL='https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
 Promise.all([
 window.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
 window.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
 window.faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-]).then(function(){ window.__faceModelsLoaded=true; cb(); })
-.catch(function(e){setRegStatus('Model load failed: '+e.message,'error');});
+]).then(function(){ window.__faceModelsLoaded=true; _modelsLoading=false; cb(); })
+.catch(function(e){ _modelsLoading=false; setRegStatus('Model load failed — check internet: '+e.message,'error'); });
 }
 
 var _personsLoaded = false;
@@ -35211,9 +35214,13 @@ window.ssRegStartCamera = function(){
 if(!_regPerson){setRegStatus('Select a person first!','error');return;}
 var camBtn=document.getElementById('ss-reg-btn-cam');
 if(camBtn){camBtn.textContent='⏳ Loading...';camBtn.disabled=true;}
-setRegStatus('Loading AI & camera...','info');
+setRegStatus('Loading AI & camera... (first time may take 30s)','info');
+function resetBtn(){ if(camBtn){camBtn.textContent='📷 Open Camera';camBtn.disabled=false;} }
+// Timeout fallback — agar 60s mein kuch nahi hua
+var timeout=setTimeout(function(){ resetBtn(); setRegStatus('Timeout — check internet and try again','error'); },60000);
 loadFaceApiReg(function(){
 loadRegModels(function(){
+clearTimeout(timeout);
 navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}}).then(function(stream){
 _regStream=stream; _regCaptured=false;
 var vid=document.getElementById('ss-reg-video');
@@ -35225,7 +35232,7 @@ if(oval) oval.style.opacity='0.6';
 document.getElementById('ss-reg-btn-cam').style.display='none';
 document.getElementById('ss-reg-btn-capture').style.display='block';
 setRegStatus('Position face in oval, then click Capture','info');
-}).catch(function(e){setRegStatus('Camera error: '+e.message,'error');});
+}).catch(function(e){clearTimeout(timeout);resetBtn();setRegStatus('Camera error: '+e.message,'error');});
 });
 });
 };
