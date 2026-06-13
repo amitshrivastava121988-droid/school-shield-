@@ -2313,8 +2313,48 @@ const roleCards = [
 { key:"driver", label:l("driver"), icon:"🚌", color:T.yellow },
 ];
 const handleLogin = () => {
-if (!navigator.onLine && !window.firebaseReady) {
-console.log("[Offline] Attempting offline login from localStorage...");
+// ── OFFLINE LOGIN: Firebase nahi hai to localStorage cache se login karo ──
+if (!navigator.onLine) {
+// Superadmin offline login
+if (loginUsername === "superadmin") {
+var cachedSaPass = "super123";
+try { var lp2 = localStorage.getItem("ss_sa_pass"); if (lp2) cachedSaPass = lp2; } catch(e) {}
+if (pw === cachedSaPass) {
+setRole("superadmin");
+setLoggedInUser({ role:"superadmin", username:"superadmin", schoolId: null });
+setActiveSection("dashboard");
+toast("Welcome Super Admin 👑 (Offline Mode)", "success");
+} else {
+toast("Galat password ❌", "error");
+}
+return;
+}
+// Other users: cached userAccounts se try karo
+var cachedAccStr = localStorage.getItem("ss_cache_userAccounts");
+var cachedAccounts = [];
+try { cachedAccounts = cachedAccStr ? JSON.parse(cachedAccStr) : []; if (!Array.isArray(cachedAccounts)) cachedAccounts = Object.values(cachedAccounts||{}); } catch(e) { cachedAccounts = []; }
+var offlineAcc = cachedAccounts.find(function(a) { return a.username === loginUsername && a.password === pw && a.active; });
+if (offlineAcc) {
+if (offlineAcc.role === "vice_principal") { window.__vpUser = offlineAcc; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; }
+else if (offlineAcc.role === "staff") { window.__staffUser = offlineAcc; window.__vpUser = null; window.__receptionUser = null; window.__accountantUser = null; }
+else if (offlineAcc.role === "reception") { window.__receptionUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__accountantUser = null; }
+else if (offlineAcc.role === "accountant") { window.__accountantUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__coordinatorUser = null; window.__transportHeadUser = null; }
+else if (offlineAcc.role === "coordinator") { window.__coordinatorUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__transportHeadUser = null; }
+else if (offlineAcc.role === "transport_head") { window.__transportHeadUser = offlineAcc; window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__coordinatorUser = null; }
+else if (offlineAcc.role === "founder") { window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__founderUser = offlineAcc; }
+else { window.__vpUser = null; window.__staffUser = null; window.__receptionUser = null; window.__accountantUser = null; window.__founderUser = null; }
+setRole(offlineAcc.role);
+setLoggedInUser(offlineAcc);
+if (offlineAcc.schoolId) {
+var cleanId2 = String(offlineAcc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId("SCH_" + cleanId2);
+} else { setCurrentSchoolId(null); }
+setActiveSection("dashboard");
+toast("Welcome " + offlineAcc.name + "! 📦 Offline Mode — Loading from cached data", "success");
+return;
+}
+toast("You are offline and no cached data found for this account. Please login online first.", "error");
+return;
 }
 if (loginUsername === "superadmin") {
 const checkPass = async () => {
@@ -2376,6 +2416,22 @@ setLoggedInUser(acc);
 if (acc.schoolId) {
 const cleanSchoolId = String(acc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
 setCurrentSchoolId("SCH_" + cleanSchoolId);
+// ── CACHE WARMING: Login ke baad critical data localStorage mein save karo offline ke liye ──
+if (window.firebaseReady && navigator.onLine) {
+const schoolPath = "schoolshield/schools/SCH_" + cleanSchoolId;
+const WARM_KEYS = ["students","teachers","fees","feeStructure","userAccounts","employees","buses","alerts","notices","timetable","leaves","attendanceLogs"];
+WARM_KEYS.forEach(function(wk) {
+try {
+const wPath = wk === "userAccounts" ? "schoolshield/userAccounts" : (schoolPath + "/" + wk);
+window.db.ref(wPath).once("value").then(function(snap) {
+if (snap.val() !== null) {
+const cKey = wk === "userAccounts" ? "ss_cache_userAccounts" : ("ss_cache_SCH_" + cleanSchoolId + "_" + wk);
+try { localStorage.setItem(cKey, JSON.stringify(snap.val())); } catch(e) {}
+}
+}).catch(function(){});
+} catch(e) {}
+});
+}
 } else {
 setCurrentSchoolId(null);
 }
@@ -3265,24 +3321,34 @@ return (
 {!isOnline && (
 <div style={{
 background:"linear-gradient(90deg,#F75555,#F5A623)",
-padding:"6px 20px",
+padding:"7px 16px",
 display:"flex", alignItems:"center", justifyContent:"center", gap:8,
 fontSize:12, fontWeight:700, color:"#fff",
-letterSpacing:0.3,
+letterSpacing:0.3, flexWrap:"wrap",
 }}>
-<span style={{fontSize:16, animation:"pulse 1s infinite"}}>📶</span>
-<span>Offline Mode — Data locally saved, net aane par auto-sync hoga</span>
-<span style={{background:"rgba(255,255,255,0.2)", borderRadius:20, padding:"2px 10px", fontSize:11}}>⏳ Pending Sync</span>
+<span style={{fontSize:15}}>📵</span>
+<span>Offline Mode — Working from cached data</span>
+{getOfflineQueue().length > 0 && (
+<span style={{background:"rgba(0,0,0,0.25)", borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:600}}>
+{"⏳ " + getOfflineQueue().length + " changes pending sync"}
+</span>
+)}
+{getOfflineQueue().length === 0 && (
+<span style={{background:"rgba(0,0,0,0.2)", borderRadius:20, padding:"2px 10px", fontSize:11}}>
+📦 Data cached locally
+</span>
+)}
 </div>
 )}
 {isOnline && getOfflineQueue().length > 0 && (
 <div style={{
-background:"linear-gradient(90deg,#0ECB8180,#4F8EF780)",
-padding:"5px 20px",
+background:"linear-gradient(90deg,#0ECB81,#4F8EF7)",
+padding:"6px 16px",
 display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-fontSize:11, fontWeight:600, color:"#fff",
+fontSize:12, fontWeight:700, color:"#fff",
 }}>
-<span>✅ Net mila! Data sync ho raha hai...</span>
+<span>🔄</span>
+<span>{"Back online! Syncing " + getOfflineQueue().length + " pending changes to Firebase..."}</span>
 </div>
 )}
 {/* ── School Banner (non-superadmin only) ── */}
@@ -3531,12 +3597,12 @@ display:"flex", alignItems:"center", gap:14
 <span style={{fontSize:28}}>{isOnline ? "🔄" : "📶"}</span>
 <div style={{flex:1}}>
 <p style={{fontWeight:800, fontSize:14, color: isOnline ? "#0ECB81" : "#F75555"}}>
-{isOnline ? "Net mila — Sync ho raha hai" : "Aap Offline hain"}
+{isOnline ? "Back Online — Syncing now" : "You are Offline"}
 </p>
 <p style={{fontSize:12, color:"#9AA3B8", marginTop:3}}>
 {isOnline
-? `${queueLen} pending change${queueLen>1?"s":""} sync ho rahe hain...`
-: "Koi baat nahi! Sab kaam chal raha hai. Data locally save ho raha hai. Net aate hi auto-sync hoga."
+? `${queueLen} pending change${queueLen>1?"s":""} syncing to Firebase...`
+: "No worries! Everything still works. Data is saved locally and will auto-sync when back online."
 }
 </p>
 </div>
