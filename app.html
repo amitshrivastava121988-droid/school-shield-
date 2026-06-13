@@ -34626,9 +34626,7 @@ var _blink = {}, _desc = {}, _matcher = null, _modelsOk = false;
 var _logMode = 'student', _curTab = 'scan', _tabletMode = false;
 
 function getSchoolId(){
-try {
-return window.currentSchoolId || localStorage.getItem('ss_currentSchoolId') || localStorage.getItem('ss_face_school') || '';
-} catch(e){ return window.currentSchoolId || ''; }
+try { return localStorage.getItem('ss_currentSchoolId') || localStorage.getItem('ss_face_school') || ''; } catch(e){ return ''; }
 }
 function getDB(){ return window.db || null; }
 function getTodayDate(){ return new Date().toISOString().slice(0,10); }
@@ -34710,7 +34708,7 @@ var paths={student:'students',teacher:'teachers',employee:'employees'};
 db.ref('schoolshield/schools/'+sid+'/'+paths[_logMode]).once('value').then(function(pSnap){
 db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(function(lSnap){
 var persons=[]; var pVal=pSnap.val();
-if(pVal){ if(Array.isArray(pVal)) persons=pVal; else persons=Object.values(pVal); }
+if(pVal){ var raw=Array.isArray(pVal)?pVal:Object.values(pVal); persons=raw.filter(function(p){ return p&&p.name&&typeof p.name==='string'&&p.name.trim()!==''; }); }
 var logs={}; try{ var lv=lSnap.val(); logs=lv?JSON.parse(lv):{};} catch(e){ logs=lSnap.val()||{}; }
 var present=[];
 persons.forEach(function(p){
@@ -34799,7 +34797,7 @@ var paths={student:'students',teacher:'teachers',employee:'employees'};
 db.ref('schoolshield/schools/'+sid+'/'+paths[_logMode]).once('value').then(function(pSnap){
 db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(function(lSnap){
 var persons=[]; var pVal=pSnap.val();
-if(pVal){ if(Array.isArray(pVal)) persons=pVal; else persons=Object.values(pVal); }
+if(pVal){ var raw=Array.isArray(pVal)?pVal:Object.values(pVal); persons=raw.filter(function(p){ return p&&p.name&&typeof p.name==='string'&&p.name.trim()!==''; }); }
 var logs={}; try{ var lv=lSnap.val(); logs=lv?JSON.parse(lv):{};} catch(e){ logs=lSnap.val()||{}; }
 var present=[],absent=[];
 persons.forEach(function(p){
@@ -35008,7 +35006,10 @@ if(e.target===this) window.ssCloseFaceAttendance();
 </div>
 <!-- Search & select person -->
 <div style="margin-bottom:12px;position:relative;">
-<input id="ss-reg-search" type="text" placeholder="Search name..." oninput="window.ssRegSearch(this.value)"
+<input id="ss-reg-search" type="text" placeholder="Search name..." 
+oninput="window.ssRegSearch(this.value)" 
+onkeyup="window.ssRegSearch(this.value)"
+onfocus="if(this.value) window.ssRegSearch(this.value)"
 style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;"/>
 <div id="ss-reg-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #334155;border-radius:10px;margin-top:4px;max-height:160px;overflow-y:auto;z-index:10;"></div>
 </div>
@@ -35047,7 +35048,7 @@ var _regPersons = [];
 var _regDescriptors = {};
 
 function getSchoolId(){
-try{ return window.currentSchoolId||localStorage.getItem('ss_currentSchoolId')||localStorage.getItem('ss_face_school')||''; }catch(e){return window.currentSchoolId||'';}
+try{ return localStorage.getItem('ss_currentSchoolId')||localStorage.getItem('ss_face_school')||''; }catch(e){return '';}
 }
 function getDB(){ return window.db||null; }
 
@@ -35089,10 +35090,7 @@ var _personsLoaded = false;
 var _personsLoading = false;
 function loadPersons(cb){
 var db=getDB(); var sid=getSchoolId();
-if(!db||!sid){
-setRegStatus('School not found. Please login first.','error');
-return;
-}
+if(!db||!sid) return;
 if(_personsLoading){ if(cb) setTimeout(function(){if(cb)cb();},600); return; }
 _personsLoading=true;
 var paths={student:'students',teacher:'teachers',employee:'employees'};
@@ -35103,14 +35101,16 @@ db.ref('schoolshield/faceDescriptors/'+sid).once('value')
 var snap=results[0]; var fdSnap=results[1];
 var val=snap.val();
 if(!val){_regPersons=[];}
-else if(Array.isArray(val)) _regPersons=val;
-else _regPersons=Object.values(val);
+else {
+var raw=Array.isArray(val)?val:Object.values(val);
+_regPersons=raw.filter(function(p){ return p&&p.name&&typeof p.name==='string'&&p.name.trim()!==''; });
+}
 _regDescriptors=fdSnap.val()||{};
 _personsLoaded=true;
 _personsLoading=false;
 renderRegList();
 if(cb) cb();
-}).catch(function(){ _personsLoading=false; });
+}).catch(function(e){ _personsLoading=false; setRegStatus('Error: '+e.message,'error'); });
 }
 
 function renderRegList(){
@@ -35210,6 +35210,9 @@ if(oval) oval.style.opacity='0';
 
 window.ssRegStartCamera = function(){
 if(!_regPerson){setRegStatus('Select a person first!','error');return;}
+var camBtn=document.getElementById('ss-reg-btn-cam');
+if(camBtn){camBtn.textContent='⏳ Loading...';camBtn.disabled=true;}
+setRegStatus('Loading AI & camera...','info');
 loadFaceApiReg(function(){
 loadRegModels(function(){
 navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}}).then(function(stream){
