@@ -29308,6 +29308,7 @@ const schoolExams = (exams||[]).filter(e => sameId(e.schoolId, mySchoolId));
 const filtered = isParent && parentClass ? schoolExams.filter(e => e.class === parentClass) : schoolExams;
 const [selClass, setSelClass] = useState("all");
 const [selExam, setSelExam] = useState(null);
+const [marksheetData, setMarksheetData] = useState(null); // {exam, student}
 const [showUpload, setShowUpload] = useState(null); // studentId
 const [uploadFile, setUploadFile] = useState(null);
 const uploadRef = React.useRef(null);
@@ -29494,8 +29495,20 @@ style={{background:T.card, border:"1px solid "+T.border, borderRadius:12, paddin
 <div>
 <button onClick={()=>setSelExam(null)} style={{background:T.accent+"20", border:"1px solid "+T.accent+"40", color:T.accent, padding:"6px 14px", borderRadius:8, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:700, fontSize:12, marginBottom:14}}>← Back</button>
 <div style={{background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:16, marginBottom:14}}>
+<div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, flexWrap:"wrap"}}>
+<div>
 <p style={{fontWeight:800, fontSize:16, color:T.text, marginBottom:4}}>{examToShow.title}</p>
-<p style={{fontSize:12, color:T.textMuted}}>📅 {examToShow.date} • {examToShow.class} • Max: {examToShow.totalMarks}/subject</p>
+<p style={{fontSize:12, color:T.textMuted}}>{"📅 "+examToShow.date+" • "+examToShow.class+" • Max: "+examToShow.totalMarks+"/subject"}</p>
+</div>
+{isPrincipal && (
+<button onClick={function(){
+setExams(function(prev){ return prev.map(function(e){ return e.id===examToShow.id ? Object.assign({},e,{isPublished:!e.isPublished}) : e; }); });
+toast(examToShow.isPublished ? "🔒 Result parents se hide kiya" : "✅ Result parents ko publish ho gaya!", "success");
+}} style={{background: examToShow.isPublished ? T.green+"20" : T.surface, border:"1px solid "+(examToShow.isPublished ? T.green : T.border), color: examToShow.isPublished ? T.green : T.textMuted, padding:"8px 14px", borderRadius:8, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:800, fontSize:13, whiteSpace:"nowrap"}}>
+{examToShow.isPublished ? "✅ Published" : "🔒 Publish to Parents"}
+</button>
+)}
+</div>
 </div>
 <p style={{fontWeight:700, color:T.text, fontSize:14, marginBottom:10}}>📊 Student Results & Answer Sheets</p>
 <input ref={uploadRef} type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={handleFileSelect} />
@@ -29511,10 +29524,13 @@ const pct = total !== null && max > 0 ? Math.round((total/max)*100) : null;
 const isUploading = showUpload === (stu.id || stu.name);
 return (
 <div key={stu.id || stu.name} style={{background:T.surface, border:"1px solid "+T.border, borderRadius:12, padding:14, marginBottom:10}}>
+{marksheetData && marksheetData.exam && marksheetData.student && (
+<MarksheetModal exam={marksheetData.exam} student={marksheetData.student} currentSchool={currentSchool} onClose={function(){setMarksheetData(null);}} />
+)}
 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
 <div>
 <p style={{fontWeight:700, fontSize:13, color:T.text}}>{stu.name}</p>
-<p style={{fontSize:11, color:T.textMuted}}>{stu.class}{stu.rollNo ? ` • Roll #${stu.rollNo}` : ""}</p>
+<p style={{fontSize:11, color:T.textMuted}}>{stu.class}{stu.rollNo ? " • Roll #"+stu.rollNo : ""}</p>
 </div>
 {pct !== null && (
 <div style={{textAlign:"right"}}>
@@ -29524,6 +29540,14 @@ return (
 )}
 {pct === null && <p style={{fontSize:11, color:T.textMuted, fontStyle:"italic"}}>Marks nahi</p>}
 </div>
+{result && (
+<button onClick={function(){
+var fullStu = (students||[]).find(function(s){return s.id===stu.id||s.name===stu.name;}) || stu;
+setMarksheetData({exam:examToShow, student:fullStu});
+}} style={{width:"100%",background:T.accent+"15",border:"1px solid "+T.accent+"40",borderRadius:8,padding:"7px",color:T.accent,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:700,marginBottom:8}}>
+{"📋 View Marksheet / Print"}
+</button>
+)}
 {/* Answer Sheet */}
 {sheet ? (
 <div style={{display:"flex", alignItems:"center", gap:8, background:T.green+"12", borderRadius:8, padding:"8px 12px"}}>
