@@ -27671,29 +27671,55 @@ return (
 // ─── MARKS ENTRY MODAL ───────────────────────────────────────────────────────
 function MarksEntryModal({ exam, student, currentMarks, onSave, onClose }) {
 const [marks, setMarks] = useState({ ...currentMarks });
-const total    = exam.subjects.reduce((s, sub) => s + (parseInt(marks[sub]) || 0), 0);
-const maxTotal = exam.subjects.length * exam.totalMarks;
+// Subject-wise max marks — default exam.totalMarks, but editable per subject
+var initMaxMarks = {};
+exam.subjects.forEach(function(sub){
+initMaxMarks[sub] = (exam.subjectMaxMarks && exam.subjectMaxMarks[sub]) ? exam.subjectMaxMarks[sub] : exam.totalMarks;
+});
+const [subjectMax, setSubjectMax] = useState(initMaxMarks);
+const total    = exam.subjects.reduce(function(s,sub){ return s + (parseInt(marks[sub]) || 0); }, 0);
+const maxTotal = exam.subjects.reduce(function(s,sub){ return s + (parseInt(subjectMax[sub]) || exam.totalMarks); }, 0);
 const pct      = maxTotal > 0 ? Math.round((total / maxTotal) * 100) : 0;
-const getGrade = (p) => p >= 90 ? "A+" : p >= 80 ? "A" : p >= 70 ? "B+" : p >= 60 ? "B" : p >= 50 ? "C" : "F";
-const gc       = (g) => ({ "A+":"#0ECB81", A:"#4F8EF7", "B+":"#A78BFA", B:"#F5A623", C:"#F97316", F:"#F75555" }[g] || "#6B7A99");
+const getGrade = function(p){ return p >= 90 ? "A+" : p >= 80 ? "A" : p >= 70 ? "B+" : p >= 60 ? "B" : p >= 50 ? "C" : "F"; };
 return (
 <div onClick={onClose} style={{ position:"fixed", inset:0, background:"#000C", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16 }}>
-<div onClick={e => e.stopPropagation()} style={{ background:T.card, border:"1px solid "+T.border, borderRadius:16, padding:24, width:420, maxWidth:"95vw", maxHeight:"85vh", overflowY:"auto" }}>
-<p style={{ fontWeight:800, fontSize:15, color:T.text, marginBottom:4 }}>Add Marks</p>
+<div onClick={function(e){e.stopPropagation();}} style={{ background:T.card, border:"1px solid "+T.border, borderRadius:16, padding:24, width:440, maxWidth:"95vw", maxHeight:"90vh", overflowY:"auto" }}>
+<p style={{ fontWeight:800, fontSize:15, color:T.text, marginBottom:4 }}>{"✏️ Edit Marks"}</p>
 <p style={{ fontSize:12, color:T.textMuted, marginBottom:16 }}>{student.name} — {exam.title}</p>
-<div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
-{exam.subjects.map(sub => (
-<div key={sub} style={{ display:"flex", alignItems:"center", gap:10 }}>
-<label style={{ flex:1, fontSize:13, color:T.text, fontWeight:600 }}>{sub}</label>
+<div style={{ display:"grid", gridTemplateColumns:"1fr auto auto", gap:"6px 10px", alignItems:"center", marginBottom:8 }}>
+<p style={{fontSize:11,color:T.textMuted,fontWeight:700}}>{"Subject"}</p>
+<p style={{fontSize:11,color:T.textMuted,fontWeight:700,textAlign:"center",width:70}}>{"Max Marks"}</p>
+<p style={{fontSize:11,color:T.textMuted,fontWeight:700,textAlign:"center",width:70}}>{"Obtained"}</p>
+</div>
+<div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
+{exam.subjects.map(function(sub){
+var maxVal = parseInt(subjectMax[sub]) || exam.totalMarks;
+var obtained = parseInt(marks[sub]) || 0;
+var subPct = maxVal > 0 ? Math.round((obtained/maxVal)*100) : 0;
+var grade = getGrade(subPct);
+var gradeColors = {"A+":"#0ECB81","A":"#4F8EF7","B+":"#A78BFA","B":"#F5A623","C":"#F97316","F":"#F75555"};
+return (
+<div key={sub} style={{ display:"grid", gridTemplateColumns:"1fr auto auto", gap:"0 10px", alignItems:"center", background:T.surface, borderRadius:8, padding:"8px 10px" }}>
+<div style={{display:"flex",alignItems:"center",gap:6}}>
+<span style={{fontSize:13,color:T.text,fontWeight:600}}>{sub}</span>
+<span style={{fontSize:11,fontWeight:700,color:gradeColors[grade]||"#666"}}>{grade}</span>
+</div>
 <input
-type="number" min="0" max={exam.totalMarks}
+type="number" min="1" max="500"
+value={subjectMax[sub] !== undefined ? subjectMax[sub] : exam.totalMarks}
+onChange={function(e){ var v=parseInt(e.target.value)||exam.totalMarks; setSubjectMax(function(m){ return Object.assign({},m,{[sub]:v}); }); }}
+style={{ width:70, background:T.card, border:"1px solid "+T.accent+"50", borderRadius:7, padding:"6px 8px", fontSize:13, color:T.accent, fontFamily:"Outfit,sans-serif", textAlign:"center", fontWeight:700 }}
+/>
+<input
+type="number" min="0"
 value={marks[sub] !== undefined ? marks[sub] : ""}
-onChange={e => setMarks(m => ({ ...m, [sub]: parseInt(e.target.value) || 0 }))}
-placeholder={"/" + exam.totalMarks}
-style={{ width:80, background:T.surface, border:"1px solid "+T.border, borderRadius:7, padding:"7px 10px", fontSize:13, color:T.text, fontFamily:"Outfit,sans-serif", textAlign:"center" }}
+onChange={function(e){ var v=parseInt(e.target.value)||0; setMarks(function(m){ return Object.assign({},m,{[sub]:v}); }); }}
+placeholder={"0"}
+style={{ width:70, background:T.card, border:"1px solid "+T.border, borderRadius:7, padding:"6px 8px", fontSize:13, color:T.text, fontFamily:"Outfit,sans-serif", textAlign:"center" }}
 />
 </div>
-))}
+);
+})}
 </div>
 <div style={{ padding:"10px 14px", background:T.surface, borderRadius:9, marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
 <span style={{ fontSize:13, color:T.textMuted }}>Total: <strong style={{ color:T.text }}>{total}/{maxTotal}</strong></span>
@@ -27701,7 +27727,7 @@ style={{ width:80, background:T.surface, border:"1px solid "+T.border, borderRad
 </div>
 <div style={{ display:"flex", gap:10 }}>
 <button onClick={onClose} style={{ flex:1, padding:"10px", borderRadius:9, border:"1px solid "+T.border, background:"none", color:T.textMuted, fontFamily:"Outfit,sans-serif", cursor:"pointer", fontWeight:700 }}>Cancel</button>
-<button onClick={() => onSave(exam.id, student.id, student.name, marks)} style={{ flex:1, padding:"10px", borderRadius:9, border:"none", background:"#0ECB81", color:"#fff", fontFamily:"Outfit,sans-serif", cursor:"pointer", fontWeight:800 }}>Save</button>
+<button onClick={function(){ onSave(exam.id, student.id, student.name, marks, subjectMax); }} style={{ flex:1, padding:"10px", borderRadius:9, border:"none", background:"#0ECB81", color:"#fff", fontFamily:"Outfit,sans-serif", cursor:"pointer", fontWeight:800 }}>Save</button>
 </div>
 </div>
 </div>
@@ -28333,7 +28359,7 @@ const parentChild     = isParent ? students.find(s => s.name === parentChildName
 const parentClass     = parentChild?.class || null;
 const CLASSES = classNames || DEFAULT_CLASSES;
 const defaultClass = isTeacher && teacherClass ? teacherClass : "Class 5";
-const emptyForm = { title:"", type:"monthly", date:"", class:defaultClass, totalMarks:100, subjects:["Mathematics","Science","English","Hindi"], schoolId:mySchoolId, results:[] };
+const emptyForm = { title:"", type:"monthly", date:"", class:defaultClass, totalMarks:50, subjects:["Mathematics","Science","English","Hindi"], schoolId:mySchoolId, results:[], subjectMaxMarks:{} };
 const emptyDutyFields = { dutyTeacherName:"", dutyType:"invigilator", dutyRoom:"", dutyNote:"" };
 const [examTab,     setExamTab]     = useState("exams");
 const [view,        setView]        = useState("list");
@@ -28364,7 +28390,7 @@ const toggleSubject = (sub) => setForm(f => ({ ...f, subjects: f.subjects.includ
 const doSave = () => {
 if (!form.title || !form.date || form.subjects.length === 0) { toast("Title, date and subjects required!", "error"); return; }
 const { dutyTeacherName, dutyType, dutyRoom, dutyNote, ...examData } = form;
-const finalForm = { ...examData, totalMarks: parseInt(form.totalMarks) > 0 ? parseInt(form.totalMarks) : 100 };
+const finalForm = { ...examData, totalMarks: parseInt(form.totalMarks) > 0 ? parseInt(form.totalMarks) : 50, subjectMaxMarks: form.subjectMaxMarks || {} };
 let examId;
 if (editExam) {
 setExams(prev => prev.map(e => e.id === editExam.id ? { ...e, ...finalForm, id:editExam.id } : e));
@@ -28394,14 +28420,17 @@ if (!window.confirm("Are you sure you want to delete this exam?")) return;
 setExams(prev => prev.filter(e => e.id !== id));
 toast("Exam deleted", "success");
 };
-const doSaveMarks = (examId, studentId, studentName, marks) => {
+const doSaveMarks = (examId, studentId, studentName, marks, subjectMaxMarks) => {
 setExams(prev => prev.map(e => {
 if (e.id !== examId) return e;
 const exists  = e.results.find(r => r.studentId === studentId);
 const results = exists
 ? e.results.map(r => r.studentId === studentId ? { ...r, marks } : r)
 : [...e.results, { studentId, studentName, marks }];
-return { ...e, results };
+// Save subjectMaxMarks on exam if provided
+var updated = { ...e, results };
+if (subjectMaxMarks) updated.subjectMaxMarks = Object.assign({}, e.subjectMaxMarks||{}, subjectMaxMarks);
+return updated;
 }));
 toast("Marks save ho gaye!", "success");
 setMarksModal(null);
@@ -28825,18 +28854,14 @@ style={{ width:"100%", background:T.surface, border:"1px solid "+T.border, borde
 )}
 </div>
 <div>
-<p style={{ fontSize:12, color:T.textMuted, marginBottom:5, fontWeight:600 }}>Max Marks per Subject</p>
+<p style={{ fontSize:12, color:T.textMuted, marginBottom:5, fontWeight:600 }}>Default Max Marks (sabhi subjects ke liye)</p>
 <input
 type="number"
 min="1"
 value={form.totalMarks}
 onChange={e => {
-const val = e.target.value;
-setForm(f => ({ ...f, totalMarks: val === "" ? "" : Number(val) }));
-}}
-onBlur={e => {
-const parsed = parseInt(e.target.value);
-setForm(f => ({ ...f, totalMarks: (!parsed || parsed < 1) ? 100 : parsed }));
+const val = parseInt(e.target.value)||50;
+setForm(f => ({ ...f, totalMarks: val }));
 }}
 style={{ width:"100%", background:T.surface, border:"1px solid "+T.border, borderRadius:8, padding:"9px 12px", fontSize:13, color:T.text, fontFamily:"Outfit,sans-serif" }}
 />
@@ -28855,6 +28880,46 @@ style={{ padding:"5px 12px", borderRadius:7, border:"1px solid "+(sel?T.accent:T
 })}
 </div>
 </div>
+{form.subjects.length > 0 && (
+<div style={{ gridColumn:"1/-1" }}>
+<p style={{ fontSize:12, color:T.accent, marginBottom:8, fontWeight:700 }}>📝 Subject-wise Max Marks (default se alag ho to yahan set karo)</p>
+<div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+{form.subjects.map(function(sub){
+var defaultMax = form.totalMarks || 50;
+var currentMax = (form.subjectMaxMarks && form.subjectMaxMarks[sub] !== undefined) ? form.subjectMaxMarks[sub] : defaultMax;
+var isCustom = form.subjectMaxMarks && form.subjectMaxMarks[sub] !== undefined && form.subjectMaxMarks[sub] !== defaultMax;
+return (
+<div key={sub} style={{ display:"flex", alignItems:"center", gap:10, background:T.surface, borderRadius:8, padding:"8px 12px", border:"1px solid "+(isCustom?T.accent:T.border) }}>
+<label style={{ flex:1, fontSize:13, color:T.text, fontWeight:600 }}>{sub}</label>
+<input
+type="number" min="1" max="500"
+value={currentMax}
+onChange={function(e){
+var val = parseInt(e.target.value)||defaultMax;
+setForm(function(f){
+var smm = Object.assign({}, f.subjectMaxMarks||{});
+smm[sub] = val;
+return Object.assign({}, f, {subjectMaxMarks: smm});
+});
+}}
+style={{ width:80, background:T.card, border:"1px solid "+(isCustom?T.accent:T.border), borderRadius:7, padding:"6px 10px", fontSize:13, color:isCustom?T.accent:T.text, fontFamily:"Outfit,sans-serif", textAlign:"center", fontWeight:isCustom?700:400 }}
+/>
+{isCustom && (
+<button onClick={function(){
+setForm(function(f){
+var smm = Object.assign({}, f.subjectMaxMarks||{});
+delete smm[sub];
+return Object.assign({}, f, {subjectMaxMarks: smm});
+});
+}} style={{ background:"none", border:"none", color:T.textMuted, cursor:"pointer", fontSize:12, padding:"0 4px" }}>↺</button>
+)}
+</div>
+);
+})}
+</div>
+<p style={{ fontSize:10, color:T.textMuted, marginTop:6 }}>💡 Blue border = custom marks set hai | ↺ = default par wapas jaao</p>
+</div>
+)}
 </div>
 {/* ── Exam Duty Fields (optional) ── */}
 {canEdit && (
@@ -29164,7 +29229,7 @@ if (!exam || !student) return null;
 var result = exam.results.find(function(r){ return r.studentName === student.name || r.studentId === student.id; });
 var subjects = exam.subjects || [];
 var total = result ? subjects.reduce(function(s,sub){return s+(parseInt(result.marks[sub])||0);},0) : 0;
-var max = subjects.length * (exam.totalMarks || 100);
+var max = subjects.reduce(function(s,sub){ return s+((exam.subjectMaxMarks && exam.subjectMaxMarks[sub]) ? parseInt(exam.subjectMaxMarks[sub]) : (exam.totalMarks||50)); }, 0);
 var pct = max > 0 ? Math.round((total/max)*100) : 0;
 var grade = pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":"F";
 var gradeColor = {"A+":"#0a7c42","A":"#1a6fbd","B+":"#7c3aed","B":"#d97706","C":"#ea580c","F":"#dc2626"}[grade]||"#222";
@@ -29234,14 +29299,15 @@ return (
 </thead>
 <tbody>
 {subjects.map(function(sub, idx){
+var subMax = (exam.subjectMaxMarks && exam.subjectMaxMarks[sub]) ? parseInt(exam.subjectMaxMarks[sub]) : (exam.totalMarks||50);
 var obtained = result ? (parseInt(result.marks[sub])||0) : 0;
-var subPct = exam.totalMarks > 0 ? Math.round((obtained/exam.totalMarks)*100) : 0;
+var subPct = subMax > 0 ? Math.round((obtained/subMax)*100) : 0;
 var subGrade = subPct>=90?"A+":subPct>=80?"A":subPct>=70?"B+":subPct>=60?"B":subPct>=50?"C":"F";
 return (
 <tr key={sub} style={{background: idx%2===0?"#f9f9f9":"#fff"}}>
 <td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center"}}>{idx+1}</td>
 <td style={{padding:"7px 10px",border:"1px solid #ccc",fontWeight:600}}>{sub}</td>
-<td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center"}}>{exam.totalMarks}</td>
+<td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center"}}>{subMax}</td>
 <td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center",fontWeight:700}}>{obtained}</td>
 <td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center",fontWeight:700,color:gradeColor}}>{subGrade}</td>
 </tr>
@@ -29308,7 +29374,8 @@ const schoolExams = (exams||[]).filter(e => sameId(e.schoolId, mySchoolId));
 const filtered = isParent && parentClass ? schoolExams.filter(e => e.class === parentClass) : schoolExams;
 const [selClass, setSelClass] = useState("all");
 const [selExam, setSelExam] = useState(null);
-const [marksheetData, setMarksheetData] = useState(null); // {exam, student}
+const [marksheetData, setMarksheetData] = useState(null);
+const [editMarksModal, setEditMarksModal] = useState(null); // {exam, student, currentMarks}
 const [showUpload, setShowUpload] = useState(null); // studentId
 const [uploadFile, setUploadFile] = useState(null);
 const uploadRef = React.useRef(null);
@@ -29493,6 +29560,31 @@ style={{background:T.card, border:"1px solid "+T.border, borderRadius:12, paddin
 </>
 ) : examToShow && (
 <div>
+{editMarksModal && (
+<MarksEntryModal
+exam={editMarksModal.exam}
+student={editMarksModal.student}
+currentMarks={editMarksModal.currentMarks}
+onSave={function(examId, studentId, studentName, marks, subjectMaxMarks){
+setExams(function(prev){ return prev.map(function(e){
+if (e.id !== examId) return e;
+var existing = e.results.find(function(r){ return r.studentId===studentId||r.studentName===studentName; });
+var newResults;
+if (existing) {
+newResults = e.results.map(function(r){ return (r.studentId===studentId||r.studentName===studentName) ? Object.assign({},r,{marks:marks}) : r; });
+} else {
+newResults = [...e.results,{studentId:studentId,studentName:studentName,marks:marks}];
+}
+var updated = Object.assign({},e,{results:newResults});
+if (subjectMaxMarks) updated.subjectMaxMarks = Object.assign({}, e.subjectMaxMarks||{}, subjectMaxMarks);
+return updated;
+}); });
+setEditMarksModal(null);
+toast("✅ Marks saved!", "success");
+}}
+onClose={function(){setEditMarksModal(null);}}
+/>
+)}
 <button onClick={()=>setSelExam(null)} style={{background:T.accent+"20", border:"1px solid "+T.accent+"40", color:T.accent, padding:"6px 14px", borderRadius:8, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:700, fontSize:12, marginBottom:14}}>← Back</button>
 <div style={{background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:16, marginBottom:14}}>
 <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, flexWrap:"wrap"}}>
@@ -29546,6 +29638,15 @@ var fullStu = (students||[]).find(function(s){return s.id===stu.id||s.name===stu
 setMarksheetData({exam:examToShow, student:fullStu});
 }} style={{width:"100%",background:T.accent+"15",border:"1px solid "+T.accent+"40",borderRadius:8,padding:"7px",color:T.accent,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:700,marginBottom:8}}>
 {"📋 View Marksheet / Print"}
+</button>
+)}
+{isPrincipal && (
+<button onClick={function(){
+var fullStu = (students||[]).find(function(s){return s.id===stu.id||s.name===stu.name;}) || stu;
+var currentMarks = result ? Object.assign({},result.marks) : {};
+setEditMarksModal({exam:examToShow, student:fullStu, currentMarks:currentMarks});
+}} style={{width:"100%",background:T.yellow+"15",border:"1px solid "+T.yellow+"40",borderRadius:8,padding:"7px",color:T.yellow,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:700,marginBottom:8}}>
+{result ? "✏️ Edit Marks" : "➕ Add Marks"}
 </button>
 )}
 {/* Answer Sheet */}
