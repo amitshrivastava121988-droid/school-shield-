@@ -28428,6 +28428,14 @@ return (
 {canEdit && (
 <button onClick={() => { setEditExam(exam); setForm({ ...exam }); setShowForm(true); setView("list"); }} style={{ background:T.yellow+"20", border:"1px solid "+T.yellow+"40", color:T.yellow, padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:700, fontSize:12 }}>Edit</button>
 )}
+{canEdit && (
+<button onClick={() => {
+setExams(prev => prev.map(e => e.id === exam.id ? {...e, isPublished: !e.isPublished} : e));
+toast(exam.isPublished ? "🔒 Result parents se hide kiya" : "✅ Result parents ko publish ho gaya!", "success");
+}} style={{ background: exam.isPublished ? T.green+"20" : T.surface, border:"1px solid "+(exam.isPublished ? T.green : T.border), color: exam.isPublished ? T.green : T.textMuted, padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:700, fontSize:12 }}>
+{exam.isPublished ? "✅ Published" : "🔒 Publish to Parents"}
+</button>
+)}
 </div>
 <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:12, padding:14, marginBottom:14 }}>
 <p style={{ fontSize:12, color:T.textMuted, marginBottom:8, fontWeight:700 }}>Subjects</p>
@@ -29150,6 +29158,142 @@ return (
 );
 }
 // ─── EXAM RESULTS SECTION ────────────────────────────────────────────────────
+// ─── GOVERNMENT PATTERN MARKSHEET MODAL ──────────────────────────────────────
+function MarksheetModal({ exam, student, currentSchool, onClose }) {
+if (!exam || !student) return null;
+var result = exam.results.find(function(r){ return r.studentName === student.name || r.studentId === student.id; });
+var subjects = exam.subjects || [];
+var total = result ? subjects.reduce(function(s,sub){return s+(parseInt(result.marks[sub])||0);},0) : 0;
+var max = subjects.length * (exam.totalMarks || 100);
+var pct = max > 0 ? Math.round((total/max)*100) : 0;
+var grade = pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":"F";
+var gradeColor = {"A+":"#0a7c42","A":"#1a6fbd","B+":"#7c3aed","B":"#d97706","C":"#ea580c","F":"#dc2626"}[grade]||"#222";
+
+var handlePrint = function() {
+var el = document.getElementById("marksheet-print-area");
+if (!el) return;
+var w = window.open("","_blank");
+w.document.write("<html><head><title>Marksheet - "+student.name+"</title><style>body{margin:0;font-family:Arial,sans-serif;} @media print{body{margin:0;}}</style></head><body>"+el.innerHTML+"</body></html>");
+w.document.close();
+w.focus();
+setTimeout(function(){w.print();w.close();},400);
+};
+
+var schoolName = currentSchool && currentSchool.name ? currentSchool.name.toUpperCase() : "SCHOOL NAME";
+var schoolAddr = currentSchool && (currentSchool.address||currentSchool.city) ? (currentSchool.address||"")+(currentSchool.city?", "+currentSchool.city:"") : "";
+var schoolPhone = currentSchool && (currentSchool.schoolPhone||currentSchool.contact) ? (currentSchool.schoolPhone||currentSchool.contact) : "";
+var dise = currentSchool && currentSchool.diseCode ? "DISE: "+currentSchool.diseCode : "";
+var session = exam.session || "2025-26";
+
+return (
+<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"16px 0"}}>
+<div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:600,margin:"0 auto",fontFamily:"Arial,sans-serif",color:"#111"}}>
+{/* Action buttons */}
+<div style={{display:"flex",gap:8,padding:"12px 16px",background:"#f5f5f5",borderRadius:"14px 14px 0 0",justifyContent:"space-between",alignItems:"center"}}>
+<p style={{fontWeight:800,fontSize:13,color:"#333"}}>📋 Marksheet — {student.name}</p>
+<div style={{display:"flex",gap:8}}>
+<button onClick={handlePrint} style={{padding:"8px 16px",background:"#1a6fbd",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer"}}>🖨️ Print</button>
+<button onClick={onClose} style={{padding:"8px 14px",background:"#dc2626",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer"}}>✕ Close</button>
+</div>
+</div>
+{/* Printable area */}
+<div id="marksheet-print-area" style={{padding:"24px",background:"#fff"}}>
+{/* Border */}
+<div style={{border:"3px double #1a6fbd",padding:"16px",minHeight:600}}>
+{/* School Header */}
+<div style={{textAlign:"center",borderBottom:"2px solid #1a6fbd",paddingBottom:12,marginBottom:12}}>
+{currentSchool && currentSchool.logoUrl && <img src={currentSchool.logoUrl} style={{height:60,marginBottom:6}} alt="logo" />}
+<p style={{fontSize:18,fontWeight:900,color:"#1a1a6e",letterSpacing:1,margin:0}}>{schoolName}</p>
+{schoolAddr && <p style={{fontSize:11,color:"#444",margin:"3px 0 0"}}>{schoolAddr}</p>}
+{(schoolPhone||dise) && <p style={{fontSize:10,color:"#666",margin:"2px 0 0"}}>{[schoolPhone,dise].filter(Boolean).join("  |  ")}</p>}
+</div>
+{/* Marksheet Title */}
+<div style={{textAlign:"center",marginBottom:14}}>
+<p style={{fontSize:15,fontWeight:900,textDecoration:"underline",color:"#1a1a6e",margin:0}}>PROGRESS REPORT / MARKSHEET</p>
+<p style={{fontSize:12,color:"#555",marginTop:4}}>Session: {session} &nbsp;|&nbsp; {exam.title}</p>
+</div>
+{/* Student Details */}
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,border:"1px solid #ccc",padding:"10px 14px",borderRadius:6,marginBottom:14,fontSize:12}}>
+<p style={{margin:"3px 0"}}><b>Student Name:</b> {student.name}</p>
+<p style={{margin:"3px 0"}}><b>Class:</b> {student.class}</p>
+<p style={{margin:"3px 0"}}><b>Father's Name:</b> {student.parentName||student.fatherName||"—"}</p>
+<p style={{margin:"3px 0"}}><b>Mother's Name:</b> {student.motherName||"—"}</p>
+<p style={{margin:"3px 0"}}><b>Roll No:</b> {student.rollNo||"—"}</p>
+<p style={{margin:"3px 0"}}><b>Exam Date:</b> {exam.date||"—"}</p>
+</div>
+{/* Marks Table */}
+<table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:14}}>
+<thead>
+<tr style={{background:"#1a1a6e",color:"#fff"}}>
+<th style={{padding:"8px 10px",textAlign:"left",border:"1px solid #999"}}>Sr.</th>
+<th style={{padding:"8px 10px",textAlign:"left",border:"1px solid #999"}}>Subject</th>
+<th style={{padding:"8px 10px",textAlign:"center",border:"1px solid #999"}}>Max Marks</th>
+<th style={{padding:"8px 10px",textAlign:"center",border:"1px solid #999"}}>Marks Obtained</th>
+<th style={{padding:"8px 10px",textAlign:"center",border:"1px solid #999"}}>Grade</th>
+</tr>
+</thead>
+<tbody>
+{subjects.map(function(sub, idx){
+var obtained = result ? (parseInt(result.marks[sub])||0) : 0;
+var subPct = exam.totalMarks > 0 ? Math.round((obtained/exam.totalMarks)*100) : 0;
+var subGrade = subPct>=90?"A+":subPct>=80?"A":subPct>=70?"B+":subPct>=60?"B":subPct>=50?"C":"F";
+return (
+<tr key={sub} style={{background: idx%2===0?"#f9f9f9":"#fff"}}>
+<td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center"}}>{idx+1}</td>
+<td style={{padding:"7px 10px",border:"1px solid #ccc",fontWeight:600}}>{sub}</td>
+<td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center"}}>{exam.totalMarks}</td>
+<td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center",fontWeight:700}}>{obtained}</td>
+<td style={{padding:"7px 10px",border:"1px solid #ccc",textAlign:"center",fontWeight:700,color:gradeColor}}>{subGrade}</td>
+</tr>
+);
+})}
+{/* Total Row */}
+<tr style={{background:"#e8f0fe",fontWeight:900}}>
+<td colSpan={2} style={{padding:"8px 10px",border:"1px solid #999",textAlign:"right",fontWeight:900}}>TOTAL</td>
+<td style={{padding:"8px 10px",border:"1px solid #999",textAlign:"center",fontWeight:900}}>{max}</td>
+<td style={{padding:"8px 10px",border:"1px solid #999",textAlign:"center",fontWeight:900}}>{total}</td>
+<td style={{padding:"8px 10px",border:"1px solid #999",textAlign:"center",fontWeight:900,color:gradeColor}}>{grade}</td>
+</tr>
+</tbody>
+</table>
+{/* Result Summary */}
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:20,textAlign:"center"}}>
+<div style={{border:"1px solid #ccc",borderRadius:6,padding:"10px"}}>
+<p style={{fontSize:10,color:"#666",margin:0}}>TOTAL MARKS</p>
+<p style={{fontSize:18,fontWeight:900,color:"#1a1a6e",margin:"4px 0 0"}}>{total}/{max}</p>
+</div>
+<div style={{border:"1px solid #ccc",borderRadius:6,padding:"10px"}}>
+<p style={{fontSize:10,color:"#666",margin:0}}>PERCENTAGE</p>
+<p style={{fontSize:18,fontWeight:900,color:pct>=60?"#0a7c42":"#dc2626",margin:"4px 0 0"}}>{pct}%</p>
+</div>
+<div style={{border:"1px solid #ccc",borderRadius:6,padding:"10px"}}>
+<p style={{fontSize:10,color:"#666",margin:0}}>GRADE</p>
+<p style={{fontSize:18,fontWeight:900,color:gradeColor,margin:"4px 0 0"}}>{grade}</p>
+</div>
+</div>
+{/* Result Status */}
+<div style={{textAlign:"center",margin:"0 0 20px",background:pct>=33?"#dcfce7":"#fee2e2",border:"1px solid "+(pct>=33?"#16a34a":"#dc2626"),borderRadius:8,padding:"8px"}}>
+<p style={{fontSize:14,fontWeight:900,color:pct>=33?"#16a34a":"#dc2626",margin:0}}>{pct>=33?"✅ PASS":"❌ FAIL"}</p>
+</div>
+{/* Signatures */}
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginTop:30,textAlign:"center",fontSize:11}}>
+<div>
+<div style={{borderTop:"1px solid #333",paddingTop:6,marginTop:40}}>Class Teacher</div>
+</div>
+<div>
+<div style={{borderTop:"1px solid #333",paddingTop:6,marginTop:40}}>Examiner</div>
+</div>
+<div>
+<div style={{borderTop:"1px solid #333",paddingTop:6,marginTop:40}}>Principal</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+);
+}
+
 function ExamResultsSection({ ctx, embedded, onBack }) {
 const { role, loggedInUser, exams, setExams, students, examAnswerSheets, setExamAnswerSheets, toast, currentSchool, classNames } = ctx;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
@@ -29201,65 +29345,91 @@ setShowUpload(null); setUploadFile(null);
 toast("✅ Answer sheet upload ho gayi!", "success");
 };
 if (isParent) {
+const publishedExams = (isParent && parentClass)
+? schoolExams.filter(function(e){ return e.class === parentClass && e.isPublished === true; })
+: [];
+const [selectedMarksheet, setSelectedMarksheet] = React.useState(null);
 return (
 <div className="fadeUp">
 <div style={{marginBottom:16}}>
-<h2 style={{fontSize:20, fontWeight:800, color:T.text}}>📊 Exam Results & Answer Sheets</h2>
-{parentChild && <p style={{fontSize:12, color:T.textMuted, marginTop:2}}>👦 {parentChild.name} • {parentChild.class}</p>}
+<h2 style={{fontSize:20, fontWeight:800, color:T.text}}>📊 Exam Results</h2>
+{parentChild && <p style={{fontSize:12, color:T.textMuted, marginTop:2}}>👦 {parentChild.name} • {parentChild.class} • Roll: {parentChild.rollNo}</p>}
 </div>
-{displayExams.length === 0 ? (
+{selectedMarksheet && (
+<MarksheetModal
+exam={selectedMarksheet}
+student={parentChild}
+currentSchool={currentSchool}
+onClose={function(){setSelectedMarksheet(null);}}
+/>
+)}
+{publishedExams.length === 0 ? (
 <div style={{textAlign:"center", padding:"40px", background:T.card, borderRadius:14, border:"1px solid "+T.border}}>
 <p style={{fontSize:32, marginBottom:8}}>📊</p>
-<p style={{color:T.textMuted, fontSize:13}}>Koi result available nahi hai.</p>
+<p style={{color:T.textMuted, fontSize:13}}>Koi result abhi available nahi hai.</p>
+<p style={{color:T.textMuted, fontSize:11, marginTop:4}}>Teacher ya Principal result publish karenge tab yahan dikhega.</p>
 </div>
 ) : (
 <div style={{display:"grid", gap:12}}>
-{displayExams.map(exam => {
-const result = parentChild ? exam.results.find(r => r.studentName === parentChild.name) : null;
-const sheet = parentChild ? (examAnswerSheets||[]).find(s => s.examId === exam.id && s.studentId === parentChild.id && sameId(s.schoolId, mySchoolId)) : null;
-const total = result ? exam.subjects.reduce((s,sub)=>s+(parseInt(result.marks[sub])||0),0) : null;
-const max = exam.subjects.length * exam.totalMarks;
-const pct = total !== null && max > 0 ? Math.round((total/max)*100) : null;
-const grade = pct !== null ? (pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":"F") : null;
+{publishedExams.map(function(exam) {
+// Sirf is student ka result — strict check
+var result = parentChild
+? exam.results.find(function(r){ return r.studentName === parentChild.name || r.studentId === parentChild.id; })
+: null;
+var sheet = parentChild
+? (examAnswerSheets||[]).find(function(s){ return s.examId === exam.id && (s.studentId === parentChild.id || s.studentName === parentChild.name) && sameId(s.schoolId, mySchoolId); })
+: null;
+var total = result ? exam.subjects.reduce(function(s,sub){return s+(parseInt(result.marks[sub])||0);},0) : null;
+var max = exam.subjects.length * exam.totalMarks;
+var pct = total !== null && max > 0 ? Math.round((total/max)*100) : null;
+var grade = pct !== null ? (pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":"F") : null;
+var ti = typeInfo(exam.type);
 return (
-<div key={exam.id} style={{background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:16}}>
+<div key={exam.id} style={{background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:16, cursor: result ? "pointer" : "default"}}
+onClick={function(){ if(result) setSelectedMarksheet(exam); }}>
 <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:10}}>
 <div style={{flex:1}}>
 <p style={{fontWeight:800, fontSize:14, color:T.text}}>{exam.title}</p>
-<p style={{fontSize:11, color:T.textMuted}}>📅 {exam.date} • {exam.class}</p>
+<div style={{display:"flex", gap:6, marginTop:3, flexWrap:"wrap"}}>
+<span style={{background:ti.color+"20", color:ti.color, fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:5}}>{ti.icon} {ti.label}</span>
+<span style={{fontSize:11, color:T.textMuted}}>📅 {exam.date}</span>
+<span style={{fontSize:11, color:T.textMuted}}>{exam.class}</span>
 </div>
-{pct !== null && (
-<div style={{textAlign:"center"}}>
-<p style={{fontSize:22, fontWeight:900, color:pct>=60?"#0ECB81":"#F75555"}}>{pct}%</p>
-<p style={{fontSize:12, fontWeight:700, color:T.accent}}>{grade}</p>
+</div>
+{pct !== null ? (
+<div style={{textAlign:"center", background: pct>=60?T.green+"15":T.red+"15", borderRadius:10, padding:"8px 14px"}}>
+<p style={{fontSize:22, fontWeight:900, color:pct>=60?T.green:T.red}}>{pct}%</p>
+<p style={{fontSize:13, fontWeight:800, color:T.accent}}>{grade}</p>
 <p style={{fontSize:10, color:T.textMuted}}>{total}/{max}</p>
 </div>
+) : (
+<p style={{fontSize:11, color:T.textMuted}}>Marks nahi hain</p>
 )}
 </div>
 {result && (
 <div style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:10}}>
-{exam.subjects.map(s => (
-<span key={s} style={{fontSize:11, background:T.surface, color:T.text, borderRadius:6, padding:"3px 8px"}}>
-{s.slice(0,4)}: <b>{result.marks[s] ?? "—"}</b>/{exam.totalMarks}
+{exam.subjects.map(function(s){ return (
+<span key={s} style={{fontSize:11, background:T.surface, color:T.text, borderRadius:6, padding:"3px 8px", border:"1px solid "+T.border}}>
+{s}: <b>{result.marks[s] ?? "—"}</b>/{exam.totalMarks}
 </span>
-))}
+);})}
 </div>
 )}
-{!result && <p style={{fontSize:12, color:T.textMuted, marginBottom:10}}>📋 Marks abhi add nahi hue</p>}
-{/* Answer Sheet */}
-{sheet ? (
-<div style={{background:T.green+"15", border:"1px solid "+T.green+"40", borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:10}}>
+{result && (
+<div style={{background:T.accent+"15", border:"1px solid "+T.accent+"30", borderRadius:8, padding:"8px 12px", display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+<p style={{fontSize:11, color:T.accent, fontWeight:700}}>📋 Full Marksheet dekhne ke liye tap karo</p>
+<span style={{fontSize:16}}>→</span>
+</div>
+)}
+{!result && <p style={{fontSize:12, color:T.textMuted}}>📋 Marks abhi add nahi hue</p>}
+{sheet && (
+<div style={{background:T.green+"15", border:"1px solid "+T.green+"40", borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:10, marginTop:8}}>
 <span style={{fontSize:20}}>📄</span>
 <div style={{flex:1}}>
 <p style={{fontSize:12, fontWeight:700, color:T.green}}>Answer Sheet Available</p>
-<p style={{fontSize:11, color:T.textMuted}}>{sheet.fileName} • {sheet.uploadedAt}</p>
+<p style={{fontSize:11, color:T.textMuted}}>{sheet.fileName}</p>
 </div>
-<a href={sheet.dataUrl} download={sheet.fileName} style={{background:T.green, border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontSize:12, fontWeight:700, textDecoration:"none", fontFamily:"Outfit,sans-serif"}}>⬇️ Download</a>
-</div>
-) : (
-<div style={{background:T.surface, borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:8}}>
-<span style={{fontSize:16}}>📋</span>
-<p style={{fontSize:12, color:T.textMuted}}>Answer sheet abhi upload nahi ki gayi</p>
+<a href={sheet.dataUrl} download={sheet.fileName} style={{background:T.green, border:"none", borderRadius:8, padding:"6px 14px", color:"#fff", fontSize:12, fontWeight:700, textDecoration:"none", fontFamily:"Outfit,sans-serif"}}>⬇️</a>
 </div>
 )}
 </div>
