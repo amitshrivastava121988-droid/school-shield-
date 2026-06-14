@@ -5894,6 +5894,9 @@ return (
 <FormField label="Samagra ID"><FormInput value={d.samagraId||""} onChange={v=>setD(p=>({...p,samagraId:v}))} placeholder="9-digit Samagra ID" /></FormField>
 <FormField label="OTR (One Time Reg.)"><FormInput value={d.otrId||""} onChange={v=>setD(p=>({...p,otrId:v}))} placeholder="OTR Number" /></FormField>
 <FormField label="Aadhaar No."><FormInput value={d.aadhaarNo||""} onChange={v=>setD(p=>({...p,aadhaarNo:v}))} placeholder="12-digit Aadhaar" /></FormField>
+{currentSchool && currentSchool.studentIdLabel && (
+<FormField label={currentSchool.studentIdLabel} style={{gridColumn:"1/-1"}}><FormInput value={d.cidNo||""} onChange={v=>setD(p=>({...p,cidNo:v}))} placeholder={"Enter " + currentSchool.studentIdLabel} /></FormField>
+)}
 </div>
 </div>
 {/* Standard Documents Upload */}
@@ -15349,7 +15352,7 @@ const [otherDedLabel, setOtherDedLabel] = useState("Other Deduction");
 const [otherDed,      setOtherDed]      = useState(0);
 const [slipSchoolName,    setSlipSchoolName]    = useState(currentSchool?.name    || "Sunrise Public School");
 const [slipSchoolAddress, setSlipSchoolAddress] = useState(currentSchool?.address || "New Delhi");
-const [slipSchoolPhone,   setSlipSchoolPhone]   = useState(currentSchool?.contact || "9000000001");
+const [slipSchoolPhone,   setSlipSchoolPhone]   = useState(currentSchool?.schoolPhone || currentSchool?.contact || "");
 const teacher    = teachers.find(t => t.id === selTeacher);
 const [basicOverride, setBasicOverride] = useState(null); // null = use profile salary
 React.useEffect(() => { setBasicOverride(null); }, [selTeacher]);
@@ -24324,7 +24327,7 @@ const fileRef = useRef(null);
 const [cardPhoto, setCardPhoto] = useState(student.photoUrl || null);
 const [schoolName, setSchoolName] = useState(currentSchool?.name || "Sunrise Public School");
 const [schoolAddress, setSchoolAddress] = useState(currentSchool?.address || "New Delhi");
-const [schoolPhone, setSchoolPhone] = useState(currentSchool?.contact || "9000000001");
+const [schoolPhone, setSchoolPhone] = useState(currentSchool?.schoolPhone || currentSchool?.contact || "");
 const cardRef = useRef(null);
 const handlePhoto = function(e) {
 const file = e.target.files[0]; if (!file) return;
