@@ -28067,6 +28067,230 @@ canEditCal={true}
 );
 }
 // ─── EXAM SECTION ─────────────────────────────────────────────────────────────
+// ─── EXAM BULK IMPORT MODAL ──────────────────────────────────────────────────
+function ExamBulkImportModal({ schoolId, students, exams, setExams, toast, onClose }) {
+var [step, setStep] = React.useState(1);
+var [examName, setExamName] = React.useState("");
+var [examType, setExamType] = React.useState("quarterly");
+var [examClass, setExamClass] = React.useState("All");
+var [examDate, setExamDate] = React.useState(new Date().toISOString().slice(0,10));
+var [totalMarks, setTotalMarks] = React.useState("50");
+var [pasteText, setPasteText] = React.useState("");
+var [preview, setPreview] = React.useState([]);
+var [detectedSubjects, setDetectedSubjects] = React.useState([]);
+var [errors, setErrors] = React.useState([]);
+
+var EXAM_TYPE_OPTIONS = [
+{key:"monthly",label:"Monthly Test"},{key:"quarterly",label:"Quarterly Exam"},
+{key:"halfyearly",label:"Half Yearly Exam"},{key:"annual",label:"Annual / Final"},
+{key:"preboard",label:"Pre Board"},{key:"unitTest",label:"Unit Test"},
+];
+
+// Auto-detect subjects from header row + parse marks
+var parseData = function(text) {
+var lines = text.trim().split("\n").filter(function(l){return l.trim();});
+if (lines.length < 2) return {subjects:[], rows:[], errors:["Kam se kam 2 rows chahiye — header + data"]};
+var errs = [];
+// Parse header row
+var headerParts = lines[0].split(",").map(function(p){return p.trim();});
+if (headerParts.length < 2) {
+headerParts = lines[0].split("\t").map(function(p){return p.trim();});
+}
+// First col = Name/Student, second = RollNo or first subject
+// Detect if second col is RollNo
+var hasRollNo = false;
+var subjectStartIdx = 1;
+var firstH = (headerParts[0]||"").toLowerCase();
+var secondH = (headerParts[1]||"").toLowerCase();
+if (["roll","rollno","roll no","roll_no","sr","sr no","sno"].includes(secondH)) {
+hasRollNo = true;
+subjectStartIdx = 2;
+} else if (["name","student","student name"].includes(firstH)) {
+// second col might be rollno or subject
+if (["roll","rollno","roll no","sr"].includes(secondH)) {
+hasRollNo = true;
+subjectStartIdx = 2;
+}
+}
+var subjects = headerParts.slice(subjectStartIdx).filter(function(s){return s && !["total","total marks","percentage","percent","grade","rank"].includes(s.toLowerCase());});
+if (subjects.length === 0) return {subjects:[], rows:[], errors:["Header row mein subject names nahi mile"]};
+// Parse data rows
+var rows = [];
+lines.slice(1).forEach(function(line, i) {
+var parts = line.split(",").map(function(p){return p.trim();});
+if (parts.length < 2) parts = line.split("\t").map(function(p){return p.trim();});
+if (!parts[0]) return;
+var studentName = parts[0];
+var rollNo = hasRollNo ? (parts[1]||"") : "";
+var marks = {};
+subjects.forEach(function(sub, idx) {
+var val = parseInt(parts[subjectStartIdx + idx]);
+marks[sub] = isNaN(val) ? 0 : val;
+});
+var total = subjects.reduce(function(s,sub){return s+(marks[sub]||0);},0);
+var maxTotal = subjects.length * parseInt(totalMarks||50);
+var pct = maxTotal > 0 ? Math.round((total/maxTotal)*100) : 0;
+var stu = students.find(function(s){
+return s.name && s.name.trim().toLowerCase() === studentName.trim().toLowerCase() &&
+(!examClass || examClass==="All" || s.class===examClass);
+});
+if (!stu && rollNo) stu = students.find(function(s){return s.rollNo===rollNo;});
+rows.push({studentName:studentName, studentId:stu?stu.id:null, rollNo:rollNo||stu?.rollNo||"", marks:marks, total:total, percent:pct, matched:!!stu});
+});
+return {subjects:subjects, rows:rows, errors:errs};
+};
+
+var handlePreview = function() {
+if (!examName) {setErrors(["Exam name daalo!"]);return;}
+if (!pasteText.trim()) {setErrors(["Data paste karo!"]);return;}
+var result = parseData(pasteText);
+if (result.errors.length > 0 && result.rows.length === 0) {setErrors(result.errors);return;}
+setDetectedSubjects(result.subjects);
+setPreview(result.rows);
+setErrors(result.errors);
+if (result.rows.length > 0) setStep(3);
+};
+
+var handleImport = function() {
+if (preview.length === 0) return;
+var existingExam = exams.find(function(e){
+return e.title===examName && e.type===examType && e.class===examClass && sameId(e.schoolId, schoolId);
+});
+var results = preview.map(function(r){
+return {studentId:r.studentId||r.studentName, studentName:r.studentName, rollNo:r.rollNo, marks:r.marks};
+});
+if (existingExam) {
+var existingResults = existingExam.results||[];
+results.forEach(function(nr){
+var idx = existingResults.findIndex(function(er){return er.studentName===nr.studentName||er.studentId===nr.studentId;});
+if (idx>=0) existingResults[idx]=nr; else existingResults.push(nr);
+});
+setExams(function(p){return p.map(function(e){return e.id===existingExam.id?Object.assign({},e,{results:existingResults,subjects:detectedSubjects}):e;});});
+toast("✅ "+results.length+" results updated!", "success");
+} else {
+setExams(function(p){return [...p, {id:Date.now(), schoolId:schoolId, title:examName, type:examType, class:examClass, date:examDate, totalMarks:parseInt(totalMarks)||50, subjects:detectedSubjects, results:results}];});
+toast("✅ Exam created with "+results.length+" results!", "success");
+}
+onClose();
+};
+
+return (
+<ModalBox title="📥 Import Exam Marks" onClose={onClose} wide>
+<div style={{padding:"4px 0 8px"}}>
+{step===1 && (
+<div>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:14}}>Step 1: Exam details set karo</p>
+<div style={{display:"grid",gap:10,marginBottom:12}}>
+<div>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>{"Exam Name *"}</p>
+<input value={examName} onChange={function(e){setExamName(e.target.value);}} placeholder="e.g. Quarterly Exam 2025-26"
+style={{width:"100%",padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13,fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+<div>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>{"Exam Type"}</p>
+<select value={examType} onChange={function(e){setExamType(e.target.value);}}
+style={{width:"100%",padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}}>
+{EXAM_TYPE_OPTIONS.map(function(t){return <option key={t.key} value={t.key}>{t.label}</option>;})}
+</select>
+</div>
+<div>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>{"Class"}</p>
+<select value={examClass} onChange={function(e){setExamClass(e.target.value);}}
+style={{width:"100%",padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}}>
+<option value="All">{"All Classes"}</option>
+{DEFAULT_CLASSES.map(function(c){return <option key={c} value={c}>{c}</option>;})}
+</select>
+</div>
+<div>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>{"Date"}</p>
+<input type="date" value={examDate} onChange={function(e){setExamDate(e.target.value);}}
+style={{width:"100%",padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}} />
+</div>
+<div>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:4}}>{"Max Marks per Subject"}</p>
+<input type="number" value={totalMarks} onChange={function(e){setTotalMarks(e.target.value);}} placeholder="50"
+style={{width:"100%",padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:13}} />
+</div>
+</div>
+</div>
+{errors.length>0 && <div style={{background:T.red+"20",borderRadius:8,padding:"8px 12px",marginBottom:10}}>
+{errors.map(function(e,i){return <p key={i} style={{fontSize:12,color:T.red}}>{e}</p>;})}
+</div>}
+<Btn onClick={function(){if(!examName){setErrors(["Exam name daalo!"]);return;}setErrors([]);setStep(2);}} color={T.accent} full>{"Next — Paste Data →"}</Btn>
+</div>
+)}
+{step===2 && (
+<div>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:8}}>{"Step 2: Data paste karo"}</p>
+<div style={{background:T.surface,borderRadius:10,padding:"12px",marginBottom:10,border:"1px solid "+T.accent+"30"}}>
+<p style={{fontSize:11,fontWeight:700,color:T.accent,marginBottom:6}}>{"📌 Format (CSV ya Tab):"}</p>
+<p style={{fontSize:11,color:T.text,fontFamily:"monospace",marginBottom:4}}>{"Name, RollNo, English, Hindi, Mathematics, EVS, ..."}</p>
+<p style={{fontSize:11,color:T.text,fontFamily:"monospace",marginBottom:6}}>{"Aashik Verma, S03-NR-2026-01, 33, 35, 35, 35, ..."}</p>
+<p style={{fontSize:10,color:T.textMuted}}>{"✅ Pehli row = Header (subject names auto-detect honge)"}</p>
+<p style={{fontSize:10,color:T.textMuted}}>{"✅ RollNo optional — naam se bhi match hoga"}</p>
+<p style={{fontSize:10,color:T.textMuted}}>{"✅ Total, Percentage columns automatically calculate honge"}</p>
+</div>
+<textarea value={pasteText} onChange={function(e){setPasteText(e.target.value);}}
+placeholder={"Name, RollNo, English, Hindi, Mathematics, EVS\nAashik Verma, S03-NR-2026-01, 33, 35, 35, 35"}
+style={{width:"100%",minHeight:200,padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:12,fontFamily:"monospace",resize:"vertical",boxSizing:"border-box"}} />
+{errors.length>0 && <div style={{background:T.red+"20",borderRadius:8,padding:"8px",marginTop:6}}>
+{errors.map(function(e,i){return <p key={i} style={{fontSize:11,color:T.red}}>{e}</p>;})}
+</div>}
+<div style={{display:"flex",gap:8,marginTop:10}}>
+<Btn onClick={function(){setStep(1);}} color={T.surface} full>{"← Back"}</Btn>
+<Btn onClick={handlePreview} color={T.accent} full>{"👁 Preview"}</Btn>
+</div>
+</div>
+)}
+{step===3 && (
+<div>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:6}}>{"Step 3: Preview — "+preview.length+" students"}</p>
+<div style={{background:T.accent+"15",border:"1px solid "+T.accent+"30",borderRadius:8,padding:"8px 12px",marginBottom:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+<span style={{fontSize:11,color:T.accent,fontWeight:700}}>{"Subjects detected:"}</span>
+{detectedSubjects.map(function(s){return <span key={s} style={{fontSize:11,background:T.accent+"25",color:T.accent,borderRadius:5,padding:"2px 8px"}}>{s}</span>;})}
+</div>
+{errors.length>0 && <div style={{background:T.yellow+"20",borderRadius:8,padding:"8px",marginBottom:8}}>
+{errors.map(function(e,i){return <p key={i} style={{fontSize:11,color:T.yellow}}>{e}</p>;})}
+</div>}
+<div style={{overflowX:"auto",marginBottom:12,maxHeight:300,overflowY:"auto"}}>
+<table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+<thead style={{position:"sticky",top:0,background:T.surface}}>
+<tr>
+<th style={{padding:"6px 8px",textAlign:"left",color:T.textMuted,borderBottom:"1px solid "+T.border}}>{"Name"}</th>
+{detectedSubjects.map(function(s){return <th key={s} style={{padding:"6px 8px",textAlign:"center",color:T.textMuted,borderBottom:"1px solid "+T.border,whiteSpace:"nowrap"}}>{s}</th>;})}
+<th style={{padding:"6px 8px",textAlign:"center",color:T.textMuted,borderBottom:"1px solid "+T.border}}>{"Total"}</th>
+<th style={{padding:"6px 8px",textAlign:"center",color:T.textMuted,borderBottom:"1px solid "+T.border}}>{"%" }</th>
+<th style={{padding:"6px 8px",textAlign:"center",color:T.textMuted,borderBottom:"1px solid "+T.border}}>{"✓"}</th>
+</tr>
+</thead>
+<tbody>
+{preview.map(function(r,i){
+return <tr key={i} style={{borderBottom:"1px solid "+T.border+"40",background:r.matched?"transparent":T.red+"08"}}>
+<td style={{padding:"5px 8px",color:T.text,fontWeight:600,whiteSpace:"nowrap"}}>{r.studentName}</td>
+{detectedSubjects.map(function(s){return <td key={s} style={{padding:"5px 8px",textAlign:"center",color:T.text}}>{r.marks[s]||0}</td>;})}
+<td style={{padding:"5px 8px",textAlign:"center",color:T.accent,fontWeight:700}}>{r.total}</td>
+<td style={{padding:"5px 8px",textAlign:"center",color:r.percent>=60?T.green:T.red,fontWeight:700}}>{r.percent+"%"}</td>
+<td style={{padding:"5px 8px",textAlign:"center"}}>{r.matched?"✅":"⚠️"}</td>
+</tr>;
+})}
+</tbody>
+</table>
+</div>
+{preview.filter(function(r){return !r.matched;}).length>0 && (
+<p style={{fontSize:11,color:T.yellow,marginBottom:8}}>{"⚠️ "+preview.filter(function(r){return !r.matched;}).length+" students match nahi hue — naam bilkul same hona chahiye"}</p>
+)}
+<div style={{display:"flex",gap:8}}>
+<Btn onClick={function(){setStep(2);}} color={T.surface} full>{"← Back"}</Btn>
+<Btn onClick={handleImport} color={T.green} full>{"✅ Import "+preview.length+" Results"}</Btn>
+</div>
+</div>
+)}
+</div>
+</ModalBox>
+);
+}
+
 function ExamSection({ ctx }) {
 const { exams, setExams, students, role, toast, loggedInUser, timetable, teachers, userAccounts, classNames } = ctx;
 const mySchoolId      = loggedInUser ? loggedInUser.schoolId : 1;
@@ -28102,6 +28326,7 @@ const [editExam,    setEditExam]    = useState(null);
 const [form,        setForm]        = useState({...emptyForm, ...emptyDutyFields});
 const [marksModal,  setMarksModal]  = useState(null);
 const [manualName,  setManualName]  = useState("");
+const [showBulkImport, setShowBulkImport] = useState(false);
 const filtered = schoolExams.filter(e => {
 const okType  = filterType  === "all" || e.type  === filterType;
 const okClass = filterClass === "all" || e.class === filterClass;
@@ -28406,12 +28631,24 @@ return (
 <div className="fadeUp">
 <SectionHeader title={isParent ? "📝 Bachche ke Exams" : "📝 Exams"}
 action={canEdit && (!isTeacher || teacherClass) ? (
+<div style={{display:"flex",gap:8}}>
+<button onClick={() => setShowBulkImport(true)}
+style={{ background:T.purple, border:"none", borderRadius:9, padding:"8px 14px", color:"#fff", fontFamily:"Outfit,sans-serif", fontWeight:800, fontSize:13, cursor:"pointer" }}>{"📥 Import Marks"}</button>
 <button onClick={() => { setShowForm(true); setEditExam(null); setForm({...emptyForm, ...emptyDutyFields}); }}
-style={{ background:T.accent, border:"none", borderRadius:9, padding:"8px 18px", color:"#fff", fontFamily:"Outfit,sans-serif", fontWeight:800, fontSize:13, cursor:"pointer" }}>+ Add Exam</button>
+style={{ background:T.accent, border:"none", borderRadius:9, padding:"8px 18px", color:"#fff", fontFamily:"Outfit,sans-serif", fontWeight:800, fontSize:13, cursor:"pointer" }}>{"+ Add Exam"}</button>
+</div>
 ) : null}
 />
 {/* ── Sub-Tabs ── */}
 <SubTabBar />
+{showBulkImport && <ExamBulkImportModal
+schoolId={mySchoolId}
+students={students}
+exams={schoolExams}
+setExams={setExams}
+toast={toast}
+onClose={()=>setShowBulkImport(false)}
+/>}
 {/* Teacher assigned class notice */}
 {isTeacher && teacherClass && (
 <div style={{ background:T.accent+"15", border:"1px solid "+T.accent+"30", borderRadius:10, padding:"10px 14px", marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
