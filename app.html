@@ -1778,8 +1778,9 @@ if (lu.role === "transport_head")   window.__transportHeadUser = lu;
 if (lu.role === "founder")          window.__founderUser = lu;
 // ── Restore school path on page reload ──
 if (lu.schoolId) {
-const cleanSchoolId = String(lu.schoolId).replace(/[^a-zA-Z0-9]/g,"");
-setCurrentSchoolId("SCH_" + cleanSchoolId);
+const rawSid3 = String(lu.schoolId);
+const cleanSchoolId3 = rawSid3.startsWith("SCH_") ? rawSid3 : "SCH_" + rawSid3.replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId(cleanSchoolId3);
 console.log("✅ [Session Restore] School path:", window.currentSchoolId);
 }
 }
@@ -2356,8 +2357,9 @@ if (rollAcc) {
 setRole(rollAcc.role);
 setLoggedInUser(rollAcc);
 if (rollAcc.schoolId) {
-const cleanSchoolId = String(rollAcc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
-setCurrentSchoolId("SCH_" + cleanSchoolId);
+const rawSid2 = String(rollAcc.schoolId);
+const cleanSchoolId2 = rawSid2.startsWith("SCH_") ? rawSid2 : "SCH_" + rawSid2.replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId(cleanSchoolId2);
 }
 toast(`Welcome ${rollAcc.name}! 👋`, "success");
 return;
@@ -2393,8 +2395,9 @@ setRole(acc.role);
 setLoggedInUser(acc);
 // ── Set school-specific Firebase path — event dispatch karega taaki usePersist re-subscribe ho ──
 if (acc.schoolId) {
-const cleanSchoolId = String(acc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
-setCurrentSchoolId("SCH_" + cleanSchoolId);
+const rawSid = String(acc.schoolId);
+const cleanSchoolId = rawSid.startsWith("SCH_") ? rawSid : "SCH_" + rawSid.replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId(cleanSchoolId);
 } else {
 setCurrentSchoolId(null);
 }
@@ -5135,6 +5138,25 @@ newStudents.push({ id:sid, name:row.name, class:row.class||"", dob:row.dob||"", 
 if(row.parentPhone) {
 const lastFour = row.parentPhone.slice(-4);
 newAccounts.push({ id:genId(), schoolId:mySchoolId, role:"parent", name:row.parentName||"Parent of "+row.name, username:"parent_"+row.name.toLowerCase().replace(/ /g,"_")+"_"+lastFour, password:lastFour, phone:row.parentPhone, studentId:sid, studentName:row.name, active:true });
+} else {
+// ── No phone — Roll No + DOB se login (new schools ke liye) ──
+const cleanSid = mySchoolId ? String(mySchoolId).replace(/[^a-zA-Z0-9]/g,"") : "";
+const rollUsername = "s" + rollNo + "_" + cleanSid;
+var dobPass = "";
+if (row.dob) {
+try {
+var dp = row.dob.replace(/[^0-9\-\/\.]/g,"");
+var parts = dp.split(/[-\/\.]/);
+if (parts.length === 3) {
+var yr = parts[0].length === 4 ? parts[0] : parts[2];
+var mo = parts[0].length === 4 ? parts[1] : parts[1];
+var dy = parts[0].length === 4 ? parts[2] : parts[0];
+dobPass = String(dy).padStart(2,"0") + String(mo).padStart(2,"0") + String(yr);
+}
+} catch(e) {}
+}
+if (!dobPass || dobPass.length < 6) dobPass = String(rollNo).replace(/[^0-9]/g,"") || "000000";
+newAccounts.push({ id:genId(), schoolId:mySchoolId, role:"parent", name:row.parentName||"Parent of "+row.name, username:rollUsername, password:dobPass, phone:"", studentId:sid, studentName:row.name, active:true, loginType:"rollno" });
 }
 });
 const allExistingAtImport = [...students]; // snapshot before setState
