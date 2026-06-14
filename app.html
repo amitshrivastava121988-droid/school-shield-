@@ -28895,12 +28895,22 @@ return (
 type="number" min="1" max="500"
 value={currentMax}
 onChange={function(e){
-var val = parseInt(e.target.value)||defaultMax;
+var val = e.target.value;
 setForm(function(f){
 var smm = Object.assign({}, f.subjectMaxMarks||{});
-smm[sub] = val;
+smm[sub] = val === "" ? "" : parseInt(val)||"";
 return Object.assign({}, f, {subjectMaxMarks: smm});
 });
+}}
+onBlur={function(e){
+var val = parseInt(e.target.value);
+if (!val || val < 1) {
+setForm(function(f){
+var smm = Object.assign({}, f.subjectMaxMarks||{});
+delete smm[sub];
+return Object.assign({}, f, {subjectMaxMarks: smm});
+});
+}
 }}
 style={{ width:80, background:T.card, border:"1px solid "+(isCustom?T.accent:T.border), borderRadius:7, padding:"6px 10px", fontSize:13, color:isCustom?T.accent:T.text, fontFamily:"Outfit,sans-serif", textAlign:"center", fontWeight:isCustom?700:400 }}
 />
