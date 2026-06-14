@@ -5078,6 +5078,7 @@ const openBulkImport = () => setModal(
 <BulkImportModal
 onClose={()=>setModal(null)}
 schoolId={mySchoolId}
+currentSchool={currentSchool}
 onImport={(rows)=>{
 const newStudents = [];
 const newAccounts = [];
@@ -5351,7 +5352,7 @@ style={{background:T.red+"20",border:"1px solid "+T.red,color:T.red,borderRadius
 <div style={{display:"flex", gap:6, marginTop:4, flexWrap:"wrap"}}>
 <Badge color={T.green}>{l("attendance")}: {s.attendance}%</Badge>
 <Badge color={T.accent}>{l("dateOfBirth")}: {s.dob}</Badge>
-{s.cidNo && <Badge color={"#6366f1"}>🪪 CID: {s.cidNo}</Badge>}
+{s.cidNo && currentSchool && currentSchool.studentIdLabel && <Badge color={"#6366f1"}>🪪 {currentSchool.studentIdLabel}: {s.cidNo}</Badge>}
 {s.house && <Badge color={T.yellow}>🏠 {s.house}</Badge>}
 {s.gender && <Badge color={T.purple}>{s.gender==="Female"?"👧":"👦"} {s.gender}</Badge>}
 {s.bloodGroup && s.bloodGroup !== "Unknown" && <Badge color="#F75555">🩸 {s.bloodGroup}</Badge>}
@@ -5489,7 +5490,7 @@ fontFamily:"Outfit,sans-serif",transition:"background 0.3s"}}>
 );
 }
 // ─── BULK IMPORT MODAL ───────────────────────────────────────────────────────
-function BulkImportModal({ onClose, schoolId, onImport }) {
+function BulkImportModal({ onClose, schoolId, onImport, currentSchool }) {
 const [tab, setTab] = useState("paste"); // "paste" | "csv"
 const [pasteText, setPasteText] = useState("");
 const [preview, setPreview] = useState([]);
@@ -5561,8 +5562,8 @@ style={{flex:1, padding:"10px", background: tab===t ? T.accent : T.surface, bord
 {/* Format guide */}
 <div style={{background:T.surface, borderRadius:10, padding:12, marginBottom:16, border:`1px solid ${T.border}`}}>
 <p style={{color:T.textMuted, fontSize:11, fontWeight:700, marginBottom:6}}>📌 FORMAT (comma separated):</p>
-<p style={{color:T.accent, fontSize:11, fontFamily:"monospace"}}>Name, Class, DOB, Parent Name, Parent Phone, RollNo, AdmissionDate</p>
-<p style={{color:T.textMuted, fontSize:10, marginTop:4}}>DOB, RollNo, AdmissionDate optional • Tab ya comma dono chalega • Header line skip ho jaegi • AdmissionDate se roll no order decide hota hai</p>
+<p style={{color:T.accent, fontSize:11, fontFamily:"monospace"}}>{"Name, Class, DOB, Parent Name, Parent Phone, RollNo, AdmissionDate, Mother Name" + (currentSchool && currentSchool.studentIdLabel ? ", " + currentSchool.studentIdLabel : "")}</p>
+<p style={{color:T.textMuted, fontSize:10, marginTop:4}}>DOB, RollNo, AdmissionDate, MotherName, StudentID optional • Tab ya comma dono chalega • Header line skip ho jaegi • AdmissionDate se roll no order decide hota hai</p>
 </div>
 {tab === "paste" ? (
 <div>
@@ -5832,7 +5833,7 @@ return (
 <FormField label="Father's Occupation"><FormInput value={d.fatherOccupation||""} onChange={v=>setD(p=>({...p,fatherOccupation:v}))} /></FormField>
 <FormField label="Mother's Name"><FormInput value={d.motherName||""} onChange={v=>setD(p=>({...p,motherName:v}))} /></FormField>
 <FormField label="Mother's Occupation"><FormInput value={d.motherOccupation||""} onChange={v=>setD(p=>({...p,motherOccupation:v}))} /></FormField>
-<FormField label="CID No. (Govt. Student ID)"><FormInput value={d.cidNo||""} onChange={v=>setD(p=>({...p,cidNo:v}))} placeholder="9-digit Govt. ID" /></FormField>
+{currentSchool && currentSchool.studentIdLabel ? <FormField label={currentSchool.studentIdLabel}><FormInput value={d.cidNo||""} onChange={v=>setD(p=>({...p,cidNo:v}))} placeholder="Enter ID number" /></FormField> : null}
 <FormField label="Annual Income (₹)" style={{gridColumn:"1/-1"}}><FormInput value={d.annualIncome||""} onChange={v=>setD(p=>({...p,annualIncome:v}))} placeholder="e.g. 250000" /></FormField>
 </div>
 </div>
@@ -19008,6 +19009,7 @@ registrationNo: school.registrationNo||"",
 runBy: school.runBy||"",
 founderName: school.founderName||"",
 founderMobile: school.founderMobile||"",
+studentIdLabel: school.studentIdLabel||"",
 } : {
 name:"", address:"", city:"", lat:"", lng:"", plan:"Monthly",
 joinDate:new Date().toISOString().slice(0,10), amount:4999, dueDate:"",
@@ -19017,7 +19019,7 @@ featurePlan:"basic",
 features: {...PLAN_FEATURES.basic.features},
 limits:   {...PLAN_FEATURES.basic.limits},
 diseCode:"", schoolPhone:"", registrationNo:"", runBy:"",
-founderName:"", founderMobile:"",
+founderName:"", founderMobile:"", studentIdLabel:"",
 });
 const [discCode, setDiscCode] = useState("");
 const [discInfo, setDiscInfo] = useState(null);
@@ -19095,6 +19097,9 @@ setD(p=>({...p, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.t
 </div>
 <FormField label="Registration No.">
 <FormInput value={d.registrationNo||""} onChange={v=>setD(p=>({...p,registrationNo:v}))} placeholder="e.g. Reg.no.04/17/01/17078/15" />
+</FormField>
+<FormField label="Student ID Label (e.g. CID No., Aadhar, UDISE, Samagra ID)">
+<FormInput value={d.studentIdLabel||""} onChange={v=>setD(p=>({...p,studentIdLabel:v}))} placeholder="e.g. CID No." />
 </FormField>
 <FormField label="Run By (Managing Trust / Society Name)">
 <FormInput value={d.runBy||""} onChange={v=>setD(p=>({...p,runBy:v}))} placeholder="e.g. Shri Rudra Samarth Samiti Chhindwara" />
