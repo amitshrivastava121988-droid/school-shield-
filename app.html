@@ -2344,6 +2344,25 @@ toast("Galat password ❌", "error");
 checkPass(); return;
 }
 const acc = (userAccounts||[]).find(a => a.username === loginUsername && a.password === pw && a.active);
+if (!acc) {
+// ── Fallback: Roll No login — username = sROLLNO_SCHid, password = DDMMYYYY ──
+const rollAcc = (userAccounts||[]).find(a =>
+a.loginType === "rollno" &&
+a.username === loginUsername &&
+a.password === pw &&
+a.active
+);
+if (rollAcc) {
+setRole(rollAcc.role);
+setLoggedInUser(rollAcc);
+if (rollAcc.schoolId) {
+const cleanSchoolId = String(rollAcc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId("SCH_" + cleanSchoolId);
+}
+toast(`Welcome ${rollAcc.name}! 👋`, "success");
+return;
+}
+}
 if (acc) {
 if (acc.role === "vice_principal") {
 window.__vpUser = acc;
@@ -4930,6 +4949,43 @@ active: true,
 return [...prev, newParentAcc];
 }
 });
+} else {
+// ── No phone number — Roll No + DOB se login (new schools ke liye) ──
+const rollNo = data.rollNo || data.rollno || String(newId);
+const rawDob = data.dob || "";
+// DOB ko DDMMYYYY format mein convert karo
+let dobPass = "";
+if (rawDob) {
+try {
+const d = new Date(rawDob);
+if (!isNaN(d.getTime())) {
+const dd = String(d.getDate()).padStart(2,"0");
+const mm = String(d.getMonth()+1).padStart(2,"0");
+const yyyy = d.getFullYear();
+dobPass = dd + mm + String(yyyy);
+}
+} catch(e) {}
+}
+if (!dobPass) dobPass = rawDob.replace(/[^0-9]/g,"").slice(0,8);
+if (!dobPass) dobPass = rollNo; // fallback
+const cleanSchoolId = mySchoolId ? String(mySchoolId).replace(/[^a-zA-Z0-9]/g,"") : "";
+const rollUsername = "s" + rollNo + "_" + cleanSchoolId;
+const parentDisplayName = data.parentName || `Parent of ${data.name}`;
+const newParentAcc = {
+id: newId + 1,
+schoolId: mySchoolId,
+role: "parent",
+name: parentDisplayName,
+username: rollUsername,
+password: dobPass,
+phone: "",
+studentId: newId,
+studentName: data.name,
+active: true,
+loginType: "rollno",
+};
+setUserAccounts(prev => [...prev, newParentAcc]);
+toast(`✅ Student added! Login: ${rollUsername} | Password: ${dobPass}`, "success");
 }
 // ── Auto-assign fees from Fee Structure ──
 const curYear = new Date().getFullYear();
