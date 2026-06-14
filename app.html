@@ -28222,18 +28222,37 @@ style={{width:"100%",padding:"10px 12px",background:T.surface,border:"1px solid 
 )}
 {step===2 && (
 <div>
-<p style={{fontSize:12,color:T.textMuted,marginBottom:8}}>{"Step 2: Data paste karo"}</p>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:8}}>{"Step 2: Data load karo"}</p>
 <div style={{background:T.surface,borderRadius:10,padding:"12px",marginBottom:10,border:"1px solid "+T.accent+"30"}}>
 <p style={{fontSize:11,fontWeight:700,color:T.accent,marginBottom:6}}>{"📌 Format (CSV ya Tab):"}</p>
 <p style={{fontSize:11,color:T.text,fontFamily:"monospace",marginBottom:4}}>{"Name, RollNo, English, Hindi, Mathematics, EVS, ..."}</p>
 <p style={{fontSize:11,color:T.text,fontFamily:"monospace",marginBottom:6}}>{"Aashik Verma, S03-NR-2026-01, 33, 35, 35, 35, ..."}</p>
 <p style={{fontSize:10,color:T.textMuted}}>{"✅ Pehli row = Header (subject names auto-detect honge)"}</p>
 <p style={{fontSize:10,color:T.textMuted}}>{"✅ RollNo optional — naam se bhi match hoga"}</p>
-<p style={{fontSize:10,color:T.textMuted}}>{"✅ Total, Percentage columns automatically calculate honge"}</p>
+<p style={{fontSize:10,color:T.textMuted}}>{"✅ Total, Percentage automatically calculate honge"}</p>
 </div>
+<div style={{background:T.green+"15",border:"2px dashed "+T.green+"50",borderRadius:10,padding:"14px",marginBottom:10,textAlign:"center"}}>
+<p style={{fontSize:12,color:T.green,fontWeight:700,marginBottom:8}}>{"📁 CSV File Upload"}</p>
+<input type="file" accept=".csv,.txt" id="examCsvUpload"
+onChange={function(e){
+var file = e.target.files[0];
+if (!file) return;
+var reader = new FileReader();
+reader.onload = function(ev){setPasteText(ev.target.result);};
+reader.readAsText(file);
+}}
+style={{display:"none"}} />
+<label htmlFor="examCsvUpload" style={{display:"inline-block",padding:"10px 20px",background:T.green,color:"#fff",borderRadius:8,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontWeight:700,fontSize:13}}>
+{"📂 File Choose Karo"}
+</label>
+{pasteText && pasteText.trim().length > 0 && (
+<p style={{fontSize:11,color:T.green,marginTop:8,fontWeight:700}}>{"✅ File loaded — "+pasteText.trim().split("\n").length+" rows"}</p>
+)}
+</div>
+<p style={{fontSize:11,color:T.textMuted,textAlign:"center",marginBottom:6}}>{"— ya seedha paste karo —"}</p>
 <textarea value={pasteText} onChange={function(e){setPasteText(e.target.value);}}
 placeholder={"Name, RollNo, English, Hindi, Mathematics, EVS\nAashik Verma, S03-NR-2026-01, 33, 35, 35, 35"}
-style={{width:"100%",minHeight:200,padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:12,fontFamily:"monospace",resize:"vertical",boxSizing:"border-box"}} />
+style={{width:"100%",minHeight:120,padding:"10px 12px",background:T.surface,border:"1px solid "+T.border,borderRadius:8,color:T.text,fontSize:12,fontFamily:"monospace",resize:"vertical",boxSizing:"border-box"}} />
 {errors.length>0 && <div style={{background:T.red+"20",borderRadius:8,padding:"8px",marginTop:6}}>
 {errors.map(function(e,i){return <p key={i} style={{fontSize:11,color:T.red}}>{e}</p>;})}
 </div>}
