@@ -1778,8 +1778,9 @@ if (lu.role === "transport_head")   window.__transportHeadUser = lu;
 if (lu.role === "founder")          window.__founderUser = lu;
 // ── Restore school path on page reload ──
 if (lu.schoolId) {
-const cleanSchoolId = String(lu.schoolId).replace(/[^a-zA-Z0-9]/g,"");
-setCurrentSchoolId("SCH_" + cleanSchoolId);
+const rawSid3 = String(lu.schoolId);
+const cleanSchoolId3 = rawSid3.startsWith("SCH_") ? rawSid3 : "SCH_" + rawSid3.replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId(cleanSchoolId3);
 console.log("✅ [Session Restore] School path:", window.currentSchoolId);
 }
 }
@@ -2356,8 +2357,9 @@ if (rollAcc) {
 setRole(rollAcc.role);
 setLoggedInUser(rollAcc);
 if (rollAcc.schoolId) {
-const cleanSchoolId = String(rollAcc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
-setCurrentSchoolId("SCH_" + cleanSchoolId);
+const rawSid2 = String(rollAcc.schoolId);
+const cleanSchoolId2 = rawSid2.startsWith("SCH_") ? rawSid2 : "SCH_" + rawSid2.replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId(cleanSchoolId2);
 }
 toast(`Welcome ${rollAcc.name}! 👋`, "success");
 return;
@@ -2393,8 +2395,9 @@ setRole(acc.role);
 setLoggedInUser(acc);
 // ── Set school-specific Firebase path — event dispatch karega taaki usePersist re-subscribe ho ──
 if (acc.schoolId) {
-const cleanSchoolId = String(acc.schoolId).replace(/[^a-zA-Z0-9]/g,"");
-setCurrentSchoolId("SCH_" + cleanSchoolId);
+const rawSid = String(acc.schoolId);
+const cleanSchoolId = rawSid.startsWith("SCH_") ? rawSid : "SCH_" + rawSid.replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId(cleanSchoolId);
 } else {
 setCurrentSchoolId(null);
 }
