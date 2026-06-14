@@ -5134,7 +5134,7 @@ const nextSerial = lastSerial + 1;
 rollNo = buildRollNo(row.class, nextSerial);
 classSerialMap[row.class] = nextSerial;
 }
-newStudents.push({ id:sid, name:row.name, class:row.class||"", dob:row.dob||"", admissionDate:row.admissionDate||"", parentName:row.parentName||"", parentPhone:row.parentPhone||"", attendance:100, schoolId:mySchoolId, photo:"👦", rollNo });
+newStudents.push({ id:sid, name:row.name, class:row.class||"", dob:row.dob||"", admissionDate:row.admissionDate||"", parentName:row.parentName||"", parentPhone:row.parentPhone||"", motherName:row.motherName||"", cidNo:row.cidNo||"", attendance:100, schoolId:mySchoolId, photo:"👦", rollNo });
 if(row.parentPhone) {
 const lastFour = row.parentPhone.slice(-4);
 newAccounts.push({ id:genId(), schoolId:mySchoolId, role:"parent", name:row.parentName||"Parent of "+row.name, username:"parent_"+row.name.toLowerCase().replace(/ /g,"_")+"_"+lastFour, password:lastFour, phone:row.parentPhone, studentId:sid, studentName:row.name, active:true });
@@ -5351,6 +5351,7 @@ style={{background:T.red+"20",border:"1px solid "+T.red,color:T.red,borderRadius
 <div style={{display:"flex", gap:6, marginTop:4, flexWrap:"wrap"}}>
 <Badge color={T.green}>{l("attendance")}: {s.attendance}%</Badge>
 <Badge color={T.accent}>{l("dateOfBirth")}: {s.dob}</Badge>
+{s.cidNo && <Badge color={"#6366f1"}>🪪 CID: {s.cidNo}</Badge>}
 {s.house && <Badge color={T.yellow}>🏠 {s.house}</Badge>}
 {s.gender && <Badge color={T.purple}>{s.gender==="Female"?"👧":"👦"} {s.gender}</Badge>}
 {s.bloodGroup && s.bloodGroup !== "Unknown" && <Badge color="#F75555">🩸 {s.bloodGroup}</Badge>}
@@ -5517,6 +5518,8 @@ parentName: parts[3] || "",
 parentPhone: parts[4] || "",
 rollNo: parts[5] || "",
 admissionDate: parts[6] || "",
+motherName: parts[7] || "",
+cidNo: parts[8] || "",
 };
 if(!row.name) { errors.push(`Line ${i+1}: Name missing`); return; }
 rows.push(row);
@@ -5542,9 +5545,8 @@ setPreview(rows);
 };
 reader.readAsText(file);
 };
-const sampleText = `Aarav Sharma, Class 5, 2014-03-15, Rajesh Sharma, 9876543210
-Priya Verma, Class 3, 2016-07-22, Sunita Verma, 9123456789
-Rohit Singh, Class 7, 2012-11-05, Vikram Singh, 9988776655`;
+const sampleText = `Aarav Sharma, Class 5, 2014-03-15, Rajesh Sharma, 9876543210, , , Sunita Sharma, 123456789
+Priya Verma, Class 3, 2016-07-22, Sunita Verma, 9123456789, , , Anita Verma, 987654321`;
 return (
 <ModalBox title="📥 Bulk Student Import" onClose={onClose} wide>
 {/* Tabs */}
@@ -5830,6 +5832,7 @@ return (
 <FormField label="Father's Occupation"><FormInput value={d.fatherOccupation||""} onChange={v=>setD(p=>({...p,fatherOccupation:v}))} /></FormField>
 <FormField label="Mother's Name"><FormInput value={d.motherName||""} onChange={v=>setD(p=>({...p,motherName:v}))} /></FormField>
 <FormField label="Mother's Occupation"><FormInput value={d.motherOccupation||""} onChange={v=>setD(p=>({...p,motherOccupation:v}))} /></FormField>
+<FormField label="CID No. (Govt. Student ID)"><FormInput value={d.cidNo||""} onChange={v=>setD(p=>({...p,cidNo:v}))} placeholder="9-digit Govt. ID" /></FormField>
 <FormField label="Annual Income (₹)" style={{gridColumn:"1/-1"}}><FormInput value={d.annualIncome||""} onChange={v=>setD(p=>({...p,annualIncome:v}))} placeholder="e.g. 250000" /></FormField>
 </div>
 </div>
