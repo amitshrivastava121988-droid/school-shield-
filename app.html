@@ -1961,6 +1961,18 @@ const setGreetingSettings = function(updater) {
 };
 const [userAccounts, setUserAccounts] = usePersist("userAccounts", initUserAccounts);
 const [attendanceLogs, setAttendanceLogs] = usePersist("attendanceLogs", {});
+React.useEffect(function(){
+window.ssAttCallback = function(attKey, today, entry) {
+setAttendanceLogs(function(prev) {
+var updated = Object.assign({}, prev);
+if (!updated[attKey]) updated[attKey] = {};
+updated[attKey] = Object.assign({}, updated[attKey]);
+updated[attKey][today] = entry;
+return updated;
+});
+};
+return function(){ window.ssAttCallback = null; };
+}, []);
 const [library, setLibrary] = usePersist("library", {
 books: [
 { id:1, title:"Wings of Fire", author:"APJ Abdul Kalam", genre:"Biography", total:3, schoolId:1 },
@@ -36380,6 +36392,10 @@ db.ref('schoolshield/schools/'+sid+'/attendanceLogs').once('value').then(functio
 var logs={}; try{ var v=snap.val(); logs=v?JSON.parse(v):{};} catch(e){ logs=snap.val()||{}; }
 if(logs[attKey]&&logs[attKey][today]&&logs[attKey][today].status==='present'){
 showResult(name,timeStr,'already');
+// Still update React state in case it missed the previous save
+if(window.ssAttCallback) {
+window.ssAttCallback(attKey, today, logs[attKey][today]);
+}
 setTimeout(function(){hideResult();_cool=false;_blink={};setStatus('Look at camera and BLINK once','info');},3000);
 return;
 }
@@ -36387,6 +36403,10 @@ if(!logs[attKey]) logs[attKey]={};
 logs[attKey][today]={status:'present',inTime:timeStr,outTime:'',markedBy:'face-recognition'};
 db.ref('schoolshield/schools/'+sid+'/attendanceLogs').set(JSON.stringify(logs)).then(function(){
 showResult(name,timeStr,'success');
+// Update React state so dashboard/calendar reflects immediately
+if(window.ssAttCallback) {
+window.ssAttCallback(attKey, today, {status:'present',inTime:timeStr,outTime:'',markedBy:'face-recognition'});
+}
 setTimeout(function(){hideResult();_cool=false;_blink={};setStatus('Look at camera and BLINK once','info');},3000);
 }).catch(function(){showResult(name,timeStr,'error');_cool=false;});
 }).catch(function(){showResult(name,timeStr,'error');_cool=false;});
