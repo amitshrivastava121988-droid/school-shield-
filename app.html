@@ -19668,7 +19668,7 @@ const [filterDate, setFilterDate] = useState("");
 const [dateFrom, setDateFrom] = useState("");
 const [dateTo, setDateTo] = useState("");
 const [selectedEntry, setSelectedEntry] = useState(null);
-const myExpenses = expenses.filter(e => e.schoolId && sameId(e.schoolId, schoolId));
+const myExpenses = expenses.filter(e => !e.schoolId || sameId(e.schoolId, schoolId));
 const addedByMeta = { addedById: loggedInUser?.id||null, addedByName: loggedInUser?.name||"", addedByRole: role };
 // ── Date helpers ──
 const now = new Date();
@@ -33588,7 +33588,7 @@ const handleSubmit = () => {
 if (!form.tripName.trim()) { toast("Trip naam daalo", "error"); return; }
 if (!form.destination.trim()) { toast("Destination daalo", "error"); return; }
 if (!form.tripDate) { toast("Trip date select karo", "error"); return; }
-const newTrip = { ...form, id: Date.now(), createdAt: new Date().toISOString() };
+const newTrip = { ...form, id: Date.now(), schoolId: mySchoolId, createdAt: new Date().toISOString() };
 saveTrips([...trips, newTrip]);
 toast(role === "teacher" ? "✅ Trip create hua! Principal approval ka wait karo." : "✅ Trip successfully create hua!", "success");
 onBack();
