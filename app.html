@@ -36339,7 +36339,7 @@ var sid=getSchoolId();
 var db=getDB();
 // GPS check
 function startCamera(){
-navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}}).then(function(stream){
+navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}}).then(function(stream){
 _stream=stream;
 var vid=getVideo(); var ph=getPlaceholder();
 if(vid){vid.srcObject=stream;vid.play();vid.style.display='block';}
@@ -36353,19 +36353,19 @@ _timer=setInterval(function(){
 if(!_scanning||_cool) return;
 var vid=getVideo();
 if(!vid||!window.faceapi||!_matcher) return;
-window.faceapi.detectAllFaces(vid,new window.faceapi.TinyFaceDetectorOptions({inputSize:160}))
+window.faceapi.detectAllFaces(vid,new window.faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.4}))
 .withFaceLandmarks(true).withFaceDescriptors().then(function(dets){
 if(!dets.length){setStatus('No face detected — look at camera','info');return;}
 for(var i=0;i<dets.length;i++){
 var det=dets[i];
 var match=_matcher.findBestMatch(det.descriptor);
-if(match.distance>0.5){setStatus('Face not recognized — not registered?','warning');continue;}
+if(match.distance>0.6){setStatus('Face not recognized — move closer or re-register','warning');continue;}
 var key=match.label;
-if(!_blink[key]) _blink[key]={closed:false};
+if(!_blink[key]) _blink[key]={closed:false,blinkCount:0};
 var lm=det.landmarks;
 var ear=(eyeAR(lm.getLeftEye())+eyeAR(lm.getRightEye()))/2;
-if(ear<0.22){ _blink[key].closed=true; }
-else if(_blink[key].closed&&ear>0.28){
+if(ear<0.25){ _blink[key].closed=true; }
+else if(_blink[key].closed&&ear>0.26){
 _blink[key].closed=false;
 markAtt(key);
 break;
@@ -36729,7 +36729,7 @@ if(!_regPerson){setRegStatus('No person selected!','error');return;}
 var vid=document.getElementById('ss-reg-video');
 if(!vid||!_regStream){setRegStatus('Camera not ready!','error');return;}
 setRegStatus('Detecting face...','info');
-window.faceapi.detectSingleFace(vid, new window.faceapi.TinyFaceDetectorOptions({inputSize:160}))
+window.faceapi.detectSingleFace(vid, new window.faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.4}))
 .withFaceLandmarks(true).withFaceDescriptor().then(function(det){
 if(!det){setRegStatus('No face detected! Position face properly and try again.','error');return;}
 var descriptor=Array.from(det.descriptor);
