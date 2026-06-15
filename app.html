@@ -31106,6 +31106,171 @@ style={{background:"none",border:"none",color:T.red,cursor:"pointer",fontSize:16
 );
 }
 // ─── SCHOOL PAGE GALLERY TAB ─────────────────────────────────────────────────
+function PrincipalEditWidget(props) {
+var pg = props.pg; var setPg = props.setPg; var toast = props.toast;
+var [open, setOpen] = React.useState(false);
+var [nm, setNm] = React.useState(pg.principalName||"");
+var [msg, setMsg] = React.useState(pg.principalMsg||"");
+var [photo, setPhoto] = React.useState(pg.principalPhoto||"");
+var ref = React.useRef(null);
+function onFile(e) {
+var file = e.target.files[0]; if (!file) return;
+var reader = new FileReader();
+reader.onload = function(ev) { setPhoto(ev.target.result); };
+reader.readAsDataURL(file);
+window.uploadToCloudinary(file).then(function(url){ setPhoto(url); }).catch(function(e){ console.warn(e); });
+}
+function save() {
+setPg(function(p){ return Object.assign({},p,{principalName:nm,principalMsg:msg,principalPhoto:photo}); });
+setOpen(false); toast("Principal info saved!","success");
+}
+if (!open) return <button onClick={function(){setNm(pg.principalName||"");setMsg(pg.principalMsg||"");setPhoto(pg.principalPhoto||"");setOpen(true);}} style={{background:T.accent+"18",border:"1px solid "+T.accent+"40",color:T.accent,padding:"8px 14px",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Edit Principal Info"}</button>;
+return (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14}}>
+<p style={{fontSize:12,fontWeight:700,color:T.accent,marginBottom:10}}>{"Edit Principal Info"}</p>
+<input value={nm} onChange={function(e){setNm(e.target.value);}} placeholder="Principal Name"
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",color:T.text,fontSize:13,marginBottom:8,boxSizing:"border-box"}} />
+<textarea value={msg} onChange={function(e){setMsg(e.target.value);}} rows={3} placeholder="Principal message..."
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",color:T.text,fontSize:13,fontFamily:"Outfit,sans-serif",resize:"vertical",marginBottom:8,boxSizing:"border-box"}} />
+<input type="file" ref={ref} accept="image/*" style={{display:"none"}} onChange={onFile} />
+<button onClick={function(){if(ref.current)ref.current.click();}} style={{width:"100%",background:T.accent+"15",border:"1px dashed "+T.accent+"60",borderRadius:8,padding:"8px",color:T.accent,cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif",marginBottom:8}}>
+{photo ? "Photo selected - tap to change" : "Upload Principal Photo (optional)"}
+</button>
+{photo ? <img src={photo} style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",display:"block",margin:"0 auto 10px",border:"2px solid "+T.accent}} alt="Principal" /> : null}
+<div style={{display:"flex",gap:8}}>
+<button onClick={save} style={{flex:1,background:T.green,border:"none",borderRadius:8,padding:"9px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Save"}</button>
+<button onClick={function(){setOpen(false);}} style={{flex:1,background:"none",border:"1px solid "+T.border,borderRadius:8,padding:"9px",color:T.textMuted,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Cancel"}</button>
+</div>
+</div>
+);
+}
+
+function FacultyWidget(props) {
+var pg = props.pg; var setPg = props.setPg; var isPrincipal = props.isPrincipal; var toast = props.toast;
+var members = pg.facultyMembers || [];
+var [open, setOpen] = React.useState(false);
+var [nm, setNm] = React.useState("");
+var [desig, setDesig] = React.useState("");
+var [qual, setQual] = React.useState("");
+var [photo, setPhoto] = React.useState("");
+var ref = React.useRef(null);
+function onFile(e) {
+var file = e.target.files[0]; if (!file) return;
+var reader = new FileReader();
+reader.onload = function(ev) { setPhoto(ev.target.result); };
+reader.readAsDataURL(file);
+window.uploadToCloudinary(file).then(function(url){ setPhoto(url); }).catch(function(e){ console.warn(e); });
+}
+function add() {
+if (!nm.trim()) { toast("Name required!","error"); return; }
+setPg(function(p){ return Object.assign({},p,{facultyMembers:[...(p.facultyMembers||[]),{id:Date.now(),name:nm.trim(),designation:desig.trim(),qualification:qual.trim(),photo:photo}]}); });
+setNm(""); setDesig(""); setQual(""); setPhoto(""); setOpen(false);
+toast("Faculty added!","success");
+}
+function del(id) { setPg(function(p){ return Object.assign({},p,{facultyMembers:(p.facultyMembers||[]).filter(function(f){return f.id!==id;})}); }); }
+return (
+<div style={{display:"grid",gap:12}}>
+{isPrincipal && (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:12}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:open?10:0}}>
+<p style={{fontSize:12,fontWeight:700,color:T.accent}}>{"Faculty Members"}</p>
+<button onClick={function(){setOpen(function(s){return !s;});}} style={{background:T.accent+"20",border:"1px solid "+T.accent+"40",color:T.accent,padding:"5px 12px",borderRadius:8,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"+ Add"}</button>
+</div>
+{open && (
+<div style={{background:T.surface,borderRadius:10,padding:12,border:"1px solid "+T.border}}>
+<input value={nm} onChange={function(e){setNm(e.target.value);}} placeholder="Full Name*"
+style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"7px 10px",color:T.text,fontSize:12,marginBottom:6,boxSizing:"border-box"}} />
+<input value={desig} onChange={function(e){setDesig(e.target.value);}} placeholder="Designation (e.g. Science Teacher)"
+style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"7px 10px",color:T.text,fontSize:12,marginBottom:6,boxSizing:"border-box"}} />
+<input value={qual} onChange={function(e){setQual(e.target.value);}} placeholder="Qualification (e.g. M.Sc, B.Ed)"
+style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"7px 10px",color:T.text,fontSize:12,marginBottom:8,boxSizing:"border-box"}} />
+<input type="file" ref={ref} accept="image/*" style={{display:"none"}} onChange={onFile} />
+<button onClick={function(){if(ref.current)ref.current.click();}} style={{width:"100%",background:T.accent+"15",border:"1px dashed "+T.accent+"60",borderRadius:8,padding:"7px",color:T.accent,cursor:"pointer",fontSize:12,fontFamily:"Outfit,sans-serif",marginBottom:photo?8:8}}>
+{photo ? "Photo selected" : "Upload Photo (optional)"}
+</button>
+{photo ? <img src={photo} style={{width:50,height:50,borderRadius:"50%",objectFit:"cover",display:"block",margin:"0 auto 8px",border:"2px solid "+T.accent}} alt="preview" /> : null}
+<div style={{display:"flex",gap:8}}>
+<button onClick={add} style={{flex:1,background:T.green,border:"none",borderRadius:8,padding:"8px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Save"}</button>
+<button onClick={function(){setOpen(false);}} style={{flex:1,background:"none",border:"1px solid "+T.border,borderRadius:8,padding:"8px",color:T.textMuted,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Cancel"}</button>
+</div>
+</div>
+)}
+</div>
+)}
+{members.length === 0 ? (
+<div style={{padding:"40px 20px",textAlign:"center",background:T.card,border:"1px dashed "+T.border,borderRadius:14}}>
+<p style={{fontSize:32,marginBottom:8}}>{"📚"}</p>
+<p style={{color:T.textMuted,fontSize:13}}>{isPrincipal ? "Add faculty members above." : "Faculty list not available."}</p>
+</div>
+) : (
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+{members.map(function(f){
+return (
+<div key={f.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:12,textAlign:"center",position:"relative"}}>
+{isPrincipal && <button onClick={function(){del(f.id);}} style={{position:"absolute",top:6,right:6,background:"#dc262618",border:"none",borderRadius:"50%",width:22,height:22,color:"#dc2626",cursor:"pointer",fontSize:12,fontWeight:900,fontFamily:"Outfit,sans-serif",lineHeight:"22px"}}>{"x"}</button>}
+{f.photo ? <img src={f.photo} style={{width:60,height:60,borderRadius:"50%",objectFit:"cover",margin:"0 auto 8px",display:"block",border:"2px solid "+T.accent+"40"}} alt={f.name} />
+: <div style={{width:60,height:60,borderRadius:"50%",background:T.accent+"20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 8px"}}>{"👤"}</div>}
+<p style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:2}}>{f.name}</p>
+{f.designation ? <p style={{fontSize:10,color:T.accent,fontWeight:600,marginBottom:2}}>{f.designation}</p> : null}
+{f.qualification ? <p style={{fontSize:10,color:T.textMuted}}>{f.qualification}</p> : null}
+</div>
+);
+})}
+</div>
+)}
+</div>
+);
+}
+
+function VideosWidget(props) {
+var pg = props.pg; var setPg = props.setPg; var isPrincipal = props.isPrincipal;
+var [url, setUrl] = React.useState("");
+var [title, setTitle] = React.useState("");
+var videos = pg.videos || [];
+function add() {
+if (!url.trim()) return;
+setPg(function(p){ return Object.assign({},p,{videos:[...(p.videos||[]),{url:url.trim(),title:title.trim(),id:Date.now()}]}); });
+setUrl(""); setTitle("");
+}
+function del(id) { setPg(function(p){ return Object.assign({},p,{videos:(p.videos||[]).filter(function(v){return v.id!==id;})}); }); }
+return (
+<div style={{display:"grid",gap:12}}>
+{isPrincipal && (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:12}}>
+<p style={{fontSize:12,fontWeight:700,color:T.accent,marginBottom:8}}>{"Add Video"}</p>
+<input value={url} onChange={function(e){setUrl(e.target.value);}} placeholder="YouTube URL..."
+style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",color:T.text,fontSize:12,marginBottom:6,boxSizing:"border-box"}} />
+<input value={title} onChange={function(e){setTitle(e.target.value);}} placeholder="Title (optional)"
+style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",color:T.text,fontSize:12,marginBottom:8,boxSizing:"border-box"}} />
+<button onClick={add} style={{background:T.accent,border:"none",borderRadius:8,padding:"8px 16px",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"+ Add"}</button>
+</div>
+)}
+{videos.length === 0 ? (
+<div style={{padding:"40px 20px",textAlign:"center",background:T.card,border:"1px dashed "+T.border,borderRadius:14}}>
+<p style={{fontSize:32,marginBottom:8}}>{"🎬"}</p>
+<p style={{color:T.textMuted,fontSize:13}}>{isPrincipal ? "Add YouTube links above." : "No videos available."}</p>
+</div>
+) : (
+<div style={{display:"grid",gap:10}}>
+{videos.map(function(v){
+var vid = v.url||""; var ytId = "";
+var p1 = vid.split("v="); if (p1.length > 1) { ytId = p1[1].split("&")[0]; }
+if (!ytId) { var p2 = vid.split("youtu.be/"); if (p2.length > 1) ytId = p2[1].split("?")[0]; }
+return (
+<div key={v.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,overflow:"hidden",position:"relative"}}>
+{isPrincipal && <button onClick={function(){del(v.id);}} style={{position:"absolute",top:6,right:6,zIndex:2,background:"#dc262290",border:"none",borderRadius:"50%",width:24,height:24,color:"#fff",cursor:"pointer",fontSize:12,fontWeight:900,fontFamily:"Outfit,sans-serif",lineHeight:"24px"}}>{"x"}</button>}
+{ytId ? <div style={{position:"relative",paddingBottom:"56.25%",height:0}}><iframe src={"https://www.youtube.com/embed/"+ytId} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%"}} frameBorder="0" allowFullScreen /></div>
+: <a href={vid} target="_blank" rel="noopener noreferrer" style={{display:"block",padding:14,color:T.accent,fontSize:13,fontWeight:700,textDecoration:"none"}}>{vid}</a>}
+{v.title ? <p style={{padding:"8px 12px",fontSize:12,fontWeight:600,color:T.text}}>{v.title}</p> : null}
+</div>
+);
+})}
+</div>
+)}
+</div>
+);
+}
+
 function SchoolPageGalleryTab({ myGallery, gallery, setGallery, mySchoolId, isPrincipal, toast }) {
 const [showForm, setShowForm] = React.useState(false);
 const [editItem, setEditItem] = React.useState(null);
@@ -31465,15 +31630,21 @@ window.uploadToCloudinary(file).then(function(url) { setPg(function(p) { return 
 const ACH_ICONS = ["🏆","🥇","🎖️","🏅","⭐","🎗️","📜","🎓","🏏","⚽","🎨","🎵","🔬","💻","📚"];
 const FAC_ICONS = ["🏢","🔬","💻","📚","⚽","🎨","🏊","🏃","🎭","🍱","🚌","🏋️","🎵","🌿","🏥"];
 const TABS = [
-{ id:"about",        icon:"🏫", label:"About" },
-{ id:"achievements", icon:"🏆", label:"Achievements" },
-{ id:"facilities",   icon:"🏢", label:"Facilities" },
-{ id:"stats",        icon:"📊", label:"Stats" },
-{ id:"gallery",      icon:"🖼️", label:"Gallery" },
-{ id:"admission",    icon:"📝", label:"Admission" },
-{ id:"circulars",    icon:"📄", label:"Circulars" },
-{ id:"helpdesk",     icon:"🎧", label:"Help Desk" },
-{ id:"contact",      icon:"📞", label:"Contact" },
+{ id:"about",       icon:"🏫", label:"About" },
+{ id:"vision",      icon:"🎯", label:"Vision" },
+{ id:"management",  icon:"👔", label:"Management" },
+{ id:"principal",   icon:"⭐", label:"Principal" },
+{ id:"faculty",     icon:"📚", label:"Faculty" },
+{ id:"achievements",icon:"🏆", label:"Awards" },
+{ id:"facilities",  icon:"🏢", label:"Facilities" },
+{ id:"stats",       icon:"📊", label:"Stats" },
+{ id:"gallery",     icon:"🖼️", label:"Gallery" },
+{ id:"admission",   icon:"📝", label:"Admission" },
+{ id:"circulars",   icon:"📄", label:"Circulars" },
+{ id:"videos",      icon:"🎬", label:"Videos" },
+{ id:"academic",    icon:"📅", label:"Calendar" },
+{ id:"helpdesk",    icon:"🎧", label:"Help Desk" },
+{ id:"contact",     icon:"📞", label:"Contact" },
 ];
 const TabBtn = ({ id, icon, label }) => (
 <button onClick={() => setActiveTab(id)} style={{
@@ -31638,6 +31809,16 @@ style={{width:"100%",background:T.inputBg,border:`1px solid ${T.border}`,borderR
 <textarea value={fld("principalMsg")} onChange={e=>setF("principalMsg",e.target.value)}
 rows={2} placeholder="Principal ka sandesh..."
 style={{width:"100%",background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:"8px 10px",color:T.text,fontFamily:"Outfit,sans-serif",fontSize:12,resize:"vertical"}} />
+</FormField>
+<FormField label="Management Info" style={{gridColumn:"1/-1"}}>
+<textarea value={fld("managementInfo")||""} onChange={e=>setF("managementInfo",e.target.value)}
+rows={3} placeholder="Chairman: Mr. XYZ"
+style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",color:T.text,fontFamily:"Outfit,sans-serif",fontSize:12,resize:"vertical"}} />
+</FormField>
+<FormField label="Academic Calendar" style={{gridColumn:"1/-1"}}>
+<textarea value={fld("academicCalendar")||""} onChange={e=>setF("academicCalendar",e.target.value)}
+rows={3} placeholder="Term 1: April-September"
+style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",color:T.text,fontFamily:"Outfit,sans-serif",fontSize:12,resize:"vertical"}} />
 </FormField>
 <FormField label="Website">
 <FormInput value={fld("website")} onChange={v=>setF("website",v)} placeholder="https://..." />
@@ -32023,6 +32204,67 @@ style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRad
 {/* ══════════ TAB: HELP DESK ══════════ */}
 {activeTab === "helpdesk" && (
 <HelpDeskTab pg={pg} setPg={setPg} isPrincipal={isPrincipal} />
+)}
+{/* ══════════ TAB: VISION ══════════ */}
+{activeTab === "vision" && (
+<div style={{display:"grid",gap:12}}>
+{isPrincipal && <button onClick={startEdit} style={{background:T.accent+"18",border:"1px solid "+T.accent+"40",color:T.accent,padding:"8px 14px",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Edit Vision & Mission"}</button>}
+{pg.vision ? <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:16}}><p style={{fontSize:11,color:T.accent,fontWeight:800,marginBottom:6}}>{"OUR VISION"}</p><p style={{fontSize:13,color:T.text,lineHeight:1.7,whiteSpace:"pre-line"}}>{pg.vision}</p></div> : null}
+{pg.mission ? <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:16}}><p style={{fontSize:11,color:T.accent,fontWeight:800,marginBottom:6}}>{"OUR MISSION"}</p><p style={{fontSize:13,color:T.text,lineHeight:1.7,whiteSpace:"pre-line"}}>{pg.mission}</p></div> : null}
+{!pg.vision && !pg.mission && <div style={{padding:"40px 20px",textAlign:"center",background:T.card,border:"1px dashed "+T.border,borderRadius:14}}><p style={{fontSize:13,color:T.textMuted}}>{isPrincipal ? "Edit School Page se Vision add karo." : "Not available."}</p></div>}
+</div>
+)}
+{/* ══════════ TAB: MANAGEMENT ══════════ */}
+{activeTab === "management" && (
+<div style={{display:"grid",gap:12}}>
+{isPrincipal && <button onClick={startEdit} style={{background:T.accent+"18",border:"1px solid "+T.accent+"40",color:T.accent,padding:"8px 14px",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Edit Management Info"}</button>}
+{pg.managementInfo ? (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:16}}>
+<p style={{fontSize:11,color:T.accent,fontWeight:800,marginBottom:10}}>{"MANAGEMENT COMMITTEE"}</p>
+{(pg.managementInfo||"").split(String.fromCharCode(10)).map(function(line,i){
+return line.trim() ? <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid "+T.border+"40"}}><span style={{fontSize:18}}>{"👤"}</span><p style={{fontSize:13,color:T.text,fontWeight:600}}>{line}</p></div> : null;
+})}
+</div>
+) : <div style={{padding:"40px 20px",textAlign:"center",background:T.card,border:"1px dashed "+T.border,borderRadius:14}}><p style={{fontSize:13,color:T.textMuted}}>{isPrincipal ? "Edit School Page se Management info add karo." : "Not available."}</p></div>}
+</div>
+)}
+{/* ══════════ TAB: PRINCIPAL ══════════ */}
+{activeTab === "principal" && (
+<div style={{display:"grid",gap:12}}>
+{isPrincipal && (
+<PrincipalEditWidget pg={pg} setPg={setPg} toast={toast} />
+)}
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:20,textAlign:"center"}}>
+{pg.principalPhoto ? <img src={pg.principalPhoto} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",margin:"0 auto 10px",display:"block",border:"3px solid "+T.accent+"50"}} alt="Principal" />
+: <div style={{width:80,height:80,borderRadius:"50%",background:T.accent+"20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 10px"}}>{"👤"}</div>}
+<p style={{fontSize:16,fontWeight:800,color:T.text,marginBottom:2}}>{pg.principalName||"Principal"}</p>
+<p style={{fontSize:11,color:T.textMuted,marginBottom:14}}>{"Principal"}</p>
+{pg.principalMsg ? <p style={{fontSize:13,color:T.text,lineHeight:1.7,fontStyle:"italic",textAlign:"left",borderLeft:"3px solid "+T.accent,paddingLeft:12}}>{pg.principalMsg}</p>
+: <p style={{color:T.textMuted,fontSize:13}}>{isPrincipal ? "Edit karo to add message." : "Not available."}</p>}
+</div>
+</div>
+)}
+{/* ══════════ TAB: FACULTY ══════════ */}
+{activeTab === "faculty" && (
+<FacultyWidget pg={pg} setPg={setPg} isPrincipal={isPrincipal} toast={toast} />
+)}
+{/* ══════════ TAB: VIDEOS ══════════ */}
+{activeTab === "videos" && (
+<VideosWidget pg={pg} setPg={setPg} isPrincipal={isPrincipal} />
+)}
+{/* ══════════ TAB: ACADEMIC CALENDAR ══════════ */}
+{activeTab === "academic" && (
+<div style={{display:"grid",gap:12}}>
+{isPrincipal && <button onClick={startEdit} style={{background:T.accent+"18",border:"1px solid "+T.accent+"40",color:T.accent,padding:"8px 14px",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>{"Edit Academic Calendar"}</button>}
+{pg.academicCalendar ? (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:16}}>
+<p style={{fontSize:11,color:T.accent,fontWeight:800,marginBottom:10}}>{"ACADEMIC CALENDAR 2025-26"}</p>
+{(pg.academicCalendar||"").split(String.fromCharCode(10)).map(function(line,i){
+return line.trim() ? <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid "+T.border+"40"}}><span style={{fontSize:16}}>{"📌"}</span><p style={{fontSize:13,color:T.text}}>{line}</p></div> : null;
+})}
+</div>
+) : <div style={{padding:"40px 20px",textAlign:"center",background:T.card,border:"1px dashed "+T.border,borderRadius:14}}><p style={{fontSize:13,color:T.textMuted}}>{isPrincipal ? "Edit School Page se Calendar add karo." : "Not available."}</p></div>}
+</div>
 )}
 {/* ══════════ TAB: CONTACT ══════════ */}
 {activeTab === "contact" && (
