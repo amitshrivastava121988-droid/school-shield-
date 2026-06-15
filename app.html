@@ -2697,8 +2697,8 @@ staff: [
 {key:"unifiedcalendar",icon:"📅",label:"Calendar & Attendance"},
 {key:"schoolpage",icon:"🏫",label:"School Page"},
 {key:"visitors",icon:"🚪",label:"Visitors"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},
-
 {key:"busroute",icon:"🚌",label:"busRoute"},
+{key:"staffprofile",icon:"👤",label:"Profile"},
 ],
 reception: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"students",icon:"👨‍🎓",label:"students"},
@@ -2747,8 +2747,8 @@ teacher: [
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
-
 {key:"busroute",icon:"🚌",label:"busRoute"},
+{key:"staffprofile",icon:"👤",label:"Profile"},
 ],
 parent: [
 {key:"dashboard",icon:"📊",label:"dashboard"},{key:"mychild",icon:"👶",label:"myChild"},
@@ -3496,6 +3496,7 @@ if (section === "letterscerts") return <PermGuard ctx={ctx} section="letterscert
 if (section === "mychild") return <MyChildSection ctx={ctx} />;
 if (section === "parentlibrary") return <ParentLibrarySection ctx={ctx} />;
 if (section === "parentprofile") return <ParentProfileSection ctx={ctx} />;
+if (section === "staffprofile") return <StaffProfileSection ctx={ctx} />;
 if (section === "classmates") return <ClassmatesSection ctx={ctx} />;
 if (section === "medicals") return <MedicalsSection ctx={ctx} />;
 if (section === "pickup") return <PickupSection ctx={ctx} />;
@@ -16058,6 +16059,113 @@ style={{fontSize:13, fontWeight:700, color:T.accent, textDecoration:"none"}}>
 </div>
 )}
 <p style={{fontSize:11, color:T.textMuted, textAlign:"center", marginTop:4}}>💡 Photo par tap karo change karne ke liye</p>
+{/* Login Credentials Card */}
+<div style={{background:T.card, border:"1px solid "+T.accent+"40", borderRadius:14, padding:"0 16px", marginBottom:14, marginTop:14}}>
+<div style={{padding:"12px 0 4px", borderBottom:"1px solid "+T.border, display:"flex", alignItems:"center", gap:8}}>
+<span style={{fontSize:16}}>🔐</span>
+<p style={{fontSize:12, fontWeight:800, color:T.accent}}>My Login Credentials</p>
+</div>
+<InfoRow icon="👤" label="Username (Login ID)" value={loggedInUser && loggedInUser.username} />
+<div style={{display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid "+T.border}}>
+<div style={{width:36, height:36, borderRadius:10, background:T.surface, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
+<span style={{fontSize:18}}>🔑</span>
+</div>
+<div style={{flex:1}}>
+<p style={{fontSize:11, color:T.textMuted}}>Password</p>
+<p style={{fontSize:13, fontWeight:700, color:T.text}}>{loggedInUser && loggedInUser.password ? loggedInUser.password : "—"}</p>
+</div>
+</div>
+<div style={{padding:"10px 0"}}>
+<p style={{fontSize:10, color:T.textMuted}}>📱 App se login karne ke liye ye credentials use karo. Kisi ke saath share mat karo.</p>
+</div>
+</div>
+</div>
+);
+}
+// ─── STAFF PROFILE SECTION ───────────────────────────────────────────────────
+function StaffProfileSection({ ctx }) {
+var loggedInUser = ctx.loggedInUser;
+var currentSchool = ctx.currentSchool;
+var teachers = ctx.teachers;
+var employees = ctx.employees;
+var role = ctx.role;
+var mySchoolId = (currentSchool && currentSchool.id) || (loggedInUser && loggedInUser.schoolId) || null;
+// Find my record from teachers or employees
+var myRecord = null;
+var myName = loggedInUser && loggedInUser.name;
+if (role === "teacher") {
+myRecord = (teachers||[]).find(function(t){ return sameId(t.schoolId, mySchoolId) && (t.name === myName || t.id === (loggedInUser && loggedInUser.employeeId)); });
+} else {
+myRecord = (employees||[]).find(function(e){ return sameId(e.schoolId, mySchoolId) && (e.name === myName || e.id === (loggedInUser && loggedInUser.employeeId)); });
+}
+var InfoRow = function(props) {
+return (
+<div style={{display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid "+T.border}}>
+<div style={{width:36, height:36, borderRadius:10, background:T.surface, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
+<span style={{fontSize:18}}>{props.icon}</span>
+</div>
+<div style={{flex:1}}>
+<p style={{fontSize:11, color:T.textMuted}}>{props.label}</p>
+<p style={{fontSize:13, fontWeight:700, color:T.text}}>{props.value||"—"}</p>
+</div>
+</div>
+);
+};
+return (
+<div className="fadeUp">
+<SectionHeader title="👤 My Profile" />
+{/* Profile Card */}
+<div style={{background:"linear-gradient(135deg, #1a2a6c, #2d4a9a)", borderRadius:16, padding:20, marginBottom:14}}>
+<div style={{display:"flex", gap:16, alignItems:"center"}}>
+<div style={{width:72, height:72, borderRadius:"50%", background:"rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", border:"3px solid rgba(255,255,255,0.4)", flexShrink:0}}>
+{myRecord && myRecord.photoUrl
+? <img src={myRecord.photoUrl} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="" />
+: <span style={{fontSize:32}}>👤</span>}
+</div>
+<div style={{flex:1}}>
+<p style={{fontWeight:900, fontSize:18, color:"#fff"}}>{(loggedInUser && loggedInUser.name) || "—"}</p>
+<div style={{background:"rgba(255,255,255,0.15)", borderRadius:20, padding:"4px 12px", display:"inline-flex", gap:8, marginTop:6, alignItems:"center"}}>
+<span style={{fontSize:11, color:"#E0E7FF", fontWeight:600}}>{role === "teacher" ? "👨‍🏫 Teacher" : "👔 Staff"}</span>
+{myRecord && myRecord.subject && <span style={{fontSize:11, color:"#E0E7FF"}}>• {myRecord.subject}</span>}
+{myRecord && myRecord.designation && <span style={{fontSize:11, color:"#E0E7FF"}}>• {myRecord.designation}</span>}
+</div>
+</div>
+</div>
+</div>
+{/* Personal Details */}
+<div style={{background:T.card, border:"1px solid "+T.border, borderRadius:14, padding:"0 16px", marginBottom:14}}>
+<div style={{padding:"12px 0 4px", borderBottom:"1px solid "+T.border}}>
+<p style={{fontSize:12, fontWeight:800, color:T.text}}>Personal Details</p>
+</div>
+<InfoRow icon="📞" label="Phone" value={myRecord && (myRecord.phone||myRecord.mobile)} />
+<InfoRow icon="📧" label="Email" value={myRecord && myRecord.email} />
+<InfoRow icon="🎂" label="Date of Birth" value={myRecord && myRecord.dob} />
+<InfoRow icon="🏠" label="Address" value={myRecord && myRecord.address} />
+{myRecord && myRecord.qualification && <InfoRow icon="🎓" label="Qualification" value={myRecord.qualification} />}
+{myRecord && myRecord.experience && <InfoRow icon="💼" label="Experience" value={myRecord.experience} />}
+{myRecord && (myRecord.subject || myRecord.assignedClass) && <InfoRow icon="📚" label="Subject / Class" value={(myRecord.subject||"")+(myRecord.assignedClass?" — "+myRecord.assignedClass:"")} />}
+{myRecord && myRecord.employeeId && <InfoRow icon="🪪" label="Employee ID" value={myRecord.employeeId} />}
+</div>
+{/* Login Credentials */}
+<div style={{background:T.card, border:"1px solid "+T.accent+"40", borderRadius:14, padding:"0 16px", marginBottom:14}}>
+<div style={{padding:"12px 0 4px", borderBottom:"1px solid "+T.border, display:"flex", alignItems:"center", gap:8}}>
+<span style={{fontSize:16}}>🔐</span>
+<p style={{fontSize:12, fontWeight:800, color:T.accent}}>My Login Credentials</p>
+</div>
+<InfoRow icon="👤" label="Username (Login ID)" value={loggedInUser && loggedInUser.username} />
+<div style={{display:"flex", alignItems:"center", gap:12, padding:"12px 0", borderBottom:"1px solid "+T.border}}>
+<div style={{width:36, height:36, borderRadius:10, background:T.surface, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
+<span style={{fontSize:18}}>🔑</span>
+</div>
+<div style={{flex:1}}>
+<p style={{fontSize:11, color:T.textMuted}}>Password</p>
+<p style={{fontSize:13, fontWeight:700, color:T.text}}>{loggedInUser && loggedInUser.password ? loggedInUser.password : "—"}</p>
+</div>
+</div>
+<div style={{padding:"10px 0"}}>
+<p style={{fontSize:10, color:T.textMuted}}>📱 Ye credentials apne paas rakhein. Kisi ke saath share mat karein.</p>
+</div>
+</div>
 </div>
 );
 }
@@ -21867,13 +21975,14 @@ const [bulkSelected, setBulkSelected] = React.useState([]);
 const [bulkDone, setBulkDone] = React.useState(false);
 const LOWER_STAFF_ROLES = ["Sweeper","Cleaner","Conductor","Gardener","Cook","Peon","Helper","Electrician","Plumber","Other","Security Guard"];
 const canEdit = ["principal","founder","superadmin"].includes(role);
-const filtered = employees.filter(e => {
-const okRole = filterRole === "all" || e.empRole === filterRole;
-const okSearch = !search || [e.name, e.empRole, e.phone, e.address].some(v => v && v.toLowerCase().includes(search.toLowerCase()));
-return okRole && okSearch;
-});
 const [formStaffType, setFormStaffType] = React.useState("lower");
 const mySchIdForFilter = String(currentSchool?.id || loggedInUser?.schoolId || mySchoolId || "");
+const filtered = employees.filter(e => {
+const okSchool = !e.schoolId || String(e.schoolId) === mySchIdForFilter;
+const okRole = filterRole === "all" || e.empRole === filterRole;
+const okSearch = !search || [e.name, e.empRole, e.phone, e.address].some(v => v && v.toLowerCase().includes(search.toLowerCase()));
+return okSchool && okRole && okSearch;
+});
 const schoolEmployees = employees.filter(e => !e.schoolId || String(e.schoolId) === mySchIdForFilter);
 const lowerStaff = schoolEmployees.filter(e => LOWER_STAFF_ROLES.includes(e.empRole));
 const higherStaff = schoolEmployees.filter(e => !LOWER_STAFF_ROLES.includes(e.empRole));
