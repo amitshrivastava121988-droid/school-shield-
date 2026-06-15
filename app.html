@@ -28493,7 +28493,8 @@ return okType && okClass && okTeacher && okParent && okCoord;
 });
 const typeInfo   = (key) => EXAM_TYPES.find(t => t.key === key) || { label:key, icon:"📝", color:"#4F8EF7" };
 const getTotal   = (marks, subjects) => subjects.reduce((s, sub) => s + (parseInt(marks[sub]) || 0), 0);
-const getPercent = (marks, subjects, max) => { const t = getTotal(marks,subjects); const m = subjects.length*max; return m>0 ? Math.round((t/m)*100) : 0; };
+const getPercent = (marks, subjects, max, smm) => { const t = getTotal(marks,subjects); const m = subjects.reduce(function(s,sub){return s+(smm&&smm[sub]?parseInt(smm[sub]):parseInt(max)||50);},0); return m>0 ? Math.round((t/m)*100) : 0; };
+const getMaxTotal = (subjects, max, smm) => subjects.reduce(function(s,sub){return s+(smm&&smm[sub]?parseInt(smm[sub]):parseInt(max)||50);},0);
 const getGrade   = (p) => p>=90?"A+":p>=80?"A":p>=70?"B+":p>=60?"B":p>=50?"C":"F";
 const gc         = (g) => ({"A+":"#0ECB81",A:"#4F8EF7","B+":"#A78BFA",B:"#F5A623",C:"#F97316",F:"#F75555"}[g]||"#6B7A99");
 const toggleSubject = (sub) => setForm(f => ({ ...f, subjects: f.subjects.includes(sub) ? f.subjects.filter(s => s!==sub) : [...f.subjects, sub] }));
@@ -28606,10 +28607,10 @@ rankMap[r.studentId]=prevRank;
 }
 var displayList=isParent?exam.results.filter(function(r){return parentChild&&(r.studentName===parentChild.name||r.studentId===parentChild.id);}):sortedForRank;
 return displayList.map(function(r,i){
-var pct=getPercent(r.marks,exam.subjects,exam.totalMarks);
+var pct=getPercent(r.marks,exam.subjects,exam.totalMarks,exam.subjectMaxMarks);
 var grade=getGrade(pct);
 var total=getTotal(r.marks,exam.subjects);
-var max=exam.subjects.length*exam.totalMarks;
+var max=getMaxTotal(exam.subjects,exam.totalMarks,exam.subjectMaxMarks);
 var rank=rankMap[r.studentId];
 var rankIcon=rank===1?"👑":rank===2?"🥈":rank===3?"🥉":null;
 var rankColor=rank===1?"#FFD700":rank===2?"#C0C0C0":rank===3?"#CD7F32":T.textMuted;
@@ -28667,7 +28668,7 @@ return (
 {exam.results.find(r => r.studentId===stu.id) && (() => {
 const r = exam.results.find(r => r.studentId===stu.id);
 const t = exam.subjects.reduce((s,sub)=>s+(parseInt(r.marks[sub])||0),0);
-const m = exam.subjects.length * exam.totalMarks;
+const m = getMaxTotal(exam.subjects, exam.totalMarks, exam.subjectMaxMarks);
 const pct = m>0?Math.round((t/m)*100):0;
 return <p style={{ fontSize:11, color:pct>=60?"#0ECB81":"#F75555", fontWeight:700 }}>{t}/{m} ({pct}%)</p>;
 })()}
@@ -28738,7 +28739,7 @@ if (!r) return (
 </div>
 );
 const t = exam.subjects.reduce((s,sub)=>s+(parseInt(r.marks[sub])||0),0);
-const m = exam.subjects.length * exam.totalMarks;
+const m = getMaxTotal(exam.subjects, exam.totalMarks, exam.subjectMaxMarks);
 const pct = m>0?Math.round((t/m)*100):0;
 const grade = pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":"F";
 const gc2 = g => ({"A+":"#0ECB81",A:"#4F8EF7","B+":"#A78BFA",B:"#F5A623",C:"#F97316",F:"#F75555"}[g]||"#6B7A99");
@@ -28873,7 +28874,7 @@ const totalPct = childResults.reduce((sum, r) => {
 const ex = filtered.find(ex => ex.results.includes(r));
 if (!ex) return sum;
 const t = ex.subjects.reduce((s,sub)=>s+(parseInt(r.marks[sub])||0),0);
-const m = ex.subjects.length * ex.totalMarks;
+const m = getMaxTotal(ex.subjects, ex.totalMarks, ex.subjectMaxMarks);
 return sum + (m>0 ? (t/m)*100 : 0);
 }, 0) / childResults.length;
 const avgPct = Math.round(totalPct);
@@ -29180,7 +29181,7 @@ style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", curso
 {isOpen && (
 <div style={{ background:T.surface+"80" }}>
 {groupExams.map(function(exam, idx){
-var avgPct = exam.results.length > 0 ? Math.round(exam.results.reduce(function(s,r){ return s + getPercent(r.marks, exam.subjects, exam.totalMarks); }, 0) / exam.results.length) : null;
+var avgPct = exam.results.length > 0 ? Math.round(exam.results.reduce(function(s,r){ return s + getPercent(r.marks, exam.subjects, exam.totalMarks, exam.subjectMaxMarks); }, 0) / exam.results.length) : null;
 return (
 <div key={exam.id}
 onClick={function(){ setSelected(exam.id); setView("detail"); }}
@@ -29208,7 +29209,7 @@ onMouseLeave={function(e){e.currentTarget.style.background="transparent";}}>
 var r = exam.results.find(function(r){ return r.studentName === parentChild.name; });
 if (!r) return React.createElement("p",{style:{fontSize:11,color:T.textMuted,fontStyle:"italic"}},"Marks nahi");
 var t2 = exam.subjects.reduce(function(s,sub){return s+(parseInt(r.marks[sub])||0);},0);
-var m2 = exam.subjects.length * exam.totalMarks;
+var m2 = getMaxTotal(exam.subjects, exam.totalMarks, exam.subjectMaxMarks);
 var pct2 = m2>0?Math.round((t2/m2)*100):0;
 var grade2 = pct2>=90?"A+":pct2>=80?"A":pct2>=70?"B+":pct2>=60?"B":pct2>=50?"C":"F";
 return React.createElement("div",null,
@@ -29621,7 +29622,7 @@ var sheet = parentChild
 ? (examAnswerSheets||[]).find(function(s){ return s.examId === exam.id && (s.studentId === parentChild.id || s.studentName === parentChild.name) && sameId(s.schoolId, mySchoolId); })
 : null;
 var total = result ? exam.subjects.reduce(function(s,sub){return s+(parseInt(result.marks[sub])||0);},0) : null;
-var max = exam.subjects.length * exam.totalMarks;
+var max = getMaxTotal(exam.subjects, exam.totalMarks, exam.subjectMaxMarks);
 var pct = total !== null && max > 0 ? Math.round((total/max)*100) : null;
 var grade = pct !== null ? (pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":"F") : null;
 var ti = typeInfo(exam.type);
