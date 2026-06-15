@@ -21843,15 +21843,13 @@ const DEFAULT_EMPLOYEE_ROLES = ["Driver","Conductor","Cleaner","Sweeper","Securi
 const HIGHER_STAFF_ROLES = ["Vice Principal","Coordinator","Accountant","Receptionist","Transport Head","Librarian","Admin Staff","HR","IT Staff","Lab Assistant","Sports Coach","Counselor","Other (Higher)"];
 // ─── STAFF DIRECTORY ─────────────────────────────────────────────────────────
 function StaffDirectorySection({ ctx }) {
-const { loggedInUser, teachers, userAccounts, attendanceLogs, setAttendanceLogs, currentSchool } = ctx;
+const { loggedInUser, teachers, userAccounts, attendanceLogs, setAttendanceLogs, currentSchool, employees } = ctx;
 var mySchoolId = (loggedInUser && loggedInUser.schoolId) || (currentSchool && currentSchool.id) || null;
 const [attDate, setAttDate] = React.useState(new Date().toISOString().slice(0,10));
 const [search, setSearch]   = React.useState("");
 const [filterD, setFilterD] = React.useState("all");
 const [editing, setEditing] = React.useState(null);
-const [emps, setEmps] = React.useState(function(){
-try { var s=localStorage.getItem("ss_employees_"+mySchoolId); return s?JSON.parse(s):[]; } catch(e){ return []; }
-});
+var emps = (employees||[]).filter(function(e){ return !e.schoolId||String(e.schoolId)===String(mySchoolId); });
 var schoolTeachers = (teachers||[]).filter(function(t){ return !t.schoolId||String(t.schoolId)===String(mySchoolId); });
 var RLABEL = {vice_principal:"Vice Principal",staff:"Staff",reception:"Receptionist",accountant:"Accountant",coordinator:"Coordinator",transport_head:"Transport Head",librarian:"Librarian",driver:"Driver"};
 var allStaff = React.useMemo(function(){
@@ -21861,7 +21859,7 @@ var hiRoles=["vice_principal","staff","reception","accountant","coordinator","tr
 (userAccounts||[]).filter(function(a){ return hiRoles.indexOf(a.role)>=0&&(!a.schoolId||String(a.schoolId)===String(mySchoolId)); }).forEach(function(a){
 list.push({id:"a_"+a.id,name:a.name,designation:RLABEL[a.role]||a.role,phone:a.phone||"",joinDate:"",empId:"",photo:null,srcType:"account"});
 });
-emps.forEach(function(e){ list.push({id:"e_"+e.id,name:e.name,designation:e.empRole||"Staff",phone:e.phone||"",joinDate:e.joinDate||"",empId:e.empId||"",photo:e.photo||null,srcType:"employee"}); });
+emps.forEach(function(e){ list.push({id:"e_"+e.id,name:e.name,designation:e.empRole||"Staff",phone:e.phone||"",joinDate:e.joinDate||"",empId:e.employeeId||e.empId||"",photo:e.photo||null,srcType:"employee"}); });
 return list;
 }, [schoolTeachers, userAccounts, emps]);
 function getAttKey(person) {
