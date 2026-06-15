@@ -28372,6 +28372,7 @@ const [form,        setForm]        = useState({...emptyForm, ...emptyDutyFields
 const [marksModal,  setMarksModal]  = useState(null);
 const [manualName,  setManualName]  = useState("");
 const [showBulkImport, setShowBulkImport] = useState(false);
+const [openFolders, setOpenFolders] = useState({});
 const filtered = schoolExams.filter(e => {
 const okType  = filterType  === "all" || e.type  === filterType;
 const okClass = filterClass === "all" || e.class === filterClass;
@@ -29005,88 +29006,109 @@ style={{ display:"flex", alignItems:"center", gap:5, padding:"6px 13px", borderR
 <p style={{ color:T.textMuted, fontSize:13 }}>No exams found</p>
 </div>
 ) : (
-<div style={{ display:"grid", gap:10 }}>
-{filtered.map(exam => {
-const ti     = typeInfo(exam.type);
-const avgPct = exam.results.length > 0 ? Math.round(exam.results.reduce((s, r) => s + getPercent(r.marks, exam.subjects, exam.totalMarks), 0) / exam.results.length) : null;
+<div style={{ display:"grid", gap:12 }}>
+{(function(){
+// Group exams by type
+var groups = {};
+var typeOrder = EXAM_TYPES.map(function(t){return t.key;});
+filtered.forEach(function(exam){
+var key = exam.type || "other";
+if (!groups[key]) groups[key] = [];
+groups[key].push(exam);
+});
+// Also add any types not in EXAM_TYPES
+Object.keys(groups).forEach(function(k){
+if (!typeOrder.includes(k)) typeOrder.push(k);
+});
+return typeOrder.filter(function(k){return groups[k] && groups[k].length > 0;}).map(function(typeKey){
+var ti = typeInfo(typeKey);
+var groupExams = groups[typeKey];
+var isOpen = openFolders[typeKey] !== false; // default open
 return (
-<div key={exam.id} onClick={() => { setSelected(exam.id); setView("detail"); }}
-style={{ background:T.card, border:"1px solid "+ti.color+"30", borderRadius:13, padding:16, cursor:"pointer" }}>
+<div key={typeKey} style={{ border:"2px solid "+ti.color+"60", borderRadius:14, overflow:"hidden", marginBottom:4 }}>
+{/* Folder Header */}
+<div onClick={function(){setOpenFolders(function(p){ var n=Object.assign({},p); n[typeKey]=!isOpen; return n; });}}
+style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px", cursor:"pointer", background:"linear-gradient(135deg,"+ti.color+"25,"+ti.color+"10)", borderBottom: isOpen ? "2px solid "+ti.color+"40" : "none" }}>
+<div style={{ width:40, height:40, borderRadius:10, background:ti.color+"30", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{ti.icon}</div>
+<div style={{ flex:1 }}>
+<p style={{ fontWeight:900, fontSize:15, color:ti.color, margin:0, letterSpacing:0.3 }}>{ti.label}</p>
+<p style={{ fontSize:11, color:T.textMuted, margin:"2px 0 0" }}>{groupExams.length} exam{groupExams.length>1?"s":""} • tap to {isOpen?"collapse":"expand"}</p>
+</div>
+<span style={{ background:ti.color, color:"#fff", borderRadius:99, padding:"3px 12px", fontSize:13, fontWeight:900 }}>{groupExams.length}</span>
+<span style={{ color:ti.color, fontSize:18, fontWeight:900, marginLeft:4 }}>{isOpen ? "▲" : "▼"}</span>
+</div>
+{/* Folder Content */}
+{isOpen && (
+<div style={{ background:T.surface+"80" }}>
+{groupExams.map(function(exam, idx){
+var avgPct = exam.results.length > 0 ? Math.round(exam.results.reduce(function(s,r){ return s + getPercent(r.marks, exam.subjects, exam.totalMarks); }, 0) / exam.results.length) : null;
+return (
+<div key={exam.id}
+onClick={function(){ setSelected(exam.id); setView("detail"); }}
+style={{ padding:"12px 16px 12px 24px", cursor:"pointer", borderBottom: idx < groupExams.length-1 ? "1px solid "+T.border : "none", background:"transparent", borderLeft:"3px solid "+ti.color+"40" }}
+onMouseEnter={function(e){e.currentTarget.style.background=T.card;}}
+onMouseLeave={function(e){e.currentTarget.style.background="transparent";}}>
 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
 <div style={{ flex:1 }}>
-<div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
-<div style={{ width:38, height:38, borderRadius:10, background:ti.color+"18", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{ti.icon}</div>
-<div>
-<p style={{ fontWeight:800, fontSize:14, color:T.text }}>{exam.title}</p>
-<span style={{ background:ti.color+"18", color:ti.color, fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:6 }}>{ti.label}</span>
+<div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:4 }}>
+<p style={{ fontWeight:700, fontSize:13, color:T.text, margin:0 }}>{exam.title}</p>
+{exam.isPublished && <span style={{ fontSize:9, background:"#0ECB8120", color:"#0ECB81", borderRadius:4, padding:"1px 5px", fontWeight:700 }}>✅ Published</span>}
 </div>
-</div>
-<div style={{ display:"flex", gap:10, flexWrap:"wrap", marginLeft:4 }}>
-<span style={{ fontSize:11, color:T.textMuted }}>Date: {exam.date}</span>
-<span style={{ fontSize:11, color:T.textMuted }}>{exam.class}</span>
+<div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+<span style={{ fontSize:11, color:T.textMuted }}>📅 {exam.date}</span>
+<span style={{ fontSize:11, color:T.accent, fontWeight:600 }}>🏫 {exam.class}</span>
 <span style={{ fontSize:11, color:T.textMuted }}>{exam.subjects.length} subjects</span>
 {!isParent && <span style={{ fontSize:11, color:T.textMuted }}>{exam.results.length} results</span>}
 </div>
+<div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:4 }}>
+{exam.subjects.map(function(s){ return <span key={s} style={{ fontSize:9, background:ti.color+"15", color:ti.color, borderRadius:4, padding:"1px 6px" }}>{s}</span>; })}
+</div>
 </div>
 <div style={{ textAlign:"right", flexShrink:0 }}>
-{/* Parent: show child's individual result */}
-{isParent && parentChild ? (() => {
-const r = exam.results.find(r => r.studentName === parentChild.name);
-if (!r) return <p style={{ fontSize:11, color:T.textMuted, fontStyle:"italic" }}>Marks nahi</p>;
-const t = exam.subjects.reduce((s,sub)=>s+(parseInt(r.marks[sub])||0),0);
-const m = exam.subjects.length * exam.totalMarks;
-const pct = m>0?Math.round((t/m)*100):0;
-const grade = pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":"F";
-return (
-<div>
-<p style={{ fontSize:20, fontWeight:900, color:pct>=60?"#0ECB81":"#F75555" }}>{pct}%</p>
-<p style={{ fontSize:11, fontWeight:700, color:T.accent }}>{grade}</p>
-<p style={{ fontSize:10, color:T.textMuted }}>{t}/{m} marks</p>
-</div>
+{isParent && parentChild ? (function(){
+var r = exam.results.find(function(r){ return r.studentName === parentChild.name; });
+if (!r) return React.createElement("p",{style:{fontSize:11,color:T.textMuted,fontStyle:"italic"}},"Marks nahi");
+var t2 = exam.subjects.reduce(function(s,sub){return s+(parseInt(r.marks[sub])||0);},0);
+var m2 = exam.subjects.length * exam.totalMarks;
+var pct2 = m2>0?Math.round((t2/m2)*100):0;
+var grade2 = pct2>=90?"A+":pct2>=80?"A":pct2>=70?"B+":pct2>=60?"B":pct2>=50?"C":"F";
+return React.createElement("div",null,
+React.createElement("p",{style:{fontSize:18,fontWeight:900,color:pct2>=60?"#0ECB81":"#F75555"}},pct2+"%"),
+React.createElement("p",{style:{fontSize:11,fontWeight:700,color:T.accent}},grade2)
 );
 })() : (
 avgPct !== null ? (
 <div>
-<p style={{ fontSize:20, fontWeight:900, color:avgPct>=60?"#0ECB81":"#F75555" }}>{avgPct}%</p>
+<p style={{ fontSize:18, fontWeight:900, color:avgPct>=60?"#0ECB81":"#F75555" }}>{avgPct}%</p>
 <p style={{ fontSize:10, color:T.textMuted }}>Class Avg</p>
 </div>
-) : <p style={{ fontSize:11, color:T.textMuted, fontStyle:"italic" }}>No results yet</p>
+) : <p style={{ fontSize:11, color:T.textMuted, fontStyle:"italic" }}>No results</p>
 )}
 </div>
 </div>
-<div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:8 }}>
-{exam.subjects.map(s => <span key={s} style={{ fontSize:10, background:T.surface, color:T.textMuted, borderRadius:5, padding:"2px 7px" }}>{s}</span>)}
-</div>
 {avgPct !== null && !isParent && (
-<div style={{ marginTop:10, background:T.border, borderRadius:99, height:5, overflow:"hidden" }}>
+<div style={{ marginTop:8, background:T.border, borderRadius:99, height:4, overflow:"hidden" }}>
 <div style={{ width:avgPct+"%", height:"100%", background:"linear-gradient(90deg,"+ti.color+","+T.accent+")", borderRadius:99 }} />
 </div>
 )}
-{/* Parent progress bar */}
-{isParent && parentChild && (() => {
-const r = exam.results.find(r => r.studentName === parentChild.name);
-if (!r) return null;
-const t = exam.subjects.reduce((s,sub)=>s+(parseInt(r.marks[sub])||0),0);
-const m = exam.subjects.length * exam.totalMarks;
-const pct = m>0?Math.round((t/m)*100):0;
-return (
-<div style={{ marginTop:10, background:T.border, borderRadius:99, height:5, overflow:"hidden" }}>
-<div style={{ width:pct+"%", height:"100%", background:pct>=60?"linear-gradient(90deg,#0ECB81,#4F8EF7)":"linear-gradient(90deg,#F75555,#F5A623)", borderRadius:99 }} />
-</div>
-);
-})()}
 {canEdit && (!isTeacher || !teacherClass || exam.class === teacherClass) && (
-<div style={{ display:"flex", gap:6, marginTop:10 }} onClick={e => e.stopPropagation()}>
-<button onClick={e => { e.stopPropagation(); setEditExam(exam); setForm({ ...exam }); setShowForm(true); }} style={{ background:T.yellow+"18", border:"1px solid "+T.yellow+"33", color:T.yellow, padding:"5px 12px", borderRadius:7, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700 }}>✏️ Edit</button>
-<button onClick={e => { e.stopPropagation(); doDelete(exam.id); }} style={{ background:"#F7555518", border:"1px solid #F7555533", color:"#F75555", padding:"5px 12px", borderRadius:7, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700 }}>🗑️ Delete</button>
+<div style={{ display:"flex", gap:6, marginTop:8 }} onClick={function(e){e.stopPropagation();}}>
+<button onClick={function(e){ e.stopPropagation(); setEditExam(exam); setForm({...exam, subjectMaxMarks: exam.subjectMaxMarks||{}}); setShowForm(true); }} style={{ background:T.yellow+"18", border:"1px solid "+T.yellow+"33", color:T.yellow, padding:"4px 10px", borderRadius:7, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700 }}>✏️ Edit</button>
+<button onClick={function(e){ e.stopPropagation(); doDelete(exam.id); }} style={{ background:"#F7555518", border:"1px solid #F7555533", color:"#F75555", padding:"4px 10px", borderRadius:7, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700 }}>🗑️ Delete</button>
 {isTeacher && (
-<button onClick={e => { e.stopPropagation(); setSelected(exam.id); setView("detail"); }} style={{ background:T.green+"18", border:"1px solid "+T.green+"33", color:T.green, padding:"5px 12px", borderRadius:7, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700 }}>📝 Marks</button>
+<button onClick={function(e){ e.stopPropagation(); setSelected(exam.id); setView("detail"); }} style={{ background:T.green+"18", border:"1px solid "+T.green+"33", color:T.green, padding:"4px 10px", borderRadius:7, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:11, fontWeight:700 }}>📝 Marks</button>
 )}
 </div>
 )}
 </div>
 );
 })}
+</div>
+)}
+</div>
+);
+});
+})()}
 </div>
 )}
 </div>
@@ -29385,12 +29407,14 @@ const filtered = isParent && parentClass ? schoolExams.filter(e => e.class === p
 const [selClass, setSelClass] = useState("all");
 const [selExam, setSelExam] = useState(null);
 const [marksheetData, setMarksheetData] = useState(null);
-const [editMarksModal, setEditMarksModal] = useState(null); // {exam, student, currentMarks}
+const [editMarksModal, setEditMarksModal] = useState(null);
+const [openResultFolders, setOpenResultFolders] = useState({});
 const [showUpload, setShowUpload] = useState(null); // studentId
 const [uploadFile, setUploadFile] = useState(null);
 const uploadRef = React.useRef(null);
 const displayExams = selClass === "all" ? filtered : filtered.filter(e => e.class === selClass);
 const getSheets = (examId) => (examAnswerSheets||[]).filter(s => s.examId === examId && sameId(s.schoolId, mySchoolId));
+const typeInfoR = function(key){ return EXAM_TYPES.find(function(t){return t.key===key;}) || {label:key||"Other", icon:"📝", color:"#4F8EF7"}; };
 const handleFileSelect = function(e) {
 const file = e.target.files[0]; if (!file) return;
 const reader = new FileReader();
@@ -29545,17 +29569,50 @@ style={{background:T.card, border:"1px solid "+T.border, borderRadius:8, padding
 <p style={{color:T.textMuted, fontSize:13}}>Koi exam nahi mila</p>
 </div>
 ) : (
-<div style={{display:"grid", gap:10}}>
-{displayExams.map(exam => {
-const sheets = getSheets(exam.id);
-const classStudents = (students||[]).filter(s => s.class === exam.class && (!s.schoolId || sameId(s.schoolId, mySchoolId)));
+<div style={{display:"grid", gap:12}}>
+{(function(){
+var groups = {};
+var typeOrder = EXAM_TYPES.map(function(t){return t.key;});
+displayExams.forEach(function(exam){
+var key = exam.type || "other";
+if (!groups[key]) groups[key] = [];
+groups[key].push(exam);
+});
+Object.keys(groups).forEach(function(k){
+if (!typeOrder.includes(k)) typeOrder.push(k);
+});
+return typeOrder.filter(function(k){return groups[k] && groups[k].length > 0;}).map(function(typeKey){
+var ti = typeInfoR(typeKey);
+var groupExams = groups[typeKey];
+var isOpen = openResultFolders[typeKey] !== false;
 return (
-<div key={exam.id} onClick={()=>setSelExam(exam.id)}
-style={{background:T.card, border:"1px solid "+T.border, borderRadius:12, padding:14, cursor:"pointer"}}>
+<div key={typeKey} style={{border:"2px solid "+ti.color+"60", borderRadius:14, overflow:"hidden", marginBottom:4}}>
+<div onClick={function(){setOpenResultFolders(function(p){var n=Object.assign({},p); n[typeKey]=!isOpen; return n;});}}
+style={{display:"flex", alignItems:"center", gap:10, padding:"14px 16px", cursor:"pointer", background:"linear-gradient(135deg,"+ti.color+"25,"+ti.color+"10)", borderBottom: isOpen?"2px solid "+ti.color+"40":"none"}}>
+<div style={{width:40,height:40,borderRadius:10,background:ti.color+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{ti.icon}</div>
+<div style={{flex:1}}>
+<p style={{fontWeight:900, fontSize:15, color:ti.color, margin:0}}>{ti.label}</p>
+<p style={{fontSize:11, color:T.textMuted, margin:"2px 0 0"}}>{groupExams.length} exam{groupExams.length>1?"s":""} • tap to {isOpen?"collapse":"expand"}</p>
+</div>
+<span style={{background:ti.color, color:"#fff", borderRadius:99, padding:"3px 12px", fontSize:13, fontWeight:900}}>{groupExams.length}</span>
+<span style={{color:ti.color, fontSize:18, fontWeight:900, marginLeft:4}}>{isOpen?"▲":"▼"}</span>
+</div>
+{isOpen && (
+<div style={{background:T.surface+"80"}}>
+{groupExams.map(function(exam, idx){
+var sheets = getSheets(exam.id);
+return (
+<div key={exam.id} onClick={function(){setSelExam(exam.id);}}
+style={{padding:"12px 16px 12px 24px", cursor:"pointer", borderBottom: idx<groupExams.length-1?"1px solid "+T.border:"none", background:"transparent", borderLeft:"3px solid "+ti.color+"40"}}
+onMouseEnter={function(e){e.currentTarget.style.background=T.card;}}
+onMouseLeave={function(e){e.currentTarget.style.background="transparent";}}>
 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:10}}>
 <div style={{flex:1}}>
-<p style={{fontWeight:800, fontSize:14, color:T.text}}>{exam.title}</p>
-<p style={{fontSize:11, color:T.textMuted}}>📅 {exam.date} • {exam.class} • {exam.results.length} results</p>
+<div style={{display:"flex", gap:6, alignItems:"center", marginBottom:2}}>
+<p style={{fontWeight:700, fontSize:13, color:T.text, margin:0}}>{exam.title}</p>
+{exam.isPublished && <span style={{fontSize:9, background:"#0ECB8120", color:"#0ECB81", borderRadius:4, padding:"1px 5px", fontWeight:700}}>✅ Published</span>}
+</div>
+<p style={{fontSize:11, color:T.textMuted, margin:0}}>📅 {exam.date} • <span style={{color:T.accent, fontWeight:600}}>🏫 {exam.class}</span> • {exam.results.length} results</p>
 </div>
 <div style={{textAlign:"right", flexShrink:0}}>
 <p style={{fontSize:12, color:T.green, fontWeight:700}}>📄 {sheets.length} sheets</p>
@@ -29565,6 +29622,12 @@ style={{background:T.card, border:"1px solid "+T.border, borderRadius:12, paddin
 </div>
 );
 })}
+</div>
+)}
+</div>
+);
+});
+})()}
 </div>
 )}
 </>
