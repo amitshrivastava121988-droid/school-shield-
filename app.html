@@ -576,7 +576,7 @@ const ALL_PERM_SECTIONS = [
 {key:"inventory",         label:"Inventory",          icon:"📦"},
 {key:"allpickup",         label:"Authorized Pickup",  icon:"🚗"},
 {key:"tripmanagement",    label:"Trip Management",    icon:"🗺️"},
-{key:"analytics",         label:"Analytics",          icon:"📈"},
+// Analytics removed from school permissions — superadmin only
 {key:"meetingmanager",    label:"Meeting Manager",    icon:"📋"},
 ];
 const ALL_VP_SECTIONS        = ALL_PERM_SECTIONS;
@@ -16855,9 +16855,34 @@ style={{flex:1,padding:"10px",background:T.red,border:"none",borderRadius:8,colo
 )}
 {/* Approved pickup persons */}
 {approvedPickups.length === 0 ? (
-<div style={{textAlign:"center",padding:"20px 0",color:T.textMuted,background:T.card,borderRadius:12,border:`1px solid ${T.border}`,marginBottom:14}}>
-<p style={{fontSize:32,marginBottom:6}}>🚗</p>
-<p>No authorized pickup person registered</p>
+<div style={{textAlign:"center",padding:"16px",color:T.textMuted,background:T.card,borderRadius:12,border:"1px solid "+T.border,marginBottom:14}}>
+<p style={{fontSize:28,marginBottom:6}}>{"🚗"}</p>
+<p style={{fontSize:13,marginBottom:8}}>{"No authorized pickup person registered"}</p>
+{selectedStudent && (selectedStudent.parentName||selectedStudent.fatherName||selectedStudent.motherName) && (
+<div style={{textAlign:"left",background:T.surface,borderRadius:10,padding:"10px 14px",marginTop:8}}>
+<p style={{fontSize:11,color:T.accent,fontWeight:800,marginBottom:6}}>{"DEFAULT PARENTS / GUARDIANS"}</p>
+{(selectedStudent.parentName||selectedStudent.fatherName) && (
+<div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid "+T.border+"40"}}>
+<span style={{fontSize:16}}>{"👨"}</span>
+<div>
+<p style={{fontSize:12,fontWeight:700,color:T.text}}>{selectedStudent.fatherName||selectedStudent.parentName}</p>
+<p style={{fontSize:10,color:T.textMuted}}>{"Father / Guardian"}</p>
+{(selectedStudent.parentPhone||selectedStudent.fatherPhone) && <a href={"tel:"+(selectedStudent.parentPhone||selectedStudent.fatherPhone)} style={{fontSize:11,color:T.accent,textDecoration:"none",fontWeight:700}}>{"📞 "+(selectedStudent.parentPhone||selectedStudent.fatherPhone)}</a>}
+</div>
+</div>
+)}
+{selectedStudent.motherName && (
+<div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0"}}>
+<span style={{fontSize:16}}>{"👩"}</span>
+<div>
+<p style={{fontSize:12,fontWeight:700,color:T.text}}>{selectedStudent.motherName}</p>
+<p style={{fontSize:10,color:T.textMuted}}>{"Mother"}</p>
+{selectedStudent.motherPhone && <a href={"tel:"+selectedStudent.motherPhone} style={{fontSize:11,color:T.accent,textDecoration:"none",fontWeight:700}}>{"📞 "+selectedStudent.motherPhone}</a>}
+</div>
+</div>
+)}
+</div>
+)}
 </div>
 ) : (
 <div style={{display:"grid",gap:10,marginBottom:14}}>
@@ -21856,10 +21881,20 @@ var allStaff = React.useMemo(function(){
 var list = [];
 schoolTeachers.forEach(function(t){ list.push({id:"t_"+t.id,name:t.name,designation:"Teacher",phone:t.phone||"",joinDate:t.joinDate||"",empId:t.employeeId||"",photo:t.photoUrl||null,srcType:"teacher"}); });
 var hiRoles=["vice_principal","staff","reception","accountant","coordinator","transport_head","librarian","driver"];
-(userAccounts||[]).filter(function(a){ return hiRoles.indexOf(a.role)>=0&&(!a.schoolId||String(a.schoolId)===String(mySchoolId)); }).forEach(function(a){
+emps.forEach(function(e){ list.push({id:"e_"+e.id,name:e.name,designation:e.empRole||"Staff",phone:e.phone||"",joinDate:e.joinDate||"",empId:e.employeeId||e.empId||"",photo:e.photo||null,srcType:"employee"}); });
+var empPhones = emps.map(function(e){return (e.phone||"").replace(/\D/g,"");}).filter(Boolean);
+var empNames = emps.map(function(e){return (e.name||"").trim().toLowerCase();}).filter(Boolean);
+(userAccounts||[]).filter(function(a){
+if(hiRoles.indexOf(a.role)<0) return false;
+if(a.schoolId && String(a.schoolId)!==String(mySchoolId)) return false;
+var ph = (a.phone||"").replace(/\D/g,"");
+var nm = (a.name||"").trim().toLowerCase();
+if(ph && empPhones.indexOf(ph)>=0) return false;
+if(nm && empNames.indexOf(nm)>=0) return false;
+return true;
+}).forEach(function(a){
 list.push({id:"a_"+a.id,name:a.name,designation:RLABEL[a.role]||a.role,phone:a.phone||"",joinDate:"",empId:"",photo:null,srcType:"account"});
 });
-emps.forEach(function(e){ list.push({id:"e_"+e.id,name:e.name,designation:e.empRole||"Staff",phone:e.phone||"",joinDate:e.joinDate||"",empId:e.employeeId||e.empId||"",photo:e.photo||null,srcType:"employee"}); });
 return list;
 }, [schoolTeachers, userAccounts, emps]);
 function getAttKey(person) {
