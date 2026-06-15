@@ -1926,6 +1926,7 @@ const [marks] = useState(initMarks);
 const [exams, setExams] = usePersist("exams", initExams);
 const [examDuties, setExamDuties] = usePersist("examDuties", []);
 const [examAnswerSheets, setExamAnswerSheets] = usePersist("examAnswerSheets", []);
+const [progressReports, setProgressReports] = usePersist("progressReports", []);
 const [principalFeedbacks, setPrincipalFeedbacks] = usePersist("principalFeedbacks", []);
 const [timetable, setTimetable] = usePersist("timetable", initTimetable);
 const [canteen, setCanteen] = usePersist("canteen", initCanteen);
@@ -2260,7 +2261,7 @@ if (!role) return <LoginScreen lang={lang} setLang={setLang} l={l} setRole={setR
 if (role !== "superadmin" && role !== "founder" && !schoolActive) {
 return <SubscriptionExpiredScreen l={l} lang={lang} setLang={setLang} setRole={setRole} />;
 }
-const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeDeleteRequests, setFeeDeleteRequests, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, principalFeedbacks, setPrincipalFeedbacks, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection, onlineClasses, setOnlineClasses, employees, saveEmployees, greetings, setGreetings, greetingsSentLog, setGreetingsSentLog, greetingSettings, setGreetingSettings, setGs_birthday, setGs_festival, setGs_parents, setGs_teachers, setGs_branding, setGs_lang };
+const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeDeleteRequests, setFeeDeleteRequests, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, progressReports, setProgressReports, principalFeedbacks, setPrincipalFeedbacks, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection, onlineClasses, setOnlineClasses, employees, saveEmployees, greetings, setGreetings, greetingsSentLog, setGreetingsSentLog, greetingSettings, setGreetingSettings, setGs_birthday, setGs_festival, setGs_parents, setGs_teachers, setGs_branding, setGs_lang };
 return (
 <div key={themeMode} style={{display:"flex", flexDirection:"column", height:"100vh", background:T.bg, transition:"background 0.3s"}}>
 {/* TopBar */}
@@ -28432,7 +28433,7 @@ return <tr key={i} style={{borderBottom:"1px solid "+T.border+"40",background:r.
 </table>
 </div>
 {preview.filter(function(r){return !r.matched;}).length>0 && (
-<p style={{fontSize:11,color:T.yellow,marginBottom:8}}>{"⚠️ "+preview.filter(function(r){return !r.matched;}).length+" students match nahi hue — naam bilkul same hona chahiye"}</p>
+<p style={{fontSize:11,color:T.yellow,marginBottom:8}}>{"⚠️ "+preview.filter(function(r){return !r.matched;}).length+" students not matched — names must be exactly same"}</p>
 )}
 <div style={{display:"flex",gap:8}}>
 <Btn onClick={function(){setStep(2);}} color={T.surface} full>{"← Back"}</Btn>
@@ -28571,7 +28572,7 @@ return (
 {canEdit && (
 <button onClick={() => {
 setExams(prev => prev.map(e => e.id === exam.id ? {...e, isPublished: !e.isPublished} : e));
-toast(exam.isPublished ? "🔒 Result parents se hide kiya" : "✅ Result parents ko publish ho gaya!", "success");
+toast(exam.isPublished ? "🔒 Result hidden from parents" : "✅ Result published to parents!", "success");
 }} style={{ background: exam.isPublished ? T.green+"20" : T.surface, border:"1px solid "+(exam.isPublished ? T.green : T.border), color: exam.isPublished ? T.green : T.textMuted, padding:"6px 12px", borderRadius:8, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:700, fontSize:12 }}>
 {exam.isPublished ? "✅ Published" : "🔒 Publish to Parents"}
 </button>
@@ -29533,7 +29534,7 @@ return (
 }
 
 function ExamResultsSection({ ctx, embedded, onBack }) {
-const { role, loggedInUser, exams, setExams, students, examAnswerSheets, setExamAnswerSheets, toast, currentSchool, classNames } = ctx;
+const { role, loggedInUser, exams, setExams, students, examAnswerSheets, setExamAnswerSheets, progressReports, setProgressReports, toast, currentSchool, classNames } = ctx;
 const mySchoolId = currentSchool?.id || loggedInUser?.schoolId || null;
 const isPrincipal = ["principal","founder","superadmin","vice_principal"].includes(role);
 const isTeacher = role === "teacher";
@@ -29549,6 +29550,7 @@ const [selExam, setSelExam] = useState(null);
 const [marksheetData, setMarksheetData] = useState(null);
 const [editMarksModal, setEditMarksModal] = useState(null);
 const [openResultFolders, setOpenResultFolders] = useState({});
+const [progressReportStu, setProgressReportStu] = useState(null);
 const [showUpload, setShowUpload] = useState(null); // studentId
 const [uploadFile, setUploadFile] = useState(null);
 const uploadRef = React.useRef(null);
@@ -29565,7 +29567,7 @@ setUploadFile({ name: file.name, dataUrl: url, type: file.type });
 }).catch(function(err) { console.warn("Cloudinary answer sheet upload failed:", err); });
 };
 const uploadSheet = (exam, student) => {
-if (!uploadFile) { toast("Pehle file select karo!", "error"); return; }
+if (!uploadFile) { toast("Please select a file first!", "error"); return; }
 setExamAnswerSheets(p => {
 const existing = (p||[]).findIndex(s => s.examId === exam.id && s.studentId === student.id && sameId(s.schoolId, mySchoolId));
 const newSheet = {
@@ -29584,7 +29586,7 @@ return arr;
 return [...(p||[]), newSheet];
 });
 setShowUpload(null); setUploadFile(null);
-toast("✅ Answer sheet upload ho gayi!", "success");
+toast("✅ Answer sheet uploaded!", "success");
 };
 if (isParent) {
 const publishedExams = (isParent && parentClass)
@@ -29608,8 +29610,8 @@ onClose={function(){setSelectedMarksheet(null);}}
 {publishedExams.length === 0 ? (
 <div style={{textAlign:"center", padding:"40px", background:T.card, borderRadius:14, border:"1px solid "+T.border}}>
 <p style={{fontSize:32, marginBottom:8}}>📊</p>
-<p style={{color:T.textMuted, fontSize:13}}>Koi result abhi available nahi hai.</p>
-<p style={{color:T.textMuted, fontSize:11, marginTop:4}}>Teacher ya Principal result publish karenge tab yahan dikhega.</p>
+<p style={{color:T.textMuted, fontSize:13}}>No results available yet.</p>
+<p style={{color:T.textMuted, fontSize:11, marginTop:4}}>Results will appear here once published by teacher or principal.</p>
 </div>
 ) : (
 <div style={{display:"grid", gap:12}}>
@@ -29689,7 +29691,7 @@ return (
 <div>
 {!embedded && <h2 style={{fontSize:20, fontWeight:800, color:T.text}}>📊 Exam Results & Answer Sheets</h2>}
 {embedded && <p style={{fontWeight:800, fontSize:15, color:T.text}}>📊 Exam Results & Answer Sheets</p>}
-<p style={{fontSize:12, color:T.textMuted, marginTop:2}}>Class-wise results aur answer sheets manage karo</p>
+<p style={{fontSize:12, color:T.textMuted, marginTop:2}}>Manage class-wise results and answer sheets</p>
 </div>
 </div>
 {!selExam ? (
@@ -29706,7 +29708,7 @@ style={{background:T.card, border:"1px solid "+T.border, borderRadius:8, padding
 {displayExams.length === 0 ? (
 <div style={{textAlign:"center", padding:"40px", background:T.card, borderRadius:14, border:"1px solid "+T.border}}>
 <p style={{fontSize:32, marginBottom:8}}>📊</p>
-<p style={{color:T.textMuted, fontSize:13}}>Koi exam nahi mila</p>
+<p style={{color:T.textMuted, fontSize:13}}>No exams found</p>
 </div>
 ) : (
 <div style={{display:"grid", gap:12}}>
@@ -29808,7 +29810,7 @@ onClose={function(){setEditMarksModal(null);}}
 {isPrincipal && (
 <button onClick={function(){
 setExams(function(prev){ return prev.map(function(e){ return e.id===examToShow.id ? Object.assign({},e,{isPublished:!e.isPublished}) : e; }); });
-toast(examToShow.isPublished ? "🔒 Result parents se hide kiya" : "✅ Result parents ko publish ho gaya!", "success");
+toast(examToShow.isPublished ? "🔒 Result hidden from parents" : "✅ Result published to parents!", "success");
 }} style={{background: examToShow.isPublished ? T.green+"20" : T.surface, border:"1px solid "+(examToShow.isPublished ? T.green : T.border), color: examToShow.isPublished ? T.green : T.textMuted, padding:"8px 14px", borderRadius:8, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:800, fontSize:13, whiteSpace:"nowrap"}}>
 {examToShow.isPublished ? "✅ Published" : "🔒 Publish to Parents"}
 </button>
@@ -29832,6 +29834,19 @@ return (
 {marksheetData && marksheetData.exam && marksheetData.student && (
 <MarksheetModal exam={marksheetData.exam} student={marksheetData.student} currentSchool={currentSchool} onClose={function(){setMarksheetData(null);}} />
 )}
+{progressReportStu && (
+<ProgressReportModal
+student={progressReportStu}
+exams={exams}
+currentSchool={currentSchool}
+mySchoolId={mySchoolId}
+isPrincipal={isPrincipal}
+progressReports={progressReports}
+setProgressReports={setProgressReports}
+toast={toast}
+onClose={function(){setProgressReportStu(null);}}
+/>
+)}
 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
 <div>
 <p style={{fontWeight:700, fontSize:13, color:T.text}}>{stu.name}</p>
@@ -29843,7 +29858,7 @@ return (
 <p style={{fontSize:10, color:T.textMuted}}>{total}/{max}</p>
 </div>
 )}
-{pct === null && <p style={{fontSize:11, color:T.textMuted, fontStyle:"italic"}}>Marks nahi</p>}
+{pct === null && <p style={{fontSize:11, color:T.textMuted, fontStyle:"italic"}}>No marks</p>}
 </div>
 {result && (
 <button onClick={function(){
@@ -29851,6 +29866,14 @@ var fullStu = (students||[]).find(function(s){return s.id===stu.id||s.name===stu
 setMarksheetData({exam:examToShow, student:fullStu});
 }} style={{width:"100%",background:T.accent+"15",border:"1px solid "+T.accent+"40",borderRadius:8,padding:"7px",color:T.accent,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:700,marginBottom:8}}>
 {"📋 View Marksheet / Print"}
+</button>
+)}
+{isPrincipal && (
+<button onClick={function(){
+var fullStu = (students||[]).find(function(s){return s.id===stu.id||s.name===stu.name;}) || stu;
+setProgressReportStu(fullStu);
+}} style={{width:"100%",background:"#7c3aed15",border:"1px solid #7c3aed40",borderRadius:8,padding:"7px",color:"#7c3aed",cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:700,marginBottom:8}}>
+{"📊 Progress Report Card"}
 </button>
 )}
 {isPrincipal && (
@@ -29885,13 +29908,13 @@ setEditMarksModal({exam:examToShow, student:fullStu, currentMarks:currentMarks})
 ) : (
 <button onClick={()=>{ setShowUpload(stu.id || stu.name); setUploadFile(null); if(uploadRef.current){uploadRef.current.value=""; uploadRef.current.click();} }}
 style={{background:T.accent+"15", border:"1px dashed "+T.accent+"60", borderRadius:8, padding:"7px 14px", color:T.accent, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:12, fontWeight:600, width:"100%"}}>
-📤 Answer Sheet Upload Karo
+📤 Upload Answer Sheet
 </button>
 )}
 </div>
 ) : (
 <div style={{background:T.surface, borderRadius:8, padding:"7px 12px"}}>
-<p style={{fontSize:11, color:T.textMuted}}>📋 Answer sheet upload pending hai</p>
+<p style={{fontSize:11, color:T.textMuted}}>📋 Answer sheet upload pending</p>
 </div>
 )}
 </div>
@@ -29903,6 +29926,222 @@ style={{background:T.accent+"15", border:"1px dashed "+T.accent+"60", borderRadi
 </div>
 );
 }
+
+function ProgressReportModal(props) {
+var student = props.student;
+var exams = props.exams;
+var currentSchool = props.currentSchool;
+var mySchoolId = props.mySchoolId;
+var onClose = props.onClose;
+var isPrincipal = props.isPrincipal;
+var progressReports = props.progressReports;
+var setProgressReports = props.setProgressReports;
+var toast = props.toast;
+if (!student) return null;
+var schoolName = currentSchool && currentSchool.name ? currentSchool.name.toUpperCase() : "SCHOOL NAME";
+var schoolAddr = currentSchool ? ((currentSchool.address||"") + (currentSchool.city ? ", "+currentSchool.city : "")) : "";
+var schoolPhone = currentSchool ? (currentSchool.schoolPhone||currentSchool.contact||"") : "";
+var logoUrl = currentSchool ? (currentSchool.logoUrl||"") : "";
+var mySchIdStr = String(mySchoolId||"");
+var schoolExams = (exams||[]).filter(function(e){ return e.schoolId && String(e.schoolId)===mySchIdStr && e.class===student.class; });
+var QUARTERLY_KEYS = ["quarterly","monthly"];
+var HALFYEARLY_KEYS = ["halfyearly","half_yearly","midterm"];
+var ANNUAL_KEYS = ["annual","final","yearly"];
+var quarterlyExams = schoolExams.filter(function(e){ return QUARTERLY_KEYS.includes(e.type); });
+var halfYearlyExams = schoolExams.filter(function(e){ return HALFYEARLY_KEYS.includes(e.type); });
+var annualExams = schoolExams.filter(function(e){ return ANNUAL_KEYS.includes(e.type); });
+var allSubjectsSet = {};
+schoolExams.forEach(function(e){ (e.subjects||[]).forEach(function(s){ allSubjectsSet[s]=true; }); });
+var allSubjects = Object.keys(allSubjectsSet);
+var gradeMap = {"A+":"#0a7c42","A":"#1a6fbd","B+":"#7c3aed","B":"#d97706","C":"#ea580c","Fail":"#dc2626","--":"#999"};
+var gradePctMap = {"A+":95,"A":"80","B+":60,"B":45,"C":36,"Fail":20};
+function gradeFromPct(pct) {
+if (pct >= 91) return "A+";
+if (pct >= 70) return "A";
+if (pct >= 51) return "B+";
+if (pct >= 40) return "B";
+if (pct >= 33) return "C";
+return "Fail";
+}
+function stuResult(exam) {
+if (!exam) return null;
+return (exam.results||[]).find(function(r){ return r.studentName===student.name||r.studentId===student.id; })||null;
+}
+function groupGrade(examGroup, sub) {
+var tot=0; var cnt=0;
+examGroup.forEach(function(ex){
+var res=stuResult(ex); if(!res) return;
+var sm=(ex.subjectMaxMarks&&ex.subjectMaxMarks[sub])?parseInt(ex.subjectMaxMarks[sub]):(ex.totalMarks||50);
+var ob=parseInt((res.marks||{})[sub])||0;
+if(sm>0){tot+=Math.round((ob/sm)*100);cnt++;}
+});
+if(cnt===0) return "--";
+return gradeFromPct(Math.round(tot/cnt));
+}
+function overallSubGrade(sub) {
+var grades=[groupGrade(quarterlyExams,sub),groupGrade(halfYearlyExams,sub),groupGrade(annualExams,sub)].filter(function(g){return g!=="--";});
+if(grades.length===0) return "--";
+var avg=grades.reduce(function(s,g){return s+(gradePctMap[g]||0);},0)/grades.length;
+return gradeFromPct(avg);
+}
+var totalOb=0; var totalMx=0;
+schoolExams.forEach(function(ex){
+var res=stuResult(ex); if(!res) return;
+(ex.subjects||[]).forEach(function(sub){
+var sm=(ex.subjectMaxMarks&&ex.subjectMaxMarks[sub])?parseInt(ex.subjectMaxMarks[sub]):(ex.totalMarks||50);
+totalOb+=parseInt((res.marks||{})[sub])||0;
+totalMx+=sm;
+});
+});
+var aggPct=totalMx>0?Math.round((totalOb/totalMx)*100):0;
+var overallGrade=gradeFromPct(aggPct);
+var overallColor=gradeMap[overallGrade]||"#222";
+var stuNames={};
+schoolExams.forEach(function(ex){ (ex.results||[]).forEach(function(r){ stuNames[r.studentName||r.studentId]=true; }); });
+var rankArr=[];
+Object.keys(stuNames).forEach(function(sName){
+var t=0; var m=0;
+schoolExams.forEach(function(ex){
+var res=(ex.results||[]).find(function(r){return r.studentName===sName||r.studentId===sName;}); if(!res) return;
+(ex.subjects||[]).forEach(function(sub){
+var sm=(ex.subjectMaxMarks&&ex.subjectMaxMarks[sub])?parseInt(ex.subjectMaxMarks[sub]):(ex.totalMarks||50);
+t+=parseInt((res.marks||{})[sub])||0; m+=sm;
+});
+});
+rankArr.push({name:sName,pct:m>0?Math.round((t/m)*100):0});
+});
+rankArr.sort(function(a,b){return b.pct-a.pct;});
+var myRank="--";
+for(var ri=0;ri<rankArr.length;ri++){
+if(ri>0&&rankArr[ri].pct<rankArr[ri-1].pct) myRank=ri+1;
+else if(ri===0) myRank=1;
+if(rankArr[ri].name===student.name){myRank=(typeof myRank==="number")?myRank:(ri+1); break;}
+}
+var existingRpt=(progressReports||[]).find(function(p){return p.studentId===student.id&&p.studentName===student.name&&String(p.schoolId)===mySchIdStr&&p.class===student.class;});
+var isPublished=existingRpt?!!existingRpt.isPublished:false;
+var gradeRows=[
+{r:"91%-100%",g:"A+"},{r:"70%-90%",g:"A"},{r:"51%-69%",g:"B+"},
+{r:"40%-50%",g:"B"},{r:"33%-39%",g:"C"},{r:"Below 33%",g:"Fail"},
+];
+function doTogglePublish() {
+setProgressReports(function(prev){
+var arr=(prev||[]).filter(function(p){return !(p.studentId===student.id&&p.studentName===student.name&&String(p.schoolId)===mySchIdStr&&p.class===student.class);});
+arr.push({studentId:student.id,studentName:student.name,schoolId:mySchoolId,class:student.class,isPublished:!isPublished,updatedAt:new Date().toISOString()});
+return arr;
+});
+toast(isPublished?"Progress Report hidden from parents":"Progress Report published to parents!","success");
+}
+function doPrint() {
+var el=document.getElementById("pr-print-area"); if(!el) return;
+var w=window.open("","_blank");
+w.document.write("<html><head><title>Progress Report</title><style>body{margin:16px;font-family:Arial,sans-serif;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #999;padding:6px 8px;font-size:11px;}@media print{body{margin:0;}}</style></head><body>"+el.innerHTML+"</body></html>");
+w.document.close(); w.focus();
+setTimeout(function(){w.print();w.close();},400);
+}
+return (
+<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.75)",zIndex:9999,display:"flex",alignItems:"flex-start",justifyContent:"center",overflowY:"auto",padding:"12px 0"}}>
+<div style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:640,margin:"0 auto",fontFamily:"Arial,sans-serif",color:"#111"}}>
+<div style={{display:"flex",gap:8,padding:"10px 14px",background:"#f0f0f0",borderRadius:"14px 14px 0 0",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap"}}>
+<p style={{fontWeight:800,fontSize:13,color:"#333",margin:0}}>{"Progress Report — "+student.name}</p>
+<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+{isPrincipal && (
+<button onClick={doTogglePublish} style={{padding:"6px 12px",background:isPublished?"#dcfce7":"#f3f4f6",color:isPublished?"#16a34a":"#555",border:"1px solid "+(isPublished?"#16a34a":"#ccc"),borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer"}}>
+{isPublished?"Unpublish":"Publish to Parents"}
+</button>
+)}
+<button onClick={doPrint} style={{padding:"6px 12px",background:"#1a6fbd",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer"}}>Print</button>
+<button onClick={onClose} style={{padding:"6px 10px",background:"#dc2626",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer"}}>X</button>
+</div>
+</div>
+<div id="pr-print-area" style={{padding:"20px",background:"#fff"}}>
+<div style={{border:"3px double #3730a3",padding:"14px"}}>
+<div style={{textAlign:"center",borderBottom:"2px solid #3730a3",paddingBottom:10,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
+{logoUrl ? <img src={logoUrl} style={{height:60,width:60,objectFit:"contain"}} alt="logo" /> : null}
+<div>
+<p style={{fontSize:16,fontWeight:900,color:"#1a1a6e",margin:0}}>{schoolName}</p>
+{schoolAddr ? <p style={{fontSize:10,color:"#444",margin:"2px 0 0"}}>{schoolAddr}</p> : null}
+{schoolPhone ? <p style={{fontSize:10,color:"#666",margin:"1px 0 0"}}>{"Ph: "+schoolPhone}</p> : null}
+</div>
+</div>
+<div style={{textAlign:"center",marginBottom:10}}>
+<p style={{fontSize:14,fontWeight:900,textDecoration:"underline",color:"#1a1a6e",margin:0,letterSpacing:1}}>PROGRESS REPORT CARD</p>
+<p style={{fontSize:11,color:"#555",marginTop:3}}>Session: 2025-26</p>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:2,border:"1px solid #ccc",padding:"8px 12px",borderRadius:5,marginBottom:12,fontSize:11}}>
+<p style={{margin:"2px 0"}}><b>Student Name:</b> {student.name}</p>
+<p style={{margin:"2px 0"}}><b>Class:</b> {student.class}</p>
+<p style={{margin:"2px 0"}}><b>Roll No:</b> {student.rollNo||"--"}</p>
+<p style={{margin:"2px 0"}}><b>{"Father's Name:"}</b> {student.parentName||student.fatherName||"--"}</p>
+<p style={{margin:"2px 0"}}><b>{"Mother's Name:"}</b> {student.motherName||"--"}</p>
+<p style={{margin:"2px 0"}}><b>DOB:</b> {student.dob||"--"}</p>
+</div>
+<table style={{width:"100%",borderCollapse:"collapse",fontSize:11,marginBottom:12}}>
+<thead>
+<tr style={{background:"#3730a3",color:"#fff"}}>
+<th style={{padding:"7px 8px",textAlign:"left",border:"1px solid #999"}}>Subject</th>
+<th style={{padding:"7px 8px",textAlign:"center",border:"1px solid #999"}}>Quarterly Grade</th>
+<th style={{padding:"7px 8px",textAlign:"center",border:"1px solid #999"}}>Half Yearly Grade</th>
+<th style={{padding:"7px 8px",textAlign:"center",border:"1px solid #999"}}>Annual Grade</th>
+<th style={{padding:"7px 8px",textAlign:"center",border:"1px solid #999"}}>Overall Grade</th>
+</tr>
+</thead>
+<tbody>
+{allSubjects.map(function(sub,idx){
+var qG=groupGrade(quarterlyExams,sub);
+var hG=groupGrade(halfYearlyExams,sub);
+var aG=groupGrade(annualExams,sub);
+var oG=overallSubGrade(sub);
+return (
+<tr key={sub} style={{background:idx%2===0?"#f5f3ff":"#fff"}}>
+<td style={{padding:"6px 8px",border:"1px solid #ccc",fontWeight:600}}>{sub}</td>
+<td style={{padding:"6px 8px",border:"1px solid #ccc",textAlign:"center",fontWeight:700,color:gradeMap[qG]||"#222"}}>{qG}</td>
+<td style={{padding:"6px 8px",border:"1px solid #ccc",textAlign:"center",fontWeight:700,color:gradeMap[hG]||"#222"}}>{hG}</td>
+<td style={{padding:"6px 8px",border:"1px solid #ccc",textAlign:"center",fontWeight:700,color:gradeMap[aG]||"#222"}}>{aG}</td>
+<td style={{padding:"6px 8px",border:"1px solid #ccc",textAlign:"center",fontWeight:900,color:gradeMap[oG]||"#222"}}>{oG}</td>
+</tr>
+);
+})}
+<tr style={{background:"#e0e7ff",fontWeight:900}}>
+<td colSpan={4} style={{padding:"7px 8px",border:"1px solid #999",textAlign:"right",fontWeight:900,fontSize:12}}>TOTAL GRADE</td>
+<td style={{padding:"7px 8px",border:"1px solid #999",textAlign:"center",fontWeight:900,fontSize:13,color:overallColor}}>{overallGrade}</td>
+</tr>
+</tbody>
+</table>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+<div style={{border:"1px solid #ccc",borderRadius:6,overflow:"hidden"}}>
+<div style={{background:"#3730a3",color:"#fff",padding:"5px 10px",textAlign:"center",fontWeight:700,fontSize:11}}>GRADING SYSTEM</div>
+<table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+<tbody>
+{gradeRows.map(function(gs){
+return (<tr key={gs.g}><td style={{padding:"4px 8px",border:"1px solid #eee"}}>{gs.r}</td><td style={{padding:"4px 8px",border:"1px solid #eee",textAlign:"center",fontWeight:700}}>{gs.g}</td></tr>);
+})}
+</tbody>
+</table>
+</div>
+<div style={{border:"1px solid #ccc",borderRadius:6,overflow:"hidden"}}>
+<div style={{background:"#3730a3",color:"#fff",padding:"5px 10px",textAlign:"center",fontWeight:700,fontSize:11}}>RESULT</div>
+<table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+<tbody>
+<tr><td style={{padding:"5px 8px",border:"1px solid #eee",fontWeight:600}}>PERCENT(%):</td><td style={{padding:"5px 8px",border:"1px solid #eee",textAlign:"center",fontWeight:900,color:aggPct>=33?"#0a7c42":"#dc2626"}}>{aggPct+"%"}</td></tr>
+<tr><td style={{padding:"5px 8px",border:"1px solid #eee",fontWeight:600}}>GRADE:</td><td style={{padding:"5px 8px",border:"1px solid #eee",textAlign:"center",fontWeight:900,color:overallColor}}>{overallGrade}</td></tr>
+<tr><td style={{padding:"5px 8px",border:"1px solid #eee",fontWeight:600}}>RANK:</td><td style={{padding:"5px 8px",border:"1px solid #eee",textAlign:"center",fontWeight:900,color:"#1a6fbd"}}>{myRank}</td></tr>
+<tr><td style={{padding:"5px 8px",border:"1px solid #eee",fontWeight:600}}>STATUS:</td><td style={{padding:"5px 8px",border:"1px solid #eee",textAlign:"center",fontWeight:900,color:aggPct>=33?"#0a7c42":"#dc2626"}}>{aggPct>=33?"PASS":"FAIL"}</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginTop:24,textAlign:"center",fontSize:11}}>
+<div><div style={{borderTop:"1px solid #333",paddingTop:5,marginTop:36}}>Class Teacher</div></div>
+<div><div style={{borderTop:"1px solid #333",paddingTop:5,marginTop:36}}>Examiner</div></div>
+<div><div style={{borderTop:"1px solid #333",paddingTop:5,marginTop:36}}>Principal</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+);
+}
+
 // ─── PARENT FEEDBACK SECTION ─────────────────────────────────────────────────
 function ParentFeedbackSection({ ctx }) {
 const { role, loggedInUser, principalFeedbacks, setPrincipalFeedbacks, toast, currentSchool, students } = ctx;
