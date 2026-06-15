@@ -28588,15 +28588,44 @@ toast(exam.isPublished ? "🔒 Result parents se hide kiya" : "✅ Result parent
 <span style={{ fontSize:12, color:T.textMuted }}>{exam.results.length} students</span>
 </div>
 {exam.results.length === 0 && <p style={{ padding:24, textAlign:"center", color:T.textMuted, fontSize:13 }}>No marks yet</p>}
-{(isParent ? exam.results.filter(function(r){ return parentChild && (r.studentName===parentChild.name || r.studentId===parentChild.id); }) : exam.results).map((r, i) => {
-const pct   = getPercent(r.marks, exam.subjects, exam.totalMarks);
-const grade = getGrade(pct);
-const total = getTotal(r.marks, exam.subjects);
-const max   = exam.subjects.length * exam.totalMarks;
+{(() => {
+var sortedForRank = !isParent ? exam.results.slice().sort(function(a,b){
+var tA=exam.subjects.reduce(function(s,sub){return s+(parseInt((a.marks||{})[sub])||0);},0);
+var tB=exam.subjects.reduce(function(s,sub){return s+(parseInt((b.marks||{})[sub])||0);},0);
+return tB-tA;
+}) : exam.results;
+var rankMap={};
+if(!isParent){
+var prevTotal=-1,prevRank=0,counted=0;
+sortedForRank.forEach(function(r){
+var t=exam.subjects.reduce(function(s,sub){return s+(parseInt((r.marks||{})[sub])||0);},0);
+counted++;
+if(t!==prevTotal){prevRank=counted;prevTotal=t;}
+rankMap[r.studentId]=prevRank;
+});
+}
+var displayList=isParent?exam.results.filter(function(r){return parentChild&&(r.studentName===parentChild.name||r.studentId===parentChild.id);}):sortedForRank;
+return displayList.map(function(r,i){
+var pct=getPercent(r.marks,exam.subjects,exam.totalMarks);
+var grade=getGrade(pct);
+var total=getTotal(r.marks,exam.subjects);
+var max=exam.subjects.length*exam.totalMarks;
+var rank=rankMap[r.studentId];
+var rankIcon=rank===1?"👑":rank===2?"🥈":rank===3?"🥉":null;
+var rankColor=rank===1?"#FFD700":rank===2?"#C0C0C0":rank===3?"#CD7F32":T.textMuted;
+var rowBg=rank===1?"#FFD70010":rank===2?"#C0C0C008":rank===3?"#CD7F3208":"transparent";
 return (
-<div key={r.studentId} style={{ padding:"12px 16px", borderBottom: i < exam.results.length-1 ? "1px solid "+T.border+"40" : "none" }}>
+<div key={r.studentId} style={{ padding:"12px 16px", borderBottom: i < displayList.length-1 ? "1px solid "+T.border+"40" : "none", background:rowBg }}>
 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+<div style={{ display:"flex", alignItems:"center", gap:6 }}>
+{!isParent && rank && rank<=3 ? (
+<div style={{ display:"flex", flexDirection:"column", alignItems:"center", minWidth:30 }}>
+<span style={{ fontSize:rank===1?20:15, lineHeight:1 }}>{rankIcon}</span>
+<span style={{ fontSize:10, fontWeight:800, color:rankColor }}>{"#"+rank}</span>
+</div>
+) : (!isParent && rank ? <span style={{ fontSize:11, fontWeight:700, color:T.textMuted, minWidth:30, textAlign:"center" }}>{"#"+rank}</span> : null)}
 <p style={{ fontWeight:700, fontSize:13, color:T.text }}>{r.studentName}</p>
+</div>
 <div style={{ display:"flex", gap:10, alignItems:"center" }}>
 <span style={{ fontSize:13, color:T.text }}>{total}/{max}</span>
 <span style={{ fontSize:13, fontWeight:800, color:pct>=60?"#0ECB81":"#F75555" }}>{pct}%</span>
@@ -28604,18 +28633,19 @@ return (
 </div>
 </div>
 <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-{exam.subjects.map(s => (
+{exam.subjects.map(function(s){ return (
 <span key={s} style={{ fontSize:11, background:T.surface, color:T.textMuted, borderRadius:6, padding:"3px 8px" }}>
-{s.slice(0,4)}: <strong style={{ color:T.text }}>{r.marks[s] !== undefined ? r.marks[s] : "—"}</strong>
+{s.slice(0,4)}: <strong style={{ color:T.text }}>{r.marks[s]!==undefined?r.marks[s]:"—"}</strong>
 </span>
-))}
+);})}
 </div>
 <div style={{ marginTop:8, background:T.border, borderRadius:99, height:4, overflow:"hidden" }}>
 <div style={{ width:pct+"%", height:"100%", background:pct>=60?"#0ECB81":"#F75555", borderRadius:99 }} />
 </div>
 </div>
 );
-})}
+});
+})()}
 </div>
 {canEdit && (
 <div style={{ background:T.card, border:"1px solid "+T.border, borderRadius:12, padding:16 }}>
