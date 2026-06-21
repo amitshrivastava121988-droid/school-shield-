@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<!-- SS Rules v1 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SchoolShield — School Management Platform</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.9/babel.min.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#08090E;}
+@media(min-width:768px){
+  body{font-size:22px!important;}
+  p,span,div,button,input,select,textarea,label,a{font-size:inherit;}
+  .ss-card p,.ss-card span{font-size:17px;}
+  .ss-topbar-name{font-size:18px!important;}
+  .ss-nav-label{font-size:14px!important;}
+  .ss-section-title{font-size:24px!important;}
+  .ss-table td,.ss-table th{font-size:16px!important;padding:10px 12px!important;}
+  .ss-btn{font-size:17px!important;padding:10px 18px!important;}
+  .ss-input{font-size:17px!important;padding:10px 14px!important;}
+  .ss-modal-title{font-size:20px!important;}
+  .ss-list-item-title{font-size:17px!important;}
+  .ss-list-item-sub{font-size:15px!important;}
+  .ss-cal-day{min-height:72px!important;font-size:14px!important;}
+  .ss-cal-day .ss-cal-date{font-size:14px!important;}
+  .ss-cal-event{font-size:10px!important;}
+}
+@media(min-width:1024px){
+  body{font-size:24px!important;}
+  .ss-section-title{font-size:26px!important;}
+  .ss-table td,.ss-table th{font-size:17px!important;}
+  .ss-cal-day{min-height:90px!important;}
+  .ss-cal-event{font-size:11px!important;}
+}
+</style>
+<!-- PWA Manifest -->
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22SchoolShield%22%2C%22short_name%22%3A%22SchoolShield%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%2308090E%22%2C%22theme_color%22%3A%224F8EF7%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%20100'%3E%3Ctext%20y%3D'.9em'%20font-size%3D'90'%3E%F0%9F%9B%A1%EF%B8%8F%3C%2Ftext%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D" />
+<meta name="theme-color" content="#4F8EF7" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="SchoolShield" />
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+<!-- Leaflet for live bus map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+var hash = window.location.hash || '';
+if (hash.indexOf('#demo_') === 0) {
+var token = hash.slice(6);
+try {
+var decoded = atob(token);
+var parts = decoded.split('|');
+var mobile = parts[0];
+var createdAt = parseInt(parts[1]);
+var now = Date.now();
+var EXPIRY = 2 * 60 * 60 * 1000;
+if ((now - createdAt) < EXPIRY && mobile && mobile.length === 10) {
+var DEMO_STORE_KEY = 'ss_demo_codes';
+var store = {};
+try { store = JSON.parse(localStorage.getItem(DEMO_STORE_KEY)||'{}'); } catch(e) {}
+var entry = store[mobile] || { attempts: 0, sessions: [] };
+var exists = (entry.sessions||[]).some(function(s){ return s.createdAt === createdAt; });
+if (!exists) {
+entry.sessions = entry.sessions || [];
+entry.sessions.push({ createdAt: createdAt, mobile: mobile });
+store[mobile] = entry;
+try { localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(store)); } catch(e) {}
+}
+window.__autoDemoToken = token;
+}
+} catch(e) {}
+window.history.replaceState(null, '', window.location.pathname);
+}
+})();
+const FIREBASE_CONFIG = {
+apiKey: "AIzaSyBZ-l1Mp-B4m024DLD-e2yRuXu49gld1Lg",
+authDomain: "school-shield-df230.firebaseapp.com",
+databaseURL: "https://school-shield-df230-default-rtdb.firebaseio.com",
+projectId: "school-shield-df230",
+storageBucket: "school-shield-df230.firebasestorage.app",
+messagingSenderId: "721192911180",
+appId: "1:721192911180:web:9ca9bda66514e2815f8fe9"
+};
+window.FCM_VAPID_KEY = "BJCEYo2YMTJnoW3cpzZ6MlsrGc2aD9V_t2chDuHQFiqg3U73UkGwXwE7SmqPu_dOe2N5eYfrXcM2icClrexYHI0";
+try {
+firebase.initializeApp(FIREBASE_CONFIG);
+window.db = firebase.database();
+window.firebaseReady = true;
+window.__SS_ALERT_DEBUG = false;
+window.firebaseAuthReady = false;
+firebase.auth().signInAnonymously()
+.then(() => {
+window.firebaseAuthReady = true;
+})
+.catch(e => {
+window.firebaseAuthReady = false;
+});
+try {
+window.fcmMessaging = firebase.messaging();
+} catch(me) {
+window.fcmMessaging = null;
+}
+} catch(e) {
+window.firebaseReady = false;
+window.fcmMessaging = null;
+}
+window._ssToast = window._ssToast || function(msg, type) {
+  if (type === "error") {
+    window._ssHideUploadToast(false, msg);
+  }
+};
+window.CLOUDINARY_CLOUD = "dydugugig";
+window.CLOUDINARY_PRESET = "pxzlx4pv";
+window._ssUploadToastId = null;
+window._ssShowUploadToast = function(pct, fileName) {
+  var existing = document.getElementById("ss-upload-toast");
+  if (!existing) {
+    var el = document.createElement("div");
+    el.id = "ss-upload-toast";
+    el.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1d2e;border:1.5px solid #4F8EF7;border-radius:14px;padding:12px 18px;z-index:99999;min-width:240px;max-width:90vw;box-shadow:0 4px 24px rgba(0,0,0,0.5);font-family:Outfit,sans-serif;";
+    el.innerHTML = '<div id="ss-ut-label" style="color:#fff;font-size:13px;font-weight:600;margin-bottom:8px;">📤 Uploading...</div><div style="background:#0d0f1a;border-radius:8px;height:8px;overflow:hidden;"><div id="ss-ut-bar" style="height:100%;background:linear-gradient(90deg,#4F8EF7,#A78BFA);border-radius:8px;transition:width 0.2s;width:0%;"></div></div><div id="ss-ut-pct" style="color:#4F8EF7;font-size:11px;font-weight:700;margin-top:5px;text-align:right;">0%</div>';
+    document.body.appendChild(el);
+  }
+  var label = document.getElementById("ss-ut-label");
+  var bar   = document.getElementById("ss-ut-bar");
+  var pctEl = document.getElementById("ss-ut-pct");
+  if (label) label.textContent = "📤 " + (fileName ? fileName.substring(0,28) : "Uploading...");
+  if (bar)   bar.style.width = pct + "%";
+  if (pctEl) pctEl.textContent = pct + "%";
+};
+window._ssHideUploadToast = function(success, msg) {
+  var el = document.getElementById("ss-upload-toast");
+  if (!el) return;
+  if (success) {
+    el.style.borderColor = "#0ECB81";
+    var label = document.getElementById("ss-ut-label");
+    var bar   = document.getElementById("ss-ut-bar");
+    var pctEl = document.getElementById("ss-ut-pct");
+    if (label) label.textContent = "✅ Upload complete!";
+    if (bar)   { bar.style.width = "100%"; bar.style.background = "#0ECB81"; }
+    if (pctEl) pctEl.textContent = "100%";
+    setTimeout(function() { if (el && el.parentNode) el.parentNode.removeChild(el); }, 1500);
+  } else {
+    el.style.borderColor = "#F6465D";
+    var label2 = document.getElementById("ss-ut-label");
+    if (label2) label2.textContent = "❌ " + (msg || "Upload failed");
+    setTimeout(function() { if (el && el.parentNode) el.parentNode.removeChild(el); }, 2500);
+  }
+};
+window.uploadToCloudinary = function(file, onProgress) {
+  var isVideo = file.type.startsWith("video/");
+  var isImage = file.type.startsWith("image/");
+  var MB = 1024 * 1024;
+  if (isVideo && file.size > 100 * MB) return Promise.reject(new Error("VIDEO_TOO_LARGE"));
+  if (isImage && file.size > 5 * MB)   return Promise.reject(new Error("IMAGE_TOO_LARGE"));
+  if (!isVideo && !isImage && file.size > 20 * MB) return Promise.reject(new Error("FILE_TOO_LARGE"));
+  var apiUrl = "https://api.cloudinary.com/v1_1/" + window.CLOUDINARY_CLOUD + "/auto/upload";
+  var MAX_ATTEMPTS = 3;
+  window._ssShowUploadToast(0, file.name);
+  function attemptUpload(attempt) {
+    return new Promise(function(resolve, reject) {
+    var formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", window.CLOUDINARY_PRESET);
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", apiUrl);
+    xhr.upload.onprogress = function(e) {
+    if (e.lengthComputable) {
+    var pct = Math.round((e.loaded / e.total) * 100);
+    window._ssShowUploadToast(pct, file.name);
+    if (onProgress) onProgress(pct);
+    }
+    };
+    xhr.onload = function() {
+    try {
+    var res = JSON.parse(xhr.responseText);
+    if (res.secure_url) {
+    resolve(res.secure_url);
+    } else {
+    reject(new Error((res.error && res.error.message) || "Upload failed"));
+    }
+    } catch(e) {
+    reject(new Error("Invalid server response"));
+    }
+    };
+    xhr.onerror = function() { reject(new Error("Network error")); };
+    xhr.ontimeout = function() { reject(new Error("Timeout")); };
+    xhr.timeout = 60000;
+    xhr.send(formData);
+    });
+  }
+  function tryWithRetry(attempt) {
+    return attemptUpload(attempt).then(function(url) {
+    window._ssHideUploadToast(true);
+    return url;
+    }).catch(function(err) {
+    if (attempt < MAX_ATTEMPTS) {
+    var retryLabel = document.getElementById("ss-ut-label");
+    if (retryLabel) retryLabel.textContent = "🔄 Retry " + attempt + "/" + (MAX_ATTEMPTS-1) + "...";
+    return new Promise(function(res) { setTimeout(res, 1500); }).then(function() {
+    return tryWithRetry(attempt + 1);
+    });
+    }
+    window._ssHideUploadToast(false, "Upload failed. Check internet & try again.");
+    return Promise.reject(err);
+    });
+  }
+  return tryWithRetry(1);
+};
+
+(function migrateCache() {
+const MIGRATED_KEY = "ss_cache_migrated_v5"; // v27: schoolList path fix
+if (localStorage.getItem(MIGRATED_KEY)) return;
+const SCHOOL_SPECIFIC_KEYS = ["students","teachers","notices","alerts","leaves","homework",
+"buses","fees","expenses","pickups","medicals","remarks","exams","timetable",
+"canteen","gallery","chats","attendanceLogs",
+"library","syllabus","schoolPageData","thoughtOfDay","disciplineLog","schoolEvents",
+"onlineClasses","trips","polls","ptmSchedules","schoolRatings"];
+SCHOOL_SPECIFIC_KEYS.forEach(k => {
+localStorage.removeItem("ss_" + k);
+localStorage.removeItem("ss_cache_" + k);
+});
+["discounts","userAccounts"].forEach(k => {
+localStorage.removeItem("ss_" + k);
+});
+localStorage.removeItem("ss_cache_schools");
+localStorage.setItem(MIGRATED_KEY, "1");
+})();
+const urlParams = new URLSearchParams(window.location.search);
+window.NO_LOGIN_PARENT_MODE = urlParams.get("parent") === "1" || urlParams.get("panic") === "1";
+window.PARENT_SCHOOL_ID = urlParams.get("school") || "1";
+</script>
+
+<script>
+window.activateDemo = function(deps) {
+var DEMO_STORE_KEY = 'ss_demo_codes';
+var EXPIRY = 2 * 60 * 60 * 1000;
+var now = Date.now();
+var store = {};
+try { store = JSON.parse(localStorage.getItem(DEMO_STORE_KEY)||'{}'); } catch(e) {}
+var validEntry = null;
+var mins = 120;
+Object.keys(store).forEach(function(mobile) {
+var entry = store[mobile] || {};
+(entry.codes||[]).forEach(function(cd) {
+if ((now - cd.createdAt) < EXPIRY) { validEntry = cd; mins = Math.ceil((EXPIRY-(now-cd.createdAt))/60000); }
+});
+});
+if (!validEntry) { deps.toast("No valid demo code! Get one from schoolshield.pro", "error"); return; }
+var sid = "DEMO_SCH_2026";
+var SESSION_KEY = "ss_demo_session_" + validEntry.code;
+var sd = null;
+try { sd = JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); } catch(e) {}
+var ss=[{id:"ds1",schoolId:sid,name:"Aarav Sharma",class:"Class 5",rollNo:"S99-C05-01",gender:"Male",parentName:"Rajesh Sharma",parentPhone:"9876500001",dob:"2015-03-10",attendance:92},{id:"ds2",schoolId:sid,name:"Priya Patel",class:"Class 5",rollNo:"S99-C05-02",gender:"Female",parentName:"Suresh Patel",parentPhone:"9876500002",dob:"2015-07-22",attendance:88},{id:"ds3",schoolId:sid,name:"Kabir Singh",class:"Class 3",rollNo:"S99-C03-01",gender:"Male",parentName:"Manpreet Singh",parentPhone:"9876500003",dob:"2017-01-15",attendance:75},{id:"ds4",schoolId:sid,name:"Meera Joshi",class:"Class 3",rollNo:"S99-C03-02",gender:"Female",parentName:"Ramesh Joshi",parentPhone:"9876500004",dob:"2017-05-20",attendance:95},{id:"ds5",schoolId:sid,name:"Rohan Verma",class:"Class 1",rollNo:"S99-C01-01",gender:"Male",parentName:"Suresh Verma",parentPhone:"9876500005",dob:"2019-08-12",attendance:80},{id:"ds6",schoolId:sid,name:"Ananya Gupta",class:"Class 1",rollNo:"S99-C01-02",gender:"Female",parentName:"Vivek Gupta",parentPhone:"9876500006",dob:"2019-11-03",attendance:90}];
+var st=[{id:"dt1",schoolId:sid,name:"Sunita Verma",subject:"Mathematics",phone:"9876500010",salary:35000,assignedClass:"Class 5",joinDate:"2020-06-01"},{id:"dt2",schoolId:sid,name:"Ramesh Joshi",subject:"Science",phone:"9876500011",salary:32000,assignedClass:"Class 3",joinDate:"2021-07-15"},{id:"dt3",schoolId:sid,name:"Pooja Singh",subject:"Hindi",phone:"9876500012",salary:30000,assignedClass:"Class 1",joinDate:"2022-01-10"}];
+var sf=[{id:"df1",schoolId:sid,studentName:"Aarav Sharma",month:"April",amount:8000,type:"Tuition Fee",paid:true,paidAmount:8000,paymentMethod:"Cash",date:"2026-04-05",feeItems:[{type:"Tuition Fee",amount:8000}]},{id:"df2",schoolId:sid,studentName:"Aarav Sharma",month:"May",amount:8000,type:"Tuition Fee",paid:false,dueDate:"2026-05-10",feeItems:[{type:"Tuition Fee",amount:8000}]},{id:"df3",schoolId:sid,studentName:"Priya Patel",month:"April",amount:8000,type:"Tuition Fee",paid:true,paidAmount:8000,paymentMethod:"Online",date:"2026-04-03",feeItems:[{type:"Tuition Fee",amount:8000}]},{id:"df4",schoolId:sid,studentName:"Kabir Singh",month:"April",amount:7000,type:"Tuition Fee",paid:false,dueDate:"2026-04-10",feeItems:[{type:"Tuition Fee",amount:7000}]},{id:"df5",schoolId:sid,studentName:"Meera Joshi",month:"April",amount:7000,type:"Tuition Fee",paid:true,paidAmount:7000,paymentMethod:"Cash",date:"2026-04-02",feeItems:[{type:"Tuition Fee",amount:7000}]},{id:"df6",schoolId:sid,studentName:"Ananya Gupta",month:"April",amount:6000,type:"Tuition Fee",paid:true,paidAmount:6000,paymentMethod:"Online",date:"2026-04-07",feeItems:[{type:"Tuition Fee",amount:6000}]}];
+var sfs=[{id:"dfs1",schoolId:sid,class:"Class 1",total:24000,session:"2026-27"},{id:"dfs2",schoolId:sid,class:"Class 3",total:28000,session:"2026-27"},{id:"dfs3",schoolId:sid,class:"Class 5",total:32000,session:"2026-27"}];
+var sal=[{id:"dal1",schoolId:sid,title:"PTM on 15th June",message:"Parent Teacher Meeting on 15th June 2026 at 10 AM.",type:"notice",date:new Date().toISOString(),active:true},{id:"dal2",schoolId:sid,title:"School Holiday — 16th June",message:"School closed on 16th June 2026 due to local holiday.",type:"notice",date:new Date().toISOString(),active:true}];
+var sb=[{id:"db1",schoolId:sid,busNo:"MP-09-1234",driverName:"Ramkumar Patel",driverPhone:"9876500020",route:"City Center to School",capacity:40,status:"running"}];
+try {
+localStorage.setItem("ss_cache_SCH_"+sid+"_students",JSON.stringify(sd?sd.students:ss));
+localStorage.setItem("ss_cache_SCH_"+sid+"_teachers",JSON.stringify(sd?sd.teachers:st));
+localStorage.setItem("ss_cache_SCH_"+sid+"_fees",JSON.stringify(sd?sd.fees:sf));
+localStorage.setItem("ss_cache_SCH_"+sid+"_feeStructure",JSON.stringify(sd?sd.feeStructure:sfs));
+localStorage.setItem("ss_cache_SCH_"+sid+"_alerts",JSON.stringify(sd?sd.alerts:sal));
+localStorage.setItem("ss_cache_SCH_"+sid+"_buses",JSON.stringify(sd?sd.buses:sb));
+} catch(e) {}
+var demoSchool={id:sid,schoolCode:"S99",name:"SchoolShield Demo School",address:"Indore, MP",contact:"8839913233",logo:"🏫",active:true,paid:true,setup:true};
+var demoAccs=[{id:"da1",schoolId:sid,role:"principal",name:"Demo Principal",username:"demo_principal",password:"demo123",active:true},{id:"da2",schoolId:sid,role:"teacher",name:"Sunita Verma",username:"demo_teacher",password:"demo123",active:true,assignedClass:"Class 5"},{id:"da3",schoolId:sid,role:"parent",name:"Rajesh Sharma",username:"demo_parent",password:"demo123",active:true}];
+deps.setSchools(function(p){var arr=Array.isArray(p)?p:Object.values(p||{});if(!arr.find(function(s){return s.id===sid;}))return arr.concat([demoSchool]);return arr;});
+deps.setUserAccounts(function(p){var arr=Array.isArray(p)?p:Object.values(p||{});return arr.filter(function(a){return !String(a.id).startsWith("da");}).concat(demoAccs);});
+window.__isDemoMode=true;
+window.__demoSessionKey=SESSION_KEY;
+window.currentSchoolId=null;
+deps.setCurrentSchoolId(null);
+deps.setRole(null);
+deps.setLoggedInUser(null);
+setTimeout(function(){
+if(deps.setMode)deps.setMode("main");
+deps.setRole("principal");
+deps.setLoggedInUser({id:"da1",schoolId:sid,role:"principal",name:"Demo Principal",username:"demo_principal",active:true});
+window.currentSchoolId="SCH_"+sid;
+deps.setCurrentSchoolId("SCH_"+sid);
+deps.setActiveSection("dashboard");
+deps.toast("Demo open! "+mins+" min remaining. Your data stays on this device.",  "success");
+},400);
+};
+
+</script>
+</head>
+<body>
+<div id="root"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#08090E;color:#4F8EF7;font-family:sans-serif;gap:16px;"><div style="font-size:48px">🛡️</div><div style="font-weight:700;font-size:20px;letter-spacing:1px">SchoolShield</div><div style="width:48px;height:48px;border:4px solid #1F2A3F;border-top-color:#4F8EF7;border-radius:50%;animation:spin 0.8s linear infinite"></div><div id="load-msg" style="font-size:13px;color:#6B7A99;text-align:center;max-width:260px">Loading app...<br><span style="font-size:11px">First load may take a moment</span></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>
+<script>
+var t=0;
+var msgs=["Compiling scripts...","Please wait...","Almost ready...","Almost there..."];
+var mi=0;
+var iv=setInterval(function(){
+t+=5;
+var el=document.getElementById('load-msg');
+if(!el){clearInterval(iv);return;}
+if(t%10===0&&mi<msgs.length){el.innerHTML=msgs[mi]+'<br><span style="font-size:11px;color:#4F8EF7">'+t+' sec...</span>';mi++;}
+if(t>90){clearInterval(iv);el.innerHTML='Please reload — or check your internet connection<br><button onclick="location.reload()" style="margin-top:8px;padding:8px 20px;background:#4F8EF7;border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer">🔄 Reload</button>';}
+},5000);
+</script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+let _idCounter = 0;
+const genId = () => {
+_idCounter = (_idCounter + 1) % 1000000;
+const rand = Math.floor(Math.random() * 99991);
+return Date.now() * 1000 + _idCounter * 100 + rand;
+};
+const stopName = (s) => (typeof s === "object" && s !== null) ? (s.name || "") : (s || "");
+const stopHasGeo = (s) => typeof s === "object" && s !== null && s.lat && s.lng;
+const stopTime = (s) => (typeof s === "object" && s !== null) ? (s.time || "") : "";
+const stopDropTime = (s) => (typeof s === "object" && s !== null) ? (s.dropTime || "") : "";
+const haversineM = (lat1, lng1, lat2, lng2) => {
+const R = 6371000;
+const dLat = (lat2 - lat1) * Math.PI / 180;
+const dLng = (lng2 - lng1) * Math.PI / 180;
+const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+Math.sin(dLng/2)*Math.sin(dLng/2);
+return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+const forSchool = (arr, sid) => (arr || []).filter(x => sid != null && sameId(x.schoolId, sid));
+const forSchoolOrGlobal = (arr, sid) => (arr || []).filter(x => !x.schoolId || sameId(x.schoolId, sid));
+const THEMES = {
+dark: {
+bg: "#08090E", surface: "#0F1117", card: "#161B26", border: "#1F2A3F",
+accent: "#4F8EF7", green: "#0ECB81", yellow: "#F5A623", red: "#F75555",
+purple: "#A78BFA", text: "#E8EEF8", textMuted: "#6B7A99", textSub: "#9AA3B8",
+navBg: "#0D0F18", inputBg: "#0F1117", shadow: "rgba(0,0,0,0.5)",
+},
+gold: {
+bg: "#050400", surface: "#0D0A00", card: "#151000", border: "#2A2200",
+accent: "#D4AF37", green: "#4CAF50", yellow: "#FFD700", red: "#FF5252",
+purple: "#CE93D8", text: "#FFF8DC", textMuted: "#7A6A20", textSub: "#C9A84C",
+navBg: "#030200", inputBg: "#0D0A00", shadow: "rgba(212,175,55,0.25)",
+},
+redwhite: {
+bg: "#FFFFFF", surface: "#FFF5F5", card: "#FFFFFF", border: "#FECACA",
+accent: "#9B1C1C", green: "#166534", yellow: "#92400E", red: "#991B1B",
+purple: "#6B21A8", text: "#1A0000", textMuted: "#6B3030", textSub: "#7F1D1D",
+navBg: "#7F1D1D", inputBg: "#FFF5F5", shadow: "rgba(127,29,29,0.15)",
+},
+lemon: {
+bg: "#FFFDE7", surface: "#FFF9C4", card: "#FFFFFF", border: "#F9A825",
+accent: "#7B0000", green: "#1B5E20", yellow: "#F57F17", red: "#B71C1C",
+purple: "#880E4F", text: "#1A0000", textMuted: "#5D4037", textSub: "#6D4C41",
+navBg: "#7B0000", inputBg: "#FFF9C4", shadow: "rgba(123,0,0,0.15)",
+},
+navy: {
+bg: "#E3F2FD", surface: "#BBDEFB", card: "#FFFFFF", border: "#64B5F6",
+accent: "#0D47A1", green: "#1B5E20", yellow: "#E65100", red: "#B71C1C",
+purple: "#4A148C", text: "#0A1628", textMuted: "#1565C0", textSub: "#1976D2",
+navBg: "#0D47A1", inputBg: "#BBDEFB", shadow: "rgba(13,71,161,0.15)",
+},
+light: {
+bg: "#EEF2FF", surface: "#FFFFFF", card: "#FFFFFF", border: "#CBD5E1",
+accent: "#2563EB", green: "#059669", yellow: "#D97706", red: "#DC2626",
+purple: "#7C3AED", text: "#1E293B", textMuted: "#64748B", textSub: "#475569",
+navBg: "#1E293B", inputBg: "#F8FAFC", shadow: "rgba(0,0,0,0.12)",
+},
+ocean: {
+bg: "#0A1628", surface: "#0D1F3C", card: "#112244", border: "#1A3A5C",
+accent: "#00D4FF", green: "#00E676", yellow: "#FFD740", red: "#FF5252",
+purple: "#CE93D8", text: "#E3F2FD", textMuted: "#546E7A", textSub: "#78909C",
+navBg: "#071020", inputBg: "#0D1F3C", shadow: "rgba(0,212,255,0.15)",
+},
+mint: {
+bg: "#F0FDF4", surface: "#FFFFFF", card: "#FFFFFF", border: "#BBF7D0",
+accent: "#059669", green: "#10B981", yellow: "#D97706", red: "#EF4444",
+purple: "#7C3AED", text: "#064E3B", textMuted: "#6B7280", textSub: "#374151",
+navBg: "#064E3B", inputBg: "#F0FDF4", shadow: "rgba(16,185,129,0.12)",
+},
+};
+const THEME_META = {
+dark:     { label: "Dark",     icon: "🌑", desc: "Classic dark" },
+gold:     { label: "Gold",     icon: "✨", desc: "Premium gold" },
+redwhite: { label: "Red-White",icon: "🔴", desc: "Visiting card" },
+lemon:    { label: "Lemon",    icon: "🍋", desc: "Yellow + Dark red" },
+navy:     { label: "Navy",     icon: "🩵", desc: "Light + Navy blue" },
+light:    { label: "Light",    icon: "☀️", desc: "Clean light" },
+ocean:    { label: "Ocean",    icon: "🌊", desc: "Deep blue" },
+mint:     { label: "Mint",     icon: "🍃", desc: "Fresh green" },
+};
+let T = {...THEMES.dark};
+var _isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+var _isLarge   = typeof window !== "undefined" && window.innerWidth >= 1024;
+var fs = {
+  xs:  _isLarge ? 13 : _isDesktop ? 12 : 10,
+  sm:  _isLarge ? 14 : _isDesktop ? 13 : 12,
+  md:  _isLarge ? 16 : _isDesktop ? 15 : 13,
+  base:_isLarge ? 17 : _isDesktop ? 16 : 14,
+  lg:  _isLarge ? 19 : _isDesktop ? 18 : 16,
+  xl:  _isLarge ? 22 : _isDesktop ? 20 : 18,
+  h1:  _isLarge ? 26 : _isDesktop ? 24 : 22,
+  h2:  _isLarge ? 22 : _isDesktop ? 20 : 18,
+  content: _isLarge ? 26 : _isDesktop ? 24 : 13,
+  contentSm: _isLarge ? 20 : _isDesktop ? 18 : 11,
+  contentXs: _isLarge ? 17 : _isDesktop ? 15 : 10,
+};
+const LANG = {
+en: {
+appName: "SchoolShield", login: "Login", logout: "Logout", dashboard: "Dashboard",
+students: "Students", teachers: "Teachers", fees: "Fees", notices: "Notices",
+transport: "Transport", gallery: "Gallery", canteen: "Canteen", timetable: "Timetable",
+reports: "Reports", safety: "Safety & Alerts", chat: "Parent-Teacher Chat",
+schools: "Schools", revenue: "Revenue", analytics: "Analytics", discounts: "Discounts", support: "Support Settings",
+addStudent: "Add Student", addTeacher: "Add Teacher", addNotice: "Add Notice",
+addSchool: "Add School", save: "Save", cancel: "Cancel", delete: "Delete",
+edit: "Edit", approve: "Approve", reject: "Reject", send: "Send",
+leaveApplications: "Leave Applications", noticeboard: "Notice Board",
+myChild: "My Child", medicalAlerts: "Medical Alerts", pickup: "Authorized Pickup",
+progress: "My Child Report", homework: "Homework", remarks: "Remarks",
+payslip: "Payment Slip", busRoute: "Bus Route", boarding: "Student Boarding",
+panicBtn: "🚨 PANIC", busStatus: "Bus Status", running: "Running", arrived: "Arrived",
+superadmin: "Super Admin", principal: "Principal", teacher: "Teacher",
+parent: "Parent", driver: "Driver", selectRole: "Select Role",
+vice_principal: "Vice Principal", staff: "Staff", reception: "Reception",
+accountant: "Accountant", librarian: "Librarian",
+accounts: "Accounts", createAccount: "Create Account",
+assignedClass: "Assigned Class", assignedRoute: "Assigned Route",
+resetPassword: "Reset Password",
+password: "Password", enterPassword: "Enter Password", loginAs: "Login As",
+demoLogin: "Demo Login", welcome: "Welcome to SchoolShield",
+tagline: "Complete School Management Platform",
+totalSchools: "Total Schools", activeSchools: "Active Schools",
+monthlyRevenue: "Monthly Revenue", yearlyRevenue: "Yearly Revenue",
+pendingPayments: "Pending Payments", dailyActiveUsers: "Daily Active Users",
+gracePeriod: "Grace Period", daysLeft: "days left", paymentDue: "Payment Due",
+activate: "Activate", deactivate: "Deactivate", markPaid: "Mark Paid",
+generateCode: "Generate Access Code", accessCode: "Access Code",
+discountCode: "Discount Code", createDiscount: "Create Discount",
+todayBirthdays: "Today's Birthdays 🎂", noAlerts: "No alerts",
+readAlert: "Read", deleteAlert: "Delete", boardStudent: "Board", dropStudent: "Drop",
+safetyLog: "Safety Log", subjectMarks: "Subject-wise Marks", attendance: "Attendance",
+grade: "Grade", printCard: "Print ID Card", generateReport: "Generate Report",
+weeklyMenu: "Weekly Menu", monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday",
+thursday: "Thursday", friday: "Friday", addPhoto: "Add Photo", schoolEvents: "School Events",
+feeRecord: "Fee Records", defaulters: "Defaulters", aiReminder: "AI Reminder",
+aiNotice: "AI Notice Generator", salary: "Salary", deductions: "Deductions", netPay: "Net Pay",
+subscriptionExpired: "Subscription Expired", contactAdmin: "Contact Administrator",
+plan: "Plan", monthly: "Monthly", yearly: "Yearly", joinDate: "Join Date",
+address: "Address", accessCodeLogin: "Access Code Login", enterCode: "Enter 8-digit Code",
+verifyCode: "Verify Code", setupSchool: "Setup Your School", schoolName: "School Name",
+schoolLogo: "School Logo (Emoji)", contact: "Contact", setup: "Setup",
+paymentReceived: "Payment Received", paymentPending: "Payment Pending",
+dueDate: "Due Date", amount: "Amount", maxUses: "Max Uses", used: "Used",
+expiry: "Expiry", discountPct: "Discount %", fixed: "Fixed Amount",
+applyDiscount: "Apply Discount Code", originalPrice: "Original Price",
+discountedPrice: "Discounted Price", class: "Class", rollNo: "Roll No",
+parentPhone: "Parent Phone", dateOfBirth: "Date of Birth", address2: "Address",
+medicine: "Medicine", reminder: "Reminder", dawali: "Dawa Li ✓", added: "Added",
+status: "Status", pending: "Pending", approved: "Approved", rejected: "Rejected",
+reason: "Reason", fromDate: "From Date", toDate: "To Date", submit: "Submit",
+message: "Message", reply: "Reply", typeMessage: "Type a message...",
+addPickup: "Add Pickup Person", name: "Name", relation: "Relation", phone: "Phone",
+subject: "Subject", marks: "Marks", maxMarks: "Max Marks", remark: "Remark",
+addRemark: "Add Remark", viewReport: "View Report", viewIdCard: "View ID Card",
+playgroup: "Playgroup", nursery: "Nursery", kg: "KG", kg2: "KG2",
+custom: "Custom", route: "Route", busNo: "Bus No", driverName: "Driver Name",
+generate: "Generate", month: "Month", schoolCity: "City", mapView: "Map View",
+reminderDue: "Payment due in", days: "days", hindi: "हिंदी", english: "English",
+noticeBody: "Notice Body", noticeTitle: "Notice Title", forRole: "For Role",
+all: "All", viewAll: "View All", close: "Close", search: "Search", loading: "Loading...",
+aiGenerating: "AI is generating...", copy: "Copy", print: "Print",
+totalStudents: "Total Students", totalTeachers: "Total Teachers",
+todayPresent: "Today Present", feeCollected: "Fee Collected",
+safetyAlerts: "Safety Alerts", activeAlerts: "Active Alerts",
+overduePayments: "Overdue Payments", totalBuses: "Total Buses",
+busArrived: "Bus Has Arrived at School", busRunning: "Bus is On the Way",
+currentTime: "Current Time", busDetails: "Bus Details",
+stopPassed: "Passed", busHere: "Bus is Here", myStop: "My Stop",
+upcoming: "Upcoming", noRouteAssigned: "No bus route has been assigned for your child.",
+contactAdmin: "Please contact the school admin.",
+boardedAt: "Boarded", droppedAt: "Dropped",
+busAtSchool: "Bus Arrived", destination: "Destination",
+liveBusRoute: "Live Bus Route", nowAt: "Now At",
+markStop: "Mark", stopHere: "Here",
+onlineClasses: "Online Classes",
+},
+hi: {
+appName: "स्कूलशील्ड", login: "लॉगिन", logout: "लॉगआउट", dashboard: "डैशबोर्ड",
+students: "छात्र", teachers: "शिक्षक", fees: "फीस", notices: "नोटिस",
+transport: "परिवहन", gallery: "गैलरी", canteen: "कैंटीन", timetable: "टाइमटेबल",
+reports: "रिपोर्ट", safety: "सुरक्षा और अलर्ट", chat: "अभिभावक-शिक्षक चैट",
+schools: "स्कूल", revenue: "राजस्व", analytics: "विश्लेषण", discounts: "छूट", support: "सपोर्ट सेटिंग्स",
+addStudent: "छात्र जोड़ें", addTeacher: "शिक्षक जोड़ें", addNotice: "नोटिस जोड़ें",
+addSchool: "स्कूल जोड़ें", save: "सहेजें", cancel: "रद्द करें", delete: "हटाएं",
+edit: "संपादित करें", approve: "स्वीकृत करें", reject: "अस्वीकार करें", send: "भेजें",
+leaveApplications: "छुट्टी आवेदन", noticeboard: "सूचना पट्ट",
+myChild: "मेरा बच्चा", medicalAlerts: "चिकित्सा अलर्ट", pickup: "अधिकृत पिकअप",
+progress: "बच्चे की प्रगति", homework: "गृहकार्य", remarks: "टिप्पणियां",
+payslip: "वेतन पर्ची", busRoute: "बस रूट", boarding: "छात्र बोर्डिंग",
+panicBtn: "🚨 आपातकाल", busStatus: "बस स्थिति", running: "चल रही है", arrived: "पहुंच गई",
+superadmin: "सुपर एडमिन", principal: "प्रधानाचार्य", teacher: "शिक्षक",
+parent: "अभिभावक", driver: "ड्राइवर", selectRole: "भूमिका चुनें",
+vice_principal: "उप प्रधानाचार्य", staff: "स्टाफ", reception: "रिसेप्शन",
+accountant: "अकाउंटेंट", librarian: "लाइब्रेरियन",
+accounts: "अकाउंट्स", createAccount: "अकाउंट बनाएं",
+assignedClass: "कक्षा", assignedRoute: "रूट", resetPassword: "पासवर्ड रीसेट",
+password: "पासवर्ड", enterPassword: "पासवर्ड दर्ज करें", loginAs: "इस रूप में लॉगिन",
+demoLogin: "डेमो लॉगिन", welcome: "स्कूलशील्ड में आपका स्वागत है",
+tagline: "संपूर्ण स्कूल प्रबंधन मंच",
+totalSchools: "कुल स्कूल", activeSchools: "सक्रिय स्कूल",
+monthlyRevenue: "मासिक राजस्व", yearlyRevenue: "वार्षिक राजस्व",
+pendingPayments: "बकाया भुगतान", dailyActiveUsers: "दैनिक सक्रिय उपयोगकर्ता",
+gracePeriod: "ग्रेस पीरियड", daysLeft: "दिन शेष", paymentDue: "भुगतान देय",
+activate: "सक्रिय करें", deactivate: "निष्क्रिय करें", markPaid: "भुगतान चिह्नित करें",
+generateCode: "एक्सेस कोड बनाएं", accessCode: "एक्सेस कोड",
+discountCode: "डिस्काउंट कोड", createDiscount: "डिस्काउंट बनाएं",
+todayBirthdays: "आज के जन्मदिन 🎂", noAlerts: "कोई अलर्ट नहीं",
+readAlert: "पढ़ें", deleteAlert: "हटाएं", boardStudent: "चढ़ाएं", dropStudent: "उतारें",
+safetyLog: "सुरक्षा लॉग", subjectMarks: "विषयवार अंक", attendance: "उपस्थिति",
+grade: "ग्रेड", printCard: "ID कार्ड प्रिंट करें", generateReport: "रिपोर्ट बनाएं",
+weeklyMenu: "साप्ताहिक मेनू", monday: "सोमवार", tuesday: "मंगलवार", wednesday: "बुधवार",
+thursday: "गुरुवार", friday: "शुक्रवार", addPhoto: "फोटो जोड़ें", schoolEvents: "स्कूल इवेंट",
+feeRecord: "फीस रिकॉर्ड", defaulters: "बकायेदार", aiReminder: "AI रिमाइंडर",
+aiNotice: "AI नोटिस जनरेटर", salary: "वेतन", deductions: "कटौती", netPay: "शुद्ध वेतन",
+subscriptionExpired: "सदस्यता समाप्त हो गई", contactAdmin: "व्यवस्थापक से संपर्क करें",
+plan: "योजना", monthly: "मासिक", yearly: "वार्षिक", joinDate: "शामिल होने की तारीख",
+address: "पता", accessCodeLogin: "एक्सेस कोड लॉगिन", enterCode: "8-अंकीय कोड दर्ज करें",
+verifyCode: "कोड सत्यापित करें", setupSchool: "अपना स्कूल सेटअप करें", schoolName: "स्कूल का नाम",
+schoolLogo: "स्कूल लोगो (इमोजी)", contact: "संपर्क", setup: "सेटअप",
+paymentReceived: "भुगतान प्राप्त", paymentPending: "भुगतान बकाया",
+dueDate: "देय तिथि", amount: "राशि", maxUses: "अधिकतम उपयोग", used: "उपयोग किया",
+expiry: "समाप्ति", discountPct: "छूट %", fixed: "निश्चित राशि",
+applyDiscount: "डिस्काउंट कोड लागू करें", originalPrice: "मूल मूल्य",
+discountedPrice: "रियायती मूल्य", class: "कक्षा", rollNo: "रोल नं",
+parentPhone: "अभिभावक फोन", dateOfBirth: "जन्म तिथि", address2: "पता",
+medicine: "दवाई", reminder: "रिमाइंडर", dawali: "दवा ली ✓", added: "जोड़ा गया",
+status: "स्थिति", pending: "लंबित", approved: "स्वीकृत", rejected: "अस्वीकृत",
+reason: "कारण", fromDate: "से तारीख", toDate: "तक तारीख", submit: "जमा करें",
+message: "संदेश", reply: "जवाब", typeMessage: "संदेश टाइप करें...",
+addPickup: "पिकअप व्यक्ति जोड़ें", name: "नाम", relation: "संबंध", phone: "फोन",
+subject: "विषय", marks: "अंक", maxMarks: "अधिकतम अंक", remark: "टिप्पणी",
+addRemark: "टिप्पणी जोड़ें", viewReport: "रिपोर्ट देखें", viewIdCard: "ID कार्ड देखें",
+playgroup: "प्लेग्रुप", nursery: "नर्सरी", kg: "केजी", kg2: "केजी2",
+custom: "कस्टम", route: "रूट", busNo: "बस नं", driverName: "ड्राइवर का नाम",
+generate: "बनाएं", month: "महीना", schoolCity: "शहर", mapView: "मानचित्र दृश्य",
+reminderDue: "भुगतान देय", days: "दिन", hindi: "हिंदी", english: "English",
+noticeBody: "नोटिस विवरण", noticeTitle: "नोटिस शीर्षक", forRole: "भूमिका के लिए",
+all: "सभी", viewAll: "सभी देखें", close: "बंद करें", search: "खोजें", loading: "लोड हो रहा है...",
+aiGenerating: "AI बना रही है...", copy: "कॉपी करें", print: "प्रिंट करें",
+totalStudents: "कुल छात्र", totalTeachers: "कुल शिक्षक",
+todayPresent: "आज उपस्थित", feeCollected: "फीस एकत्र",
+safetyAlerts: "सुरक्षा अलर्ट", activeAlerts: "सक्रिय अलर्ट",
+overduePayments: "अधिक देय भुगतान", totalBuses: "कुल बसें",
+busArrived: "बस स्कूल पहुँच गई", busRunning: "बस चल रही है",
+currentTime: "अभी का समय", busDetails: "बस विवरण",
+stopPassed: "निकल गई", busHere: "बस यहाँ है", myStop: "मेरा स्टॉप",
+upcoming: "आना बाकी", noRouteAssigned: "आपके बच्चे के लिए कोई बस रूट असाइन नहीं हुआ।",
+contactAdmin: "स्कूल एडमिन से संपर्क करें।",
+boardedAt: "चढ़ा", droppedAt: "उतरा",
+busAtSchool: "बस पहुँच गई", destination: "गंतव्य",
+liveBusRoute: "लाइव बस रूट", nowAt: "अभी",
+markStop: "मार्क करें", stopHere: "यहाँ है",
+onlineClasses: "ऑनलाइन क्लासेज",
+}
+};
+const DEFAULT_CLASSES = ["Playgroup","Nursery","KG","KG2","Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12"];
+const CLASSES = DEFAULT_CLASSES;
+const initStudents = [];
+const initTeachers = [];
+const initSchools = [];
+const initNotices = [];
+const initAlerts = [];
+const initLeaves = [];
+const initHomework = [];
+const initBuses = [];
+const initFees = [];
+const initPickups = [];
+const initMedicals = [];
+const initRemarks = [];
+const initMarks = [];
+const EXAM_TYPES = [
+{ key:"monthly",    label:"Monthly Test",     icon:"📝", color:"#4F8EF7" },
+{ key:"quarterly",  label:"Quarterly Exam",   icon:"📋", color:"#0ECB81" },
+{ key:"halfyearly", label:"Half Yearly Exam", icon:"📊", color:"#A78BFA" },
+{ key:"preboard",   label:"Pre Board Exam",   icon:"📖", color:"#F5A623" },
+{ key:"annual",     label:"Annual / Final",   icon:"🏆", color:"#F75555" },
+];
+const SUBJECTS_LIST = ["Mathematics","Science","English","Hindi","Social Studies","Computer","Sanskrit","Physical Education","Drawing","GK"];
+const initExams = [];
+const initTimetable = [];
+const initOnlineClasses = [];
+const initCanteen = [
+{ day:"Monday", menu:"🍛 Dal Rice + 🥗 Salad + 🍪 Biscuit" },
+{ day:"Tuesday", menu:"🫓 Sandwich + 🥤 Juice + 🍌 Banana" },
+{ day:"Wednesday", menu:"🍜 Noodles + 🥛 Milk + 🍎 Apple" },
+{ day:"Thursday", menu:"🫔 Paratha + 🥣 Curd + 🍊 Orange" },
+{ day:"Friday", menu:"🍕 Pizza Slice + 🥤 Cold Drink + 🍫 Chocolate" },
+];
+const initGallery = [];
+const initChats = [];
+const initDiscounts = [];
+const ALL_PERM_SECTIONS = [
+{key:"dashboard",          label:"Dashboard",          icon:"📊"},
+{key:"students",           label:"Students",           icon:"👨‍🎓"},
+{key:"teachers",           label:"Teachers",           icon:"👨‍🏫"},
+{key:"leaves",             label:"Leave Applications", icon:"📋"},
+{key:"fees",               label:"Fees",               icon:"💳"},
+{key:"alertsnotices",      label:"Alerts & Notices",   icon:"🔔"},
+{key:"transport",          label:"Transport",          icon:"🚌"},
+{key:"timetable",          label:"Timetable",          icon:"📅"},
+{key:"canteen",            label:"Canteen",            icon:"🍱"},
+{key:"gallery",            label:"Gallery",            icon:"🖼️"},
+{key:"letterscerts",       label:"Letters & Certificates", icon:"🗂️"},
+{key:"expenses",           label:"Income & Expenses",  icon:"💰"},
+{key:"accounts",           label:"Accounts",           icon:"👤"},
+{key:"unifiedcalendar",    label:"Calendar & Attendance", icon:"📅"},
+{key:"datamanager",        label:"Data Manager",       icon:"🗑️"},
+{key:"exams",              label:"Exams (Duty + Results)", icon:"📝"},
+{key:"feedback",           label:"Feedback & Poll",    icon:"💌"},
+{key:"library",            label:"Library",            icon:"📚"},
+{key:"disciplinereport",   label:"Discipline Report",  icon:"📋"},
+{key:"classsettings",      label:"Class Settings",     icon:"🏷️"},
+{key:"homework",           label:"Homework",           icon:"📓"},
+{key:"syllabus",           label:"Syllabus",           icon:"📖"},
+{key:"webcam",             label:"Live Cameras",       icon:"📹"},
+{key:"schoolpage",         label:"School Page",        icon:"🏫"},
+{key:"visitors",           label:"Visitor Management", icon:"🚪"},
+{key:"reachedhome",        label:"Reached Home",       icon:"🏠"},
+{key:"staffpanic",         label:"Staff Emergency",    icon:"🆘"},
+{key:"healthcheckin",      label:"Health Check-in",    icon:"🌡️"},
+{key:"healthgrowth",       label:"Child Health & Growth", icon:"📏"},
+{key:"onlineclasses",     label:"Online Classes",     icon:"🎥"},
+{key:"employees",         label:"Employees",          icon:"👔"},
+{key:"staffdirectory",    label:"Staff Directory",    icon:"📋"},
+{key:"inventory",         label:"Inventory",          icon:"📦"},
+{key:"allpickup",         label:"Authorized Pickup",  icon:"🚗"},
+{key:"tripmanagement",    label:"Trip Management",    icon:"🗺️"},
+{key:"meetingmanager",    label:"Meeting Manager",    icon:"📋"},
+];
+const ALL_VP_SECTIONS        = ALL_PERM_SECTIONS;
+const ALL_STAFF_SECTIONS     = ALL_PERM_SECTIONS;
+const ALL_RECEPTION_SECTIONS = ALL_PERM_SECTIONS;
+const ALL_ACCOUNTANT_SECTIONS= ALL_PERM_SECTIONS;
+const EMPLOYEE_DEFAULT_SECTIONS = [
+{key:"dashboard",      icon:"📊", label:"Dashboard",            defaultMode:"edit"},
+{key:"alertsnotices",  icon:"🔔", label:"Alerts & Notices",     defaultMode:"view"},
+{key:"leaves",         icon:"📋", label:"Leave Applications",   defaultMode:"edit"},
+{key:"staffpanic",     icon:"🆘", label:"Staff Emergency",      defaultMode:"edit"},
+{key:"reachedhome",    icon:"🏠", label:"Reached Home",         defaultMode:"edit"},
+{key:"healthcheckin",  icon:"🌡️", label:"Health Check-in",      defaultMode:"edit"},
+{key:"schoolpage",     icon:"🏫", label:"School Page",          defaultMode:"view"},
+{key:"unifiedcalendar",icon:"📅", label:"Calendar & Attendance",defaultMode:"view"},
+{key:"gallery",        icon:"🖼️", label:"Gallery",              defaultMode:"view"},
+];
+const EMPLOYEE_DEFAULT_KEYS = new Set(EMPLOYEE_DEFAULT_SECTIONS.map(s=>s.key));
+const PERM_BASED_ROLES = new Set(["vice_principal","staff","reception","accountant","coordinator","transport_head","librarian","driver"]);
+function getPermMode(perms, key) {
+if (!Array.isArray(perms)) return "off";
+var p = perms.find(function(x){ return typeof x==="string" ? x===key : x.key===key; });
+if (!p) return "off";
+return typeof p==="string" ? "edit" : (p.mode||"edit");
+}
+function hasPermAccess(perms, key) { return getPermMode(perms,key)!=="off"; }
+function hasPermEdit(perms, key)   { return getPermMode(perms,key)==="edit"; }
+function extractPermKeys(perms) {
+if (!Array.isArray(perms)) return [];
+return perms.map(function(p){ return typeof p==="string"?p:p.key; }).filter(Boolean);
+}
+function getMyPerms(ctx) {
+const u = ctx?.loggedInUser;
+if (!u) return [];
+return u.vpPermissions || u.staffPermissions || u.receptionPermissions ||
+u.accountantPermissions || u.coordinatorPermissions ||
+u.transportHeadPermissions || u.librarianPermissions || u.driverPermissions ||
+u.teacherPermissions || [];
+}
+function canDo(ctx, section, action) {
+const role = ctx?.loggedInUser?.role || ctx?.role;
+if (!role) return false;
+if (["principal","founder","superadmin"].includes(role)) return true;
+const PRINCIPAL_ONLY = new Set(["fees.editBank","schoolSettings.edit","salary.edit","salary.viewAll"]);
+if (PRINCIPAL_ONLY.has(`${section}.${action}`)) return false;
+const perms = getMyPerms(ctx);
+const mode = getPermMode(perms, section);
+if (mode === "off") return false;
+if (action === "view") return true;
+return mode === "edit";
+}
+function PermGuard({ ctx, section, children }) {
+const role = ctx?.loggedInUser?.role || ctx?.role;
+if (["principal","founder","superadmin","parent","teacher","driver","librarian"].includes(role)) return children;
+if (PERM_BASED_ROLES.has(role) && EMPLOYEE_DEFAULT_KEYS.has(section)) {
+const perms = getMyPerms(ctx);
+const mode = getPermMode(perms, section);
+if (mode === "off") return children; // show but PermGuard won't block — section itself handles view-only
+return children;
+}
+const perms = getMyPerms(ctx);
+const mode = getPermMode(perms, section);
+if (mode === "off") {
+return (
+<div className="fadeUp" style={{display:"flex",flexDirection:"column",alignItems:"center",
+justifyContent:"center",padding:"60px 24px",textAlign:"center"}}>
+<p style={{fontSize:48,marginBottom:12}}>🚫</p>
+<p style={{fontSize:20,fontWeight:800,color:T.text,marginBottom:8}}>Access Denied</p>
+<p style={{fontSize:13,color:T.textMuted,maxWidth:280}}>
+Aapke paas <b>{section}</b> section ka access nahi hai.
+Principal se contact karein.
+</p>
+</div>
+);
+}
+return children;
+}
+const initUserAccounts = [];
+function deduplicateById(arr) {
+if (!Array.isArray(arr)) return [];
+const seen = new Map();
+const noId = [];
+arr.forEach(item => {
+if (!item) return;
+if (item.id !== undefined && item.id !== null) seen.set(item.id, item);
+else noId.push(item); // no id — keep as-is
+});
+return [...Array.from(seen.values()), ...noId];
+}
+function deduplicateStudents(arr) {
+if (!Array.isArray(arr)) return [];
+const seenId = new Map();
+arr.forEach(item => {
+if (!item || item.id === undefined || item.id === null) return;
+if (!seenId.has(item.id)) seenId.set(item.id, item);
+});
+return Array.from(seenId.values());
+}
+const GLOBAL_KEYS = ["schools","discounts","userAccounts","sessions","supportInfo","houseNames","classNames","panicAlerts","fcmTriggers","leavePolicy"];
+function getFirebasePath(key) {
+if (key === "schools") return "schoolshield/schoolList";
+if (GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_")) {
+return "schoolshield/" + key;
+}
+const schoolId = window.currentSchoolId;
+if (!schoolId) return null;
+return `schoolshield/schools/${schoolId}/${key}`;
+}
+function ssRef(key) {
+const path = getFirebasePath(key);
+if (!path) return null;
+return window.db.ref(path);
+}
+function ssSchoolRef(suffix) {
+const schoolId = window.currentSchoolId;
+if (!schoolId) return null;
+return window.db.ref(`schoolshield/schools/${schoolId}/${suffix}`);
+}
+function getCacheKey(key) {
+if (key === "schools") return "ss_cache_schoolList";
+if (GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_")) {
+return "ss_cache_" + key;
+}
+const schoolId = window.currentSchoolId;
+if (!schoolId) return "ss_cache_no_school_" + key;
+return `ss_cache_${schoolId}_${key}`;
+}
+const setCurrentSchoolId = (id) => {
+window.currentSchoolId = id;
+window.dispatchEvent(new CustomEvent("ss_school_changed", { detail: { schoolId: id } }));
+};
+function usePersist(key, init) {
+const [currentSID, setCurrentSID] = useState(() => window.currentSchoolId || null);
+useEffect(() => {
+const handler = (e) => setCurrentSID(e.detail.schoolId || null);
+window.addEventListener("ss_school_changed", handler);
+return () => window.removeEventListener("ss_school_changed", handler);
+}, []);
+const cacheKey = getCacheKey(key);
+const [val, setVal] = useState(() => {
+try {
+const s = localStorage.getItem(cacheKey);
+if (s) {
+const parsed = JSON.parse(s);
+const OBJECT_KEYS = ["attendanceLogs","schoolPageData","thoughtOfDay"];
+if (!Array.isArray(parsed) && parsed && typeof parsed === "object" && !OBJECT_KEYS.includes(key)) {
+return deduplicateById(Object.values(parsed));
+}
+return Array.isArray(parsed) ? deduplicateById(parsed) : parsed;
+}
+} catch {}
+return init;
+});
+const isGlobalKey = GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_");
+const effectDep = isGlobalKey ? key : (key + "|" + (currentSID || ""));
+useEffect(() => {
+if (!window.firebaseReady) return;
+const fbPath = getFirebasePath(key);
+if (!fbPath) return;
+if (!isGlobalKey && !window.currentSchoolId) return;
+const ref = window.db.ref(fbPath);
+const onValue = ref.on("value", snap => {
+const data = snap.val();
+if (data !== null) {
+try {
+const parsed = typeof data === "string" ? JSON.parse(data) : data;
+const OBJECT_KEYS = ["attendanceLogs","schoolPageData","thoughtOfDay"];
+let clean;
+let parsedArr = parsed;
+if (!Array.isArray(parsed) && parsed && typeof parsed === "object" && !OBJECT_KEYS.includes(key)) {
+parsedArr = Object.values(parsed);
+}
+if (key === "timetable" && Array.isArray(parsedArr)) {
+clean = deduplicateById(parsedArr.map(t => ({
+...t,
+periods: (t.periods || []).map(p => ({
+subject: p.subject || "Mathematics",
+teacher: p.teacher || "",
+room: p.room || "",
+startTime: p.startTime || (p.time ? p.time.split("-")[0]+":00 AM" : "8:00 AM"),
+endTime: p.endTime || (p.time ? p.time.split("-")[1]+":00 AM" : "9:00 AM"),
+}))
+})));
+} else if (Array.isArray(parsedArr)) {
+clean = key === "students" ? deduplicateStudents(parsedArr) : deduplicateById(parsedArr);
+} else {
+clean = parsed;
+}
+setVal(clean);
+try { localStorage.setItem(cacheKey, JSON.stringify(clean)); } catch {}
+} catch(e) {
+}
+} else {
+const emptyVal = Array.isArray(init) ? [] : (typeof init === "object" && init !== null ? {} : init);
+setVal(emptyVal);
+}
+}, err => {
+});
+return () => ref.off("value", onValue);
+}, [effectDep]); // GLOBAL_KEYS: key only; School-specific: key+schoolId
+const setPersist = (updater) => {
+setVal(prev => {
+const next = typeof updater === "function" ? updater(prev) : updater;
+if (next === null || next === undefined) {
+return next;
+}
+if (window.isDeletingSchool && !GLOBAL_KEYS.includes(key)) {
+return next;
+}
+const jsonStr = JSON.stringify(next);
+const fbPath = getFirebasePath(key);
+const isGlobal = GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_");
+const canWrite = fbPath && (isGlobal || window.currentSchoolId);
+if (window.__isDemoMode) {
+} else if (window.__isDemoMode) {
+} else if (canWrite && window.firebaseReady && navigator.onLine) {
+try {
+window.db.ref(fbPath).set(jsonStr);
+} catch(e) {
+addToOfflineQueue(key, jsonStr);
+}
+} else if (!canWrite) {
+} else {
+addToOfflineQueue(key, jsonStr);
+}
+try {
+localStorage.setItem(cacheKey, jsonStr);
+} catch(e) {
+try {
+const stripped = JSON.stringify(next, (k,v) =>
+k === "dataUrl" && typeof v === "string" && v.length > 2000 ? null : v
+);
+localStorage.setItem(cacheKey, stripped);
+} catch {}
+}
+return next;
+});
+};
+return [val, setPersist];
+}
+const SYNC_QUEUE_KEY = "ss_offlineSyncQueue";
+function getOfflineQueue() {
+try { const s = localStorage.getItem(SYNC_QUEUE_KEY); return s ? JSON.parse(s) : []; } catch { return []; }
+}
+function addToOfflineQueue(key, value) {
+try {
+const q = getOfflineQueue();
+const filtered = q.filter(item => item.key !== key);
+const fbPath = getFirebasePath(key);
+filtered.push({ key, value, fbPath, ts: Date.now() });
+localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(filtered));
+} catch {}
+}
+function clearOfflineQueue() {
+try { localStorage.removeItem(SYNC_QUEUE_KEY); } catch {}
+}
+async function flushOfflineQueue() {
+if (!window.firebaseReady || !navigator.onLine) return;
+const q = getOfflineQueue();
+if (q.length === 0) return;
+for (const item of q) {
+try {
+const fbPath = item.fbPath || ("schoolshield/" + item.key);
+await window.db.ref(fbPath).set(item.value);
+} catch(e) {
+return; // Stop on first failure
+}
+}
+clearOfflineQueue();
+}
+if (typeof window !== "undefined") {
+window.addEventListener("online", () => {
+setTimeout(flushOfflineQueue, 1500);
+});
+}
+function useNetworkStatus() {
+const [online, setOnline] = React.useState(navigator.onLine);
+React.useEffect(() => {
+const goOnline  = () => { setOnline(true);  flushOfflineQueue(); };
+const goOffline = () => setOnline(false);
+window.addEventListener("online",  goOnline);
+window.addEventListener("offline", goOffline);
+return () => {
+window.removeEventListener("online",  goOnline);
+window.removeEventListener("offline", goOffline);
+};
+}, []);
+return online;
+}
+const DEFAULT_SUPPORT = {
+phone:"8800000000", whatsapp:"8800000000",
+email:"support@schoolshield.in", hours:"Mon-Sat, 9AM-6PM", faqUrl:""
+};
+function useSupportInfo() {
+const [info, setInfo] = useState(()=>{
+try { const s=localStorage.getItem("ss_supportInfo"); return s?JSON.parse(s):DEFAULT_SUPPORT; } catch { return DEFAULT_SUPPORT; }
+});
+useEffect(()=>{
+if(!window.firebaseReady) return;
+const ref = window.db.ref("schoolshield/supportInfo");
+ref.on("value", snap=>{
+if(snap.exists()){
+const d = snap.val();
+setInfo(d);
+try { localStorage.setItem("ss_supportInfo", JSON.stringify(d)); } catch {}
+}
+});
+return ()=>ref.off();
+},[]);
+return [info, setInfo];
+}
+function ShieldAssistant({ shieldData }) {
+const [open, setOpen] = React.useState(false);
+const [listening, setListening] = React.useState(false);
+const [response, setResponse] = React.useState("");
+const [transcript, setTranscript] = React.useState("");
+const recognRef = React.useRef(null);
+
+const speak = function(text) {
+  setResponse(text);
+  try {
+    if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "hi-IN";
+    u.rate = 0.9;
+    window.speechSynthesis.speak(u);
+    }
+  } catch(e) {}
+};
+
+const processQuery = function(q) {
+  var orig = q || "";
+  q = orig.toLowerCase();
+  var sd = shieldData || {};
+  var today = new Date().toISOString().slice(0,10);
+  var now = new Date();
+  var thisMonth = today.slice(0,7);
+  var dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var todayDay = dayNames[now.getDay()];
+
+  var loggedIn = sd.loggedInUser || {};
+  var role = loggedIn.role || "";
+  var mySchoolId = loggedIn.schoolId || null;
+  var currentSchool = sd.currentSchool || {};
+
+  var bySchool = function(arr) {
+    if (!mySchoolId) return arr || [];
+    return (arr||[]).filter(function(x){ return !x.schoolId || String(x.schoolId)===String(mySchoolId); });
+  };
+
+  var myStudents = bySchool(sd.students);
+  var myTeachers = bySchool(sd.teachers);
+  var myEmployees = bySchool(sd.employees);
+  var myFees = bySchool(sd.fees);
+  var myAlerts = bySchool(sd.alerts);
+  var myNotices = bySchool(sd.notices);
+  var myHomework = bySchool(sd.homework);
+  var myTimetable = bySchool(sd.timetable);
+  var myExams = bySchool(sd.exams);
+  var myMarks = bySchool(sd.marks);
+  var myLeaves = bySchool(sd.leaves);
+  var myBuses = bySchool(sd.buses);
+  var mySyllabus = bySchool(sd.syllabus);
+  var myDiscipline = bySchool(sd.disciplineLog);
+  var myExpenses = bySchool(sd.expenses);
+  var logs = sd.attendanceLogs || {};
+  var go = sd.setActiveSection || null;
+
+  var goAndSpeak = function(section, msg) {
+    if (go) { go(section); setOpen(false); }
+    speak(msg);
+  };
+
+  var myStudent = null;
+  if (role === "parent" || role === "student") {
+    myStudent = myStudents.find(function(s){ return s.name && s.name.toLowerCase() === (loggedIn.name||"").toLowerCase(); });
+    if (!myStudent && myStudents.length === 1) myStudent = myStudents[0];
+  }
+
+  var nameMatch = null;
+  var nameMatchType = "";
+  var cleanQ = q.replace(/student|teacher|employee|staff|ki|ka|ke|ko|meri|mera|mein|hai|kahan|kaun/g,"").trim();
+  if (cleanQ.length > 2) {
+    myStudents.forEach(function(s){ if(!nameMatch && s.name && s.name.length>2 && cleanQ.includes(s.name.toLowerCase())){ nameMatch=s; nameMatchType="student"; } });
+    if (!nameMatch) myTeachers.forEach(function(t){ if(!nameMatch && t.name && t.name.length>2 && cleanQ.includes(t.name.toLowerCase())){ nameMatch=t; nameMatchType="teacher"; } });
+    if (!nameMatch) myEmployees.forEach(function(e){ if(!nameMatch && e.name && e.name.length>2 && cleanQ.includes(e.name.toLowerCase())){ nameMatch=e; nameMatchType="employee"; } });
+  }
+  var targetStu = (nameMatchType==="student" ? nameMatch : null) || (role==="parent"||role==="student" ? myStudent : null);
+
+  var isAttend = q.includes("attend")||q.includes("present")||q.includes("absent")||q.includes("haziri")||q.includes("hazir")||orig.includes("हाज़िरी")||orig.includes("उपस्थित");
+  if (isAttend && targetStu) {
+    var sKey = "student_" + targetStu.id;
+    var sLogs = logs[sKey] || {};
+    var td = Object.keys(sLogs).length;
+    var pd = Object.keys(sLogs).filter(function(d){ return sLogs[d].status==="present"; }).length;
+    var pct = td > 0 ? Math.round((pd/td)*100) : 0;
+    var todayLog = sLogs[today];
+    if (q.includes("percent")||q.includes("kitni")||q.includes("percentage")) {
+    if (go) { go("unifiedcalendar"); setOpen(false); }
+    setTimeout(function(){ if(window.__shieldOpenAttendance) window.__shieldOpenAttendance(targetStu); }, 400);
+    speak(targetStu.name + " ki attendance " + pct + "% hai" + (pct<75?" — 75% se kam!":" — acchi hai")); return;
+    }
+    if (go) { go("unifiedcalendar"); setOpen(false); }
+    setTimeout(function(){ if(window.__shieldOpenAttendance) window.__shieldOpenAttendance(targetStu); }, 400);
+    speak(targetStu.name + " aaj " + (todayLog&&todayLog.status==="present"?"present":"absent") + " hai. Overall " + pct + "%"); return;
+  }
+  if (isAttend) {
+    var askTeacher = q.includes("teacher")||q.includes("staff");
+    var pfx = askTeacher ? "teacher_" : "student_";
+    var lst = askTeacher ? myTeachers : myStudents;
+    var sp=0; var sa=0; var abN=[];
+    lst.forEach(function(s){ var lg=logs[pfx+s.id]&&logs[pfx+s.id][today]; if(lg&&lg.status==="present")sp++; else{sa++;if(s.name)abN.push(s.name);} });
+    if (q.includes("absent") && abN.length>0 && abN.length<=5) { goAndSpeak("unifiedcalendar","Absent: "+abN.slice(0,5).join(", ")); return; }
+    goAndSpeak("unifiedcalendar",(askTeacher?"Teachers":"Students")+": Aaj "+sp+" present, "+sa+" absent. Total "+lst.length); return;
+  }
+
+  if (q.includes("fees")||q.includes("fee")||q.includes("due")||q.includes("pending payment")||orig.includes("फीस")) {
+    var stuFees = targetStu ? myFees.filter(function(f){return f.studentName===targetStu.name;}) : myFees;
+    var due = stuFees.filter(function(f){return !f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.amount||0);},0);
+    var paid = stuFees.filter(function(f){return f.paid&&!f.isDiscount;}).reduce(function(s,f){return s+(f.paidAmount||f.amount||0);},0);
+    if (targetStu && window.__setFeeStudent) window.__setFeeStudent(targetStu);
+    goAndSpeak("fees", due>0 ? (targetStu?targetStu.name+" ki ":"")+"₹"+due.toLocaleString("en-IN")+" fees due hai!" : (targetStu?targetStu.name+" ki ":"Sabki ")+"fees clear! Paid: ₹"+paid.toLocaleString("en-IN")); return;
+  }
+
+  var isExpense = q.includes("expense")||q.includes("income")||q.includes("kharcha")||q.includes("revenue")||q.includes("earning")||q.includes("profit")||q.includes("loss")||orig.includes("खर्चा")||orig.includes("आमदनी");
+  if (isExpense) {
+    var todayExp = myExpenses.filter(function(e){ return e.date===today; });
+    var monthExp = myExpenses.filter(function(e){ return (e.date||"").slice(0,7)===thisMonth; });
+    var todayInc = todayExp.filter(function(e){ return e.type==="income"; }).reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var todayKharcha = todayExp.filter(function(e){ return e.type!=="income"; }).reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var monthInc = monthExp.filter(function(e){ return e.type==="income"; }).reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var monthKharcha = monthExp.filter(function(e){ return e.type!=="income"; }).reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var totalInc = myExpenses.filter(function(e){ return e.type==="income"; }).reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+    var totalExp2 = myExpenses.filter(function(e){ return e.type!=="income"; }).reduce(function(s,e){return s+(Number(e.amount)||0);},0);
+
+    if (q.includes("aaj")||q.includes("today")||q.includes("abhi")) {
+    if (todayInc===0 && todayKharcha===0) { goAndSpeak("expenses","Aaj koi income ya expense record nahi hai"); return; }
+    var todayItems = todayExp.map(function(e){ return (e.description||e.name||e.category||"")+" ₹"+(Number(e.amount)||0).toLocaleString("en-IN"); }).slice(0,3).join(", ");
+    goAndSpeak("expenses","Aaj income: ₹"+todayInc.toLocaleString("en-IN")+", kharcha: ₹"+todayKharcha.toLocaleString("en-IN")+". "+todayItems); return;
+    }
+    if (q.includes("income")||q.includes("earning")||q.includes("revenue")||orig.includes("आमदनी")) {
+    goAndSpeak("expenses","Is mahine income: ₹"+monthInc.toLocaleString("en-IN")+". Total income: ₹"+totalInc.toLocaleString("en-IN")); return;
+    }
+    if (q.includes("kharcha")||q.includes("expense")||orig.includes("खर्चा")) {
+    var recentExp = myExpenses.filter(function(e){return e.type!=="income";}).slice(-3).map(function(e){return (e.description||e.name||e.category||"")+" ₹"+(Number(e.amount)||0).toLocaleString("en-IN");}).join(", ");
+    goAndSpeak("expenses","Is mahine kharcha: ₹"+monthKharcha.toLocaleString("en-IN")+". Recent: "+recentExp); return;
+    }
+    var profit = monthInc - monthKharcha;
+    goAndSpeak("expenses","Is mahine: Income ₹"+monthInc.toLocaleString("en-IN")+", Kharcha ₹"+monthKharcha.toLocaleString("en-IN")+", Net "+(profit>=0?"+":"")+"₹"+profit.toLocaleString("en-IN")); return;
+  }
+
+  if (q.includes("notice")||q.includes("alert")||q.includes("announcement")||orig.includes("सूचना")) {
+    var allNotices = myAlerts.concat(myNotices).filter(function(a){return !a.resolved;});
+    goAndSpeak("alertsnotices", allNotices.length===0 ? "Koi naya notice nahi" : allNotices.length+" notices. Latest: "+(allNotices[0].message||allNotices[0].title||allNotices[0].text||"")); return;
+  }
+
+  if (q.includes("timetable")||q.includes("time table")||q.includes("schedule")||q.includes("next class")||orig.includes("समयसारणी")) {
+    var dayToCheck = todayDay;
+    if (q.includes("kal")||q.includes("tomorrow")) dayToCheck = dayNames[(now.getDay()+1)%7];
+    var stuClass = targetStu ? targetStu.class : "";
+    var classTT = myTimetable.find(function(t){ return t.class===stuClass; });
+    var daySlots = classTT&&classTT.days ? (classTT.days[dayToCheck]||[]) : [];
+    var subjects = daySlots.filter(function(s){return s&&s.subject;}).map(function(s){return s.subject;});
+    goAndSpeak("timetable", subjects.length>0 ? (q.includes("kal")?"Kal ":"Aaj ")+dayToCheck+": "+subjects.join(", ") : "Timetable section mein dekho"); return;
+  }
+
+  if (q.includes("homework")||q.includes("home work")||q.includes("assignment")||orig.includes("गृहकार्य")) {
+    var stuCls = targetStu ? targetStu.class : "";
+    var todayHW = myHomework.filter(function(h){ return (!h.date||h.date===today||h.date>=today)&&(!stuCls||h.class===stuCls||h.className===stuCls); });
+    if (q.includes("pending")||q.includes("baaki")) {
+    var pendHW = myHomework.filter(function(h){return !h.submitted&&(!stuCls||h.class===stuCls);});
+    goAndSpeak("homework", pendHW.length===0?"Koi pending homework nahi!":pendHW.length+" pending: "+(pendHW[0].subject||pendHW[0].title||"")); return;
+    }
+    goAndSpeak("homework", todayHW.length===0?"Aaj ka koi homework nahi!":"Aaj "+todayHW.length+" homework: "+todayHW.slice(0,3).map(function(h){return h.subject||h.title||"";}).filter(Boolean).join(", ")); return;
+  }
+
+  if (q.includes("exam")||q.includes("test")||q.includes("result")||q.includes("marks")||q.includes("score")||orig.includes("परीक्षा")) {
+    var stuCls2 = targetStu ? targetStu.class : "";
+    var upcoming = myExams.filter(function(e){return e.date&&e.date>=today&&(!stuCls2||e.class===stuCls2);}).sort(function(a,b){return a.date>b.date?1:-1;});
+    if (q.includes("marks")||q.includes("result")||q.includes("score")) {
+    var stuMarks = targetStu ? myMarks.filter(function(m){return m.studentName===targetStu.name||m.studentId===targetStu.id;}) : myMarks;
+    if (stuMarks.length===0) { goAndSpeak("exams","Koi marks data nahi"); return; }
+    var lat = stuMarks[stuMarks.length-1];
+    goAndSpeak("exams",(targetStu?targetStu.name+" ke ":"")+(lat.subject||"")+" mein "+(lat.marks||lat.obtained||lat.score||"")+" marks"); return;
+    }
+    goAndSpeak("exams", upcoming.length===0?"Koi upcoming exam nahi":"Agla exam: "+(upcoming[0].subject||upcoming[0].title||"")+" — "+upcoming[0].date); return;
+  }
+
+  if (q.includes("transport")||q.includes("bus")||q.includes("gadi")||orig.includes("बस")) {
+    var activeBus = myBuses.find(function(b){return b.sharingActive;});
+    goAndSpeak("transport", activeBus ? "Bus "+(activeBus.busNo||"")+" live hai — "+(activeBus.driverName||"driver")+" drive kar raha hai" : myBuses.length+" buses hain. Abhi koi live nahi"); return;
+  }
+
+  if (q.includes("leave")||q.includes("chutti")||orig.includes("छुट्टी")) {
+    var pendLeaves = myLeaves.filter(function(l){return l.status==="pending"||!l.status;});
+    var appLeaves = myLeaves.filter(function(l){return l.status==="approved";});
+    goAndSpeak("leaves", pendLeaves.length+" pending, "+appLeaves.length+" approved leave applications"); return;
+  }
+
+  if (nameMatch) {
+    if (nameMatchType==="student") {
+    var ns = nameMatch;
+    var nsKey = "student_" + ns.id;
+    var nsLogs = logs[nsKey] || {};
+    var nsTd = Object.keys(nsLogs).length;
+    var nsPd = Object.keys(nsLogs).filter(function(d){ return nsLogs[d].status==="present"; }).length;
+    var nsPct = nsTd > 0 ? Math.round((nsPd/nsTd)*100) : 0;
+    var nsTodayLog = nsLogs[today];
+    var nsTodayStatus = nsTodayLog ? (nsTodayLog.status==="present" ? "present" : "absent") : "data nahi";
+    var nsFees = myFees.filter(function(f){ return f.studentName===ns.name; });
+    var nsDue = nsFees.filter(function(f){ return !f.paid&&!f.isDiscount; }).reduce(function(s,f){ return s+(Number(f.amount)||0); },0);
+    var nsPaid = nsFees.filter(function(f){ return f.paid&&!f.isDiscount; }).reduce(function(s,f){ return s+(Number(f.paidAmount||f.amount)||0); },0);
+    var nsFeeSummary = nsDue>0 ? "Fees due: Rs "+nsDue.toLocaleString("en-IN") : (nsPaid>0 ? "Fees clear" : "Fees data nahi");
+    var nsMsg = ns.name
+    + " — Class " + (ns.class||"N/A")
+    + ", Roll: " + (ns.rollNo||"N/A")
+    + ". Aaj " + nsTodayStatus
+    + ". Attendance: " + nsPct + "%"
+    + ". " + nsFeeSummary
+    + (ns.parentPhone ? ". Parent: " + ns.parentPhone : "");
+    if (go) { go("students"); setOpen(false); }
+    setTimeout(function(){ if(window.__shieldOpenStudent) window.__shieldOpenStudent(ns); }, 400);
+    speak(nsMsg); return;
+    }
+    if (nameMatchType==="teacher") {
+    var nt = nameMatch;
+    var ntMsg = nt.name
+    + " — " + (nt.subject||nt.designation||"Teacher")
+    + ", Phone: " + (nt.phone||"N/A")
+    + (nt.assignedClass ? ", Class: " + nt.assignedClass : "")
+    + (nt.email ? ", Email: " + nt.email : "");
+    if (go) { go("teachers"); setOpen(false); }
+    setTimeout(function(){ if(window.__shieldOpenTeacher) window.__shieldOpenTeacher(nt); }, 400);
+    speak(ntMsg); return;
+    }
+    if (nameMatchType==="employee") {
+    var ne = nameMatch;
+    var neMsg = ne.name
+    + " — " + (ne.designation||"Employee")
+    + ", Dept: " + (ne.department||"N/A")
+    + (ne.phone ? ", Phone: " + ne.phone : "");
+    if (go) { go("employees"); setOpen(false); }
+    setTimeout(function(){ if(window.__shieldOpenEmployee) window.__shieldOpenEmployee(ne); }, 400);
+    speak(neMsg); return;
+    }
+  }
+
+  if (q.includes("kitne")||q.includes("total")||q.includes("how many")) {
+    goAndSpeak("students","School mein "+myStudents.length+" students, "+myTeachers.length+" teachers, "+myEmployees.length+" employees hain"); return;
+  }
+
+  var navMap = [
+    {k:["dashboard","home"],s:"dashboard",m:"Dashboard khul gaya"},
+    {k:["library","book","kitab"],s:"library",m:"Library khul gaya"},
+    {k:["gallery","photo"],s:"gallery",m:"Gallery khul gaya"},
+    {k:["canteen","khana","menu","lunch"],s:"canteen",m:"Canteen menu khul gaya"},
+    {k:["visitor","guest"],s:"visitors",m:"Visitors log khul gaya"},
+    {k:["reached home","ghar pahuncha"],s:"reachedhome",m:"Reached Home status khul gaya"},
+    {k:["health","sehat","temperature"],s:"healthcheckin",m:"Health Check-in khul gaya"},
+    {k:["inventory","stock","saman"],s:"inventory",m:"Inventory khul gaya"},
+    {k:["camera","cctv","live feed"],s:"livecamera",m:"Live Camera khul gaya"},
+    {k:["certificate","tc","transfer cert"],s:"letterscerts",m:"Certificates section khul gaya"},
+    {k:["school page","school info"],s:"schoolpage",m:"School Page khul gaya"},
+    {k:["syllabus","course","padhna"],s:"syllabus",m:"Syllabus section khul gaya"},
+    {k:["discipline","behavior"],s:"discipline",m:"Discipline report khul gaya"},
+    {k:["pickup","authorized"],s:"authorizedpickup",m:"Authorized Pickup khul gaya"},
+    {k:["trip","picnic","tour"],s:"tripmanagement",m:"Trip Management khul gaya"},
+    {k:["online class","virtual","zoom","meet"],s:"onlineclass",m:"Online Classes khul gaya"},
+    {k:["staff directory","contact list","directory"],s:"staffdirectory",m:"Staff Directory khul gaya"},
+    {k:["feedback","parent feedback","poll","feedback poll"],s:"parentfeedback",m:"Feedback & Poll khul gaya"},
+    {k:["calendar","attendance page"],s:"unifiedcalendar",m:"Calendar & Attendance khul gaya"},
+    {k:["teacher list","sab teachers"],s:"teachers",m:"Teachers list — total "+myTeachers.length+" teachers"},
+    {k:["student list","sab students"],s:"students",m:"Students list — total "+myStudents.length+" students"},
+    {k:["employee list","sab staff"],s:"employees",m:"Employees list — total "+myEmployees.length+" employees"},
+    {k:["account","setting"],s:"accounts",m:"Accounts section khul gaya"},
+  ];
+  var matched = null;
+  navMap.forEach(function(nm){ if(!matched) nm.k.forEach(function(k){ if(!matched&&q.includes(k)) matched=nm; }); });
+  if (matched) { goAndSpeak(matched.s, matched.m); return; }
+
+  if (q.includes("help")||q.includes("kya kar")) {
+    speak("Main Shield hun. Puchh sakte hain: attendance, fees, income, kharcha, timetable, homework, exams, bus, notices, aur kisi bhi module ka naam"); return;
+  }
+
+  speak("Samajh nahi aaya. Boliye: attendance, fees, income, kharcha, exam, timetable, ya koi naam");
+};
+
+const startListening = function() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { speak("Chrome use karein"); return; }
+  try {
+    var r = new SR();
+    r.lang = "en-IN";
+    r.continuous = false;
+    r.interimResults = false;
+    r.onstart = function(){ setListening(true); };
+    r.onresult = function(e){
+    var t = e.results[0][0].transcript;
+    setTranscript(t);
+    setListening(false);
+    processQuery(t);
+    };
+    r.onerror = function(){ setListening(false); };
+    r.onend = function(){ setListening(false); };
+    recognRef.current = r;
+    r.start();
+  } catch(e){ setListening(false); }
+};
+
+return (
+<div>
+<button
+onClick={function(){setOpen(function(p){return !p;});}}
+title="Shield Assistant"
+style={{position:"fixed",bottom:162,right:24,zIndex:2999,
+width:52,height:52,borderRadius:"50%",
+background:"linear-gradient(135deg,#F5A623,#D97706)",
+border:"none",cursor:"pointer",
+boxShadow:"0 4px 20px rgba(245,166,35,0.5)",
+display:"flex",alignItems:"center",
+justifyContent:"center",fontSize:20}}>
+{"🛡️"}
+</button>
+{open && (
+<div style={{position:"fixed",bottom:226,right:16,zIndex:2999,width:280,
+background:"#0f172a",border:"1px solid rgba(245,166,35,0.3)",
+borderRadius:16,padding:14,
+boxShadow:"0 8px 32px rgba(0,0,0,0.7)"}}>
+<div style={{display:"flex",alignItems:"center",
+justifyContent:"space-between",marginBottom:10}}>
+<div style={{display:"flex",alignItems:"center",gap:8}}>
+<span style={{fontSize:18}}>{"🛡️"}</span>
+<div>
+<p style={{fontSize:13,fontWeight:800,color:"#F5A623",margin:0}}>{"Shield"}</p>
+<p style={{fontSize:10,color:"rgba(255,255,255,0.4)",margin:0}}>{"Voice Assistant"}</p>
+</div>
+</div>
+<button
+onClick={function(){setOpen(false);}}
+style={{background:"none",border:"none",
+color:"rgba(255,255,255,0.4)",fontSize:18,cursor:"pointer"}}>
+{"x"}
+</button>
+</div>
+<div style={{background:"rgba(255,255,255,0.05)",borderRadius:8,
+padding:"8px 10px",minHeight:50,marginBottom:10}}>
+{transcript
+? (<p style={{fontSize:11,color:"rgba(255,255,255,0.4)",margin:"0 0 2px"}}>{"You: "+transcript}</p>)
+: null}
+{response
+? (<p style={{fontSize:12,color:"#F5A623",fontWeight:600,margin:0}}>{response}</p>)
+: (<p style={{fontSize:11,color:"rgba(255,255,255,0.25)",fontStyle:"italic",margin:0}}>{"Bolo Shield se..."}</p>)
+}
+</div>
+<button
+onClick={listening
+? function(){
+try{ if(recognRef.current) recognRef.current.stop(); }catch(e){}
+setListening(false);
+}
+: startListening}
+style={{width:"100%",padding:"9px",borderRadius:8,border:"none",
+background:listening?"#ef4444":"#F5A623",
+color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",
+fontFamily:"Outfit,sans-serif",
+display:"flex",alignItems:"center",
+justifyContent:"center",gap:6}}>
+{listening ? "🔴 Sun raha hun..." : "🎤 Bolo Shield se"}
+</button>
+</div>
+)}
+</div>
+);
+}
+
+function CustomerSupport() {
+const [open, setOpen] = useState(false);
+const [info] = useSupportInfo();
+return (
+<>
+<button onClick={()=>setOpen(true)} style={{
+position:"fixed", bottom:90, right:24, zIndex:3000,
+width:58, height:58, borderRadius:"50%",
+background:"linear-gradient(135deg,#4F8EF7,#A78BFA)",
+border:"none", cursor:"pointer", boxShadow:"0 4px 24px rgba(79,142,247,0.6)",
+display:"flex", alignItems:"center", justifyContent:"center", fontSize:26,
+}}>💬</button>
+{open && (
+<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:4000,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:16}}>
+<div style={{background:"#161B26",borderRadius:"20px 20px 16px 16px",padding:24,width:"100%",maxWidth:440,border:"1px solid #1F2A3F"}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+<div>
+<p style={{fontWeight:800,color:"#E8EEF8",fontSize:17}}>💬 Customer Support</p>
+<p style={{fontSize:12,color:"#6B7A99",marginTop:2}}>{info.hours}</p>
+</div>
+<button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:"#6B7A99",fontSize:22,cursor:"pointer"}}>✕</button>
+</div>
+<div style={{display:"grid",gap:10}}>
+{[
+{icon:"📞",label:"Call Support",sub:info.hours,color:"#0ECB81",action:()=>window.open("tel:+91"+info.phone)},
+{icon:"💬",label:"WhatsApp",sub:"+91 "+info.whatsapp,color:"#25D366",action:()=>window.open("https://wa.me/91"+info.whatsapp+"?text=Hello SchoolShield Support")},
+{icon:"📧",label:"Email Us",sub:info.email,color:"#4F8EF7",action:()=>window.open("mailto:"+info.email)},
+{icon:"❓",label:"FAQs / Help Center",sub:"Browse common questions",color:"#A78BFA",action:()=>{ if(info.faqUrl) window.open(info.faqUrl,"_blank"); else alert("Help Center coming soon!"); }},
+].map(opt=>(
+<button key={opt.label} onClick={opt.action} style={{
+display:"flex",alignItems:"center",gap:14,padding:"12px 16px",
+background:opt.color+"12",border:"1px solid "+opt.color+"30",
+borderRadius:12,cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"Outfit,sans-serif"
+}}>
+<span style={{fontSize:26}}>{opt.icon}</span>
+<div>
+<p style={{fontWeight:700,color:"#E8EEF8",fontSize:14}}>{opt.label}</p>
+<p style={{fontSize:11,color:"#6B7A99",marginTop:1}}>{opt.sub}</p>
+</div>
+</button>
+))}
+</div>
+</div>
+</div>
+)}
+</>
+);
+}
+function SupportSettingsSection() {
+const [info, setInfo] = useSupportInfo();
+const [saved, setSaved] = useState(false);
+const save = () => {
+try { localStorage.setItem("ss_supportInfo", JSON.stringify(info)); } catch {}
+if(window.firebaseReady) {
+window.db.ref("schoolshield/supportInfo").set(info);
+}
+setSaved(true);
+setTimeout(()=>setSaved(false), 2500);
+};
+const Field = ({label, k, placeholder, type="text"}) => (
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>{label}</p>
+<input type={type} value={info[k]||""} onChange={e=>setInfo(p=>({...p,[k]:e.target.value}))} placeholder={placeholder}
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+</div>
+);
+return (
+<div className="fadeUp">
+<SectionHeader title="⚙️ Support Settings" />
+<div style={{background:"#161B26",border:"1px solid #1F2A3F",borderRadius:14,padding:24,maxWidth:500}}>
+<p style={{fontWeight:700,color:"#E8EEF8",marginBottom:6,fontSize:15}}>📞 Customer Support Info</p>
+<p style={{fontSize:12,color:"#6B7A99",marginBottom:20}}>Yeh details sabhi users ke Customer Support button mein dikhengi — Phone, WhatsApp, Email sab aap set kar sakte ho.</p>
+<Field label="📞 Phone Number (Call)" k="phone" placeholder="e.g. 9800000000" />
+<Field label="💬 WhatsApp Number" k="whatsapp" placeholder="e.g. 9800000000" />
+<Field label="📧 Email Address" k="email" placeholder="e.g. support@yourschool.in" type="email" />
+<Field label="🕐 Support Hours" k="hours" placeholder="e.g. Mon-Sat, 9AM-6PM" />
+<Field label="❓ FAQ/Help URL (optional)" k="faqUrl" placeholder="https://..." />
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🤖 Active AI Provider</p>
+<select value={info.aiProvider||"groq"} onChange={e=>setInfo(p=>({...p,aiProvider:e.target.value}))}
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}}>
+<option value="groq">Groq (Llama3) — Fast & Free</option>
+<option value="gemini">Google Gemini</option>
+<option value="claude">Claude (Anthropic) — Best Quality</option>
+</select>
+</div>
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🟢 Groq API Key</p>
+<input type="password" value={info.groqApiKey||""} onChange={e=>setInfo(p=>({...p,groqApiKey:e.target.value}))} placeholder="gsk_xxxxxxxxxxxxxxxxxxxx"
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+<p style={{fontSize:11,color:"#6B7A99",marginTop:4}}>groq.com se milegi — Free tier available</p>
+</div>
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🔵 Google Gemini API Key</p>
+<input type="password" value={info.geminiApiKey||""} onChange={e=>setInfo(p=>({...p,geminiApiKey:e.target.value}))} placeholder="AIzaSy_xxxxxxxxxxxxxxxxxxxx"
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+<p style={{fontSize:11,color:"#6B7A99",marginTop:4}}>aistudio.google.com se milegi — Free tier available</p>
+</div>
+<div style={{marginBottom:14}}>
+<p style={{fontSize:11,color:"#6B7A99",textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🟣 Claude (Anthropic) API Key</p>
+<input type="password" value={info.claudeApiKey||""} onChange={e=>setInfo(p=>({...p,claudeApiKey:e.target.value}))} placeholder="sk-ant-xxxxxxxxxxxxxxxxxxxx"
+style={{width:"100%",background:"#0F1117",border:"1px solid #1F2A3F",borderRadius:8,padding:"10px 14px",color:"#E8EEF8",fontSize:14,outline:"none",fontFamily:"Outfit,sans-serif",boxSizing:"border-box"}} />
+<p style={{fontSize:11,color:"#6B7A99",marginTop:4}}>console.anthropic.com se milegi</p>
+</div>
+<button onClick={save} style={{
+width:"100%",padding:"13px",
+background:saved?"#0ECB81":"#4F8EF7",
+border:"none",borderRadius:10,color:"#fff",fontWeight:800,fontSize:15,
+cursor:"pointer",fontFamily:"Outfit,sans-serif",marginTop:4,
+transition:"background 0.3s"
+}}>{saved?"✅ Saved Successfully!":"💾 Save Changes"}</button>
+</div>
+</div>
+);
+}
+window._alarmStopped = false;
+window._alarmCtx = null;
+function stopAlarm() {
+window._alarmStopped = true;
+try { if(window._alarmCtx) { window._alarmCtx.close(); window._alarmCtx = null; } } catch(e){}
+}
+function playAlarm(type) {
+window._alarmStopped = false;
+let round = 0;
+const totalRounds = 3;
+function playOneRound() {
+if(window._alarmStopped || round >= totalRounds) return;
+round++;
+try {
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+window._alarmCtx = ctx;
+const beep = (freq, start, dur, wave) => {
+if(window._alarmStopped) return;
+const osc = ctx.createOscillator();
+const gain = ctx.createGain();
+osc.connect(gain); gain.connect(ctx.destination);
+osc.frequency.value = freq; osc.type = wave || "square";
+gain.gain.setValueAtTime(0.5, ctx.currentTime + start);
+gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+osc.start(ctx.currentTime + start);
+osc.stop(ctx.currentTime + start + dur);
+};
+if (type === "teacher") {
+for(let i = 0; i < 3; i++) {
+beep(1200, i * 0.5, 0.1, "sine");
+beep(900, i * 0.5 + 0.15, 0.1, "sine");
+}
+} else {
+for(let i = 0; i < 6; i++) {
+beep(880, i * 0.3, 0.2, "square");
+beep(440, i * 0.3 + 0.15, 0.15, "square");
+}
+}
+setTimeout(() => {
+try { ctx.close(); } catch(e){}
+playOneRound();
+}, type === "teacher" ? 1600 : 1900);
+} catch(e){}
+}
+playOneRound();
+if (type !== "teacher") startScreenFlicker();
+}
+function startScreenFlicker() {
+if(document.getElementById("ss-flicker")) return;
+const flash = document.createElement("div");
+flash.id = "ss-flicker";
+flash.style.cssText = "position:fixed;inset:0;z-index:99998;pointer-events:none;background:white;opacity:0;";
+document.body.appendChild(flash);
+let count = 0;
+const maxFlicks = 18; // 3 rounds * 6 flicks
+const interval = setInterval(() => {
+if(window._alarmStopped || count >= maxFlicks) {
+clearInterval(interval);
+flash.remove();
+return;
+}
+flash.style.opacity = count % 2 === 0 ? "0.6" : "0";
+count++;
+}, 180);
+}
+async function saveFcmToken(parentPhone, schoolId) {
+if (!window.fcmMessaging || !window.firebaseReady) return null;
+if (!window.FCM_VAPID_KEY || window.FCM_VAPID_KEY === "YOUR_VAPID_KEY_HERE") {
+return null;
+}
+try {
+const permission = await Notification.requestPermission();
+if (permission !== "granted") { console.warn("Notification permission denied"); return null; }
+const token = await window.fcmMessaging.getToken({ vapidKey: window.FCM_VAPID_KEY, serviceWorkerRegistration: window.swRegistration });
+if (token && window.firebaseReady) {
+const safePhone = (parentPhone || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
+window.db.ref(`schoolshield/fcmTokens/${schoolId}/${safePhone}`).set({ token, updatedAt: Date.now() });
+localStorage.setItem("ss_fcm_token", token);
+}
+return token;
+} catch(e) { console.warn("FCM token error:", e); return null; }
+}
+function useFcmSetup(role, loggedInUser) {
+useEffect(() => {
+if (role !== "parent" && !window.NO_LOGIN_PARENT_MODE) return;
+const phone = loggedInUser?.phone || loggedInUser?.username || "guest";
+const schoolId = loggedInUser?.schoolId || window.PARENT_SCHOOL_ID || "1";
+const timer = setTimeout(() => saveFcmToken(phone, schoolId), 2000);
+return () => clearTimeout(timer);
+}, [role, loggedInUser]);
+}
+function triggerFcmPanic(alertObj, schoolId) {
+if (!window.firebaseReady) return;
+window.db.ref("schoolshield/fcmTriggers").push({
+...alertObj,
+schoolId: schoolId || null,
+triggeredAt: Date.now(),
+processed: false
+});
+}
+function NoLoginParentView({ schools }) {
+const [panicAlerts, setPanicAlerts] = React.useState([]);
+const [notifStatus, setNotifStatus] = React.useState("unknown");
+const [schoolInfo, setSchoolInfo] = React.useState(null);
+const schoolId = window.PARENT_SCHOOL_ID || "1";
+useEffect(() => {
+const schoolArr887 = Array.isArray(schools) ? schools : Object.values(schools || {}); const school = schoolArr887.find(s => String(s.id) === String(schoolId)) || schoolArr887[0];
+setSchoolInfo(school);
+if ("Notification" in window) {
+setNotifStatus(Notification.permission);
+}
+if (!window.firebaseReady) return;
+const ref = window.db.ref("schoolshield/panicAlerts").orderByChild("schoolId").equalTo(parseInt(schoolId));
+ref.limitToLast(5).on("child_added", snap => {
+const data = snap.val();
+if (!data) return;
+setPanicAlerts(p => [data, ...p].slice(0, 10));
+playAlarm();
+showFullScreenPanic(data);
+});
+return () => ref.off();
+}, []);
+const requestNotifications = async () => {
+const token = await saveFcmToken("guest_parent", schoolId);
+const perm = Notification.permission;
+setNotifStatus(perm);
+if (token) alert("✅ Lock screen notifications enabled! Ab phone lock hone par bhi alert aayega.");
+else if (perm === "denied") alert("❌ Notifications blocked. Please allow in browser settings.");
+else if (!window.FCM_VAPID_KEY || window.FCM_VAPID_KEY === "YOUR_VAPID_KEY_HERE") alert("⚠️ VAPID key setup required. Contact admin.");
+};
+return (
+<div style={{minHeight:"100vh", background:T.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"Outfit,sans-serif"}}>
+<div style={{width:"100%", maxWidth:400}}>
+
+<div style={{textAlign:"center", marginBottom:32}}>
+<div style={{fontSize:60, marginBottom:8}}>🛡️</div>
+<h1 style={{fontSize:26, fontWeight:800, color:"#E8EEF8"}}>SchoolShield</h1>
+<p style={{color:"#6B7A99", fontSize:13, marginTop:4}}>Parent Emergency Alert Portal</p>
+{schoolInfo && <p style={{color:"#4F8EF7", fontSize:14, marginTop:6, fontWeight:600}}>{schoolInfo.logo} {schoolInfo.name}</p>}
+</div>
+
+<div style={{background:"#161B26", border:`1px solid ${notifStatus==="granted"?"#0ECB81":"#F5A623"}`, borderRadius:16, padding:20, marginBottom:16}}>
+<div style={{display:"flex", alignItems:"center", gap:12, marginBottom:12}}>
+<span style={{fontSize:32}}>{notifStatus==="granted"?"✅":"🔔"}</span>
+<div>
+<p style={{color:"#E8EEF8", fontWeight:700, fontSize:15}}>
+{notifStatus==="granted" ? "Lock Screen Alerts Active!" : "Enable Lock Screen Alerts"}
+</p>
+<p style={{color:"#6B7A99", fontSize:12, marginTop:2}}>
+{notifStatus==="granted" ? "Alerts will come even when phone is locked" : "Get panic alerts even when phone is locked"}
+</p>
+</div>
+</div>
+{notifStatus !== "granted" && (
+<button onClick={requestNotifications} style={{width:"100%", padding:"12px", background:"#F5A623", border:"none", borderRadius:10, color:"#08090E", fontWeight:800, fontSize:15, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
+🔔 Allow Lock Screen Notifications
+</button>
+)}
+{notifStatus === "denied" && (
+<p style={{color:"#F75555", fontSize:12, marginTop:8, textAlign:"center"}}>
+❌ Blocked — Go to Browser Settings &gt; Notifications &gt; Allow
+</p>
+)}
+</div>
+
+<div style={{background:"#161B26", border:"1px solid #1F2A3F", borderRadius:16, padding:20, marginBottom:16}}>
+<p style={{color:"#E8EEF8", fontWeight:700, fontSize:15, marginBottom:12}}>🚨 Recent Emergency Alerts</p>
+{panicAlerts.length === 0 ? (
+<div style={{textAlign:"center", padding:"24px 0"}}>
+<span style={{fontSize:40}}>✅</span>
+<p style={{color:"#0ECB81", fontWeight:600, marginTop:8}}>Sab safe hai!</p>
+<p style={{color:"#6B7A99", fontSize:12, marginTop:4}}>No emergency alerts</p>
+</div>
+) : panicAlerts.map((a, i) => (
+<div key={i} style={{background:"#F7555520", border:"1px solid #F75555", borderRadius:10, padding:12, marginBottom:8}}>
+<p style={{color:"#F75555", fontWeight:800, fontSize:14}}>🚨 {a.message || a.type}</p>
+<p style={{color:"#9AA3B8", fontSize:12, marginTop:4}}>🕐 {a.time}</p>
+{a.busMapLink && (
+<a href={a.busMapLink} target="_blank" rel="noopener noreferrer"
+style={{display:"inline-flex", alignItems:"center", gap:6, marginTop:8, padding:"8px 14px", background:"#4F8EF720", border:"1px solid #4F8EF7", borderRadius:8, color:"#4F8EF7", fontSize:12, fontWeight:700, textDecoration:"none"}}>
+📍 Bus ki Live Location Dekho (Google Maps)
+</a>
+)}
+{a.busNo && <p style={{color:"#F5A623", fontSize:11, marginTop:6, fontWeight:600}}>🚌 Bus: {a.busNo}</p>}
+</div>
+))}
+</div>
+
+<button onClick={() => window.location.href = window.location.pathname} style={{width:"100%", padding:"12px", background:"#4F8EF7", border:"none", borderRadius:10, color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer", fontFamily:"Outfit,sans-serif"}}>
+🔐 Full App Login
+</button>
+<p style={{color:"#6B7A99", fontSize:11, textAlign:"center", marginTop:16}}>
+Yeh page school ne share kiya hai. Koi account required nahi.
+</p>
+</div>
+</div>
+);
+}
+function showFullScreenPanic(data) {
+if (document.getElementById("panic-overlay")) return;
+playAlarm();
+const div = document.createElement("div");
+div.id = "panic-overlay";
+div.style.cssText = "position:fixed;inset:0;background:rgba(247,85,85,0.97);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Outfit,sans-serif;color:#fff;text-align:center;padding:32px;animation:fadeUp 0.3s ease;";
+const locBtn = data.busMapLink
+? `<a href="${data.busMapLink}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;padding:12px 24px;background:rgba(255,255,255,0.2);border:2px solid #fff;border-radius:12px;color:#fff;font-size:14px;font-weight:800;text-decoration:none;">📍 Bus Location Dekho (Google Maps)</a><br/>`
+: "";
+div.innerHTML = `
+<div style="font-size:80px;margin-bottom:16px;animation:pulse 0.5s infinite alternate;">🚨</div>
+<h1 style="font-size:28px;font-weight:900;margin-bottom:8px;">EMERGENCY ALERT!</h1>
+<p style="font-size:18px;margin-bottom:6px;">${data.message || data.type}</p>
+<p style="font-size:14px;opacity:0.85;margin-bottom:16px;">Time: ${data.time}</p>
+${locBtn}
+<button onclick="stopAlarm();document.getElementById('panic-overlay').remove();" style="background:#fff;color:#F75555;border:none;padding:14px 40px;border-radius:50px;font-size:16px;font-weight:800;cursor:pointer;font-family:Outfit,sans-serif;margin-top:8px;">✓ Acknowledged</button>
+`;
+document.body.appendChild(div);
+}
+function sendPanicAlert(studentName, setAlerts, toast, isAll, studentObj, schoolId, busContext) {
+playAlarm();
+const now = new Date();
+const timeStr = now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
+const finalizeSend = (locationData) => {
+const alertObj = {
+id: Date.now(),
+type: "PANIC",
+studentName: isAll ? "🚨 ALL STUDENTS" : studentName,
+parentPhone: isAll ? "ALL" : (studentObj?.parentPhone || ""),
+studentId: isAll ? "ALL" : (studentObj?.id || ""),
+message: isAll ? "MASS PANIC ALERT — All students!" : `PANIC ALERT — ${studentName}`,
+time: timeStr,
+read: false,
+isPanic: true,
+schoolId: schoolId || null,
+busLat: locationData?.lat || null,
+busLng: locationData?.lng || null,
+busNo: locationData?.busNo || busContext?.busNo || null,
+busMapLink: locationData?.lat ? `https://maps.google.com/maps?q=${locationData.lat},${locationData.lng}` : null,
+};
+setAlerts(p=>[alertObj,...p]);
+const locMsg = alertObj.busLat ? ` 📍 Bus Location: ${alertObj.busMapLink}` : "";
+toast(isAll?"🚨 PANIC SENT TO ALL PARENTS!":"🚨 PANIC ALERT SENT!" + locMsg, "error");
+if(window.firebaseReady) {
+window.db.ref("schoolshield/panicAlerts").push(alertObj);
+triggerFcmPanic(alertObj, alertObj.schoolId);
+}
+};
+if (window.firebaseReady && busContext?.id) {
+window.db.ref(`schoolshield/busLocations/${busContext.id}`).once("value").then(snap => {
+finalizeSend(snap.exists() ? snap.val() : null);
+}).catch(() => finalizeSend(null));
+} else if (navigator.geolocation) {
+navigator.geolocation.getCurrentPosition(
+pos => finalizeSend({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+() => finalizeSend(null),
+{ timeout: 3000 }
+);
+} else {
+finalizeSend(null);
+}
+}
+function useParentPanicListener(role, loggedInUser, students) {
+useEffect(()=>{
+const isParent = role === "parent" || window.NO_LOGIN_PARENT_MODE;
+if(!isParent || !window.firebaseReady) return;
+const myStudent = students.find(s =>
+s.parentPhone === loggedInUser?.phone ||
+s.id === loggedInUser?.studentId ||
+String(s.id) === String(loggedInUser?.studentId)
+);
+const mySchoolId = loggedInUser?.schoolId || window.PARENT_SCHOOL_ID || null;
+const cleanSchoolId = String(mySchoolId).replace(/[^a-zA-Z0-9]/g,"");
+const ref = window.db.ref(`schoolshield/schools/SCH_${cleanSchoolId}/alerts`);
+const cutoff = Date.now() - 60000;
+let lastTopId = null;
+ref.on("value", snap=>{
+const raw = snap.val();
+if(!raw) return;
+let arr = [];
+try { arr = typeof raw === "string" ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []); } catch { return; }
+if(!arr.length) return;
+const latest = arr[0];
+if(!latest || !latest.isPanic) return;
+if(latest.id === lastTopId) return;
+if(latest.id && latest.id < cutoff) return;
+lastTopId = latest.id;
+const isAllAlert = latest.parentPhone === "ALL" || latest.studentName === "\uD83D\uDEA8 ALL STUDENTS";
+const phoneMatch = myStudent && latest.parentPhone && latest.parentPhone === myStudent.parentPhone;
+const idMatch = myStudent && latest.studentId && String(latest.studentId) === String(myStudent.id);
+if(isAllAlert || phoneMatch || idMatch) {
+playAlarm();
+showFullScreenPanic(latest);
+}
+});
+return ()=>ref.off();
+},[role, loggedInUser, students]);
+}
+function App() {
+const [lang, setLang] = useState("en");
+const l = (k) => LANG[lang][k] || k;
+const [themeMode, setThemeMode] = useState(() => {
+try { return localStorage.getItem("ss_theme") || "dark"; } catch { return "dark"; }
+});
+T = {...THEMES[themeMode] || THEMES.dark};
+React.useEffect(() => {
+const th = THEMES[themeMode] || THEMES.dark;
+document.body.style.background = th.bg;
+document.body.style.color = th.text;
+document.documentElement.setAttribute("data-theme", themeMode);
+}, [themeMode]);
+const setTheme = (t) => {
+if (!THEMES[t]) return;
+setThemeMode(t);
+T = {...THEMES[t]};
+document.body.style.background = THEMES[t].bg;
+document.body.style.color = THEMES[t].text;
+try { localStorage.setItem("ss_theme", t); } catch {}
+};
+const toggleTheme = () => {
+const keys = Object.keys(THEMES);
+const next = keys[(keys.indexOf(themeMode) + 1) % keys.length];
+setTheme(next);
+};
+// ── Display Settings (Firebase-persisted, per user per school) ──
+var DEFAULT_DISPLAY_SETTINGS = { fontScale: 1, iconSize: "medium" };
+var [displaySettings, setDisplaySettingsState] = useState(DEFAULT_DISPLAY_SETTINGS);
+var [showDisplaySettings, setShowDisplaySettings] = useState(false);
+var applyDisplaySettings = function(settings) {
+var scale = settings.fontScale || 1;
+document.body.style.zoom = scale;
+document.body.style.webkitTextSizeAdjust = "none";
+};
+var getDisplaySettingsPath = function(user, schoolId) {
+if (!user || !user.id || !schoolId) return null;
+var cleanId = String(user.id).replace(/[^a-zA-Z0-9_]/g, "");
+var cleanSchool = String(schoolId).replace(/[^a-zA-Z0-9_]/g, "");
+return "schoolshield/schools/" + cleanSchool + "/userSettings/" + cleanId + "/displaySettings";
+};
+var loadDisplaySettings = function(user, schoolId) {
+var path = getDisplaySettingsPath(user, schoolId);
+if (!path || !window.db) return;
+try {
+window.db.ref(path).once("value").then(function(snap) {
+var val = snap.val();
+if (val && typeof val === "object") {
+var merged = Object.assign({}, DEFAULT_DISPLAY_SETTINGS, val);
+setDisplaySettingsState(merged);
+applyDisplaySettings(merged);
+} else {
+applyDisplaySettings(DEFAULT_DISPLAY_SETTINGS);
+}
+}).catch(function(){});
+} catch(e) {}
+};
+var saveDisplaySettings = function(settings, user, schoolId) {
+var path = getDisplaySettingsPath(user, schoolId);
+if (!path || !window.db) return;
+try { window.db.ref(path).set(settings).catch(function(){}); } catch(e) {}
+setDisplaySettingsState(settings);
+applyDisplaySettings(settings);
+};
+var resetDisplaySettings = function(user, schoolId) {
+var path = getDisplaySettingsPath(user, schoolId);
+if (path && window.db) {
+try { window.db.ref(path).remove().catch(function(){}); } catch(e) {}
+}
+setDisplaySettingsState(DEFAULT_DISPLAY_SETTINGS);
+applyDisplaySettings(DEFAULT_DISPLAY_SETTINGS);
+};
+const getDeviceId = () => {
+let id = localStorage.getItem("ss_device_id");
+if (!id) { id = "dev_" + Math.random().toString(36).slice(2,10) + "_" + Date.now(); localStorage.setItem("ss_device_id", id); }
+return id;
+};
+const DEVICE_ID = getDeviceId();
+const [role, setRoleState] = useState(() => {
+try { return localStorage.getItem("ss_session_role") || null; } catch { return null; }
+});
+const [loggedInUser, setLoggedInUserState] = useState(() => {
+try { const s = localStorage.getItem("ss_session_user"); return s ? JSON.parse(s) : null; } catch { return null; }
+});
+useEffect(() => {
+const lu = (() => { try { const s = localStorage.getItem("ss_session_user"); return s ? JSON.parse(s) : null; } catch { return null; } })();
+if (lu) {
+if (lu.role === "vice_principal")   window.__vpUser = lu;
+if (lu.role === "staff")            window.__staffUser = lu;
+if (lu.role === "reception")        window.__receptionUser = lu;
+if (lu.role === "accountant")       window.__accountantUser = lu;
+if (lu.role === "coordinator")      window.__coordinatorUser = lu;
+if (lu.role === "transport_head")   window.__transportHeadUser = lu;
+if (lu.role === "founder")          window.__founderUser = lu;
+if (lu.schoolId) {
+const rawSid3 = String(lu.schoolId);
+const cleanSchoolId3 = rawSid3.startsWith("SCH_") ? rawSid3 : "SCH_" + rawSid3.replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId(cleanSchoolId3);
+}
+}
+}, []);
+useEffect(() => {
+if (!window.firebaseReady) return;
+const sesRef = window.db.ref("schoolshield/sessions/" + DEVICE_ID);
+sesRef.once("value", snap => {
+if (!snap.exists()) return;
+const ses = snap.val();
+if (ses && ses.role && !localStorage.getItem("ss_session_role")) {
+setRoleState(ses.role);
+setLoggedInUserState(ses.user || null);
+try {
+localStorage.setItem("ss_session_role", ses.role);
+if (ses.user) localStorage.setItem("ss_session_user", JSON.stringify(ses.user));
+} catch {}
+if (ses.user && ses.user.schoolId) {
+const cleanId = String(ses.user.schoolId).replace(/[^a-zA-Z0-9]/g,"");
+setCurrentSchoolId("SCH_" + cleanId);
+}
+}
+// Load display settings for already logged-in user on page refresh
+var luRefresh = (function(){ try { var s = localStorage.getItem("ss_session_user"); return s ? JSON.parse(s) : null; } catch { return null; } })();
+if (luRefresh && luRefresh.id && luRefresh.schoolId) {
+loadDisplaySettings(luRefresh, luRefresh.schoolId);
+}
+});
+}, []);
+const setRole = (r, cb) => {
+setRoleState(r);
+try {
+if (r) { localStorage.setItem("ss_session_role", r); }
+else { localStorage.removeItem("ss_session_role"); localStorage.removeItem("ss_session_user"); }
+} catch {}
+if (window.firebaseReady) {
+const sesRef = window.db.ref("schoolshield/sessions/" + DEVICE_ID);
+if (r) { sesRef.update({ role: r }); if (cb) cb(); }
+else { sesRef.remove().then(()=>{ if(cb)cb(); }).catch(()=>{ if(cb)cb(); }); }
+} else { if (cb) cb(); }
+};
+const setLoggedInUser = (u) => {
+setLoggedInUserState(u);
+try {
+if (u) localStorage.setItem("ss_session_user", JSON.stringify(u));
+else localStorage.removeItem("ss_session_user");
+} catch {}
+if (window.firebaseReady) {
+const sesRef = window.db.ref("schoolshield/sessions/" + DEVICE_ID);
+if (u) {
+const sessionUser = Object.fromEntries(
+Object.entries(u).filter(([k, v]) =>
+!(typeof v === "string" && v.length > 500 && v.startsWith("data:"))
+)
+);
+sesRef.update({ user: sessionUser });
+} else {
+sesRef.update({ user: null });
+}
+}
+if (u && u.id) {
+loadDisplaySettings(u, u.schoolId || window.currentSchoolId);
+}
+};
+const isOnline = useNetworkStatus();
+const [toasts, setToasts] = useState([]);
+const [modal, setModal] = useState(null);
+const [sidebarOpen, setSidebarOpen] = useState(true);
+const schoolHouseKey = `ss_houseNames_${loggedInUser?.schoolId || null}`;
+const [houseNames, setHouseNames] = useState(() => {
+try { const s = localStorage.getItem(schoolHouseKey); if (s) return JSON.parse(s); } catch {}
+return ["Red House","Blue House","Green House","Yellow House"];
+});
+const saveHouseNames = (names) => {
+setHouseNames(names);
+try { localStorage.setItem(schoolHouseKey, JSON.stringify(names)); } catch {}
+if (window.firebaseReady) {
+try { ssSchoolRef("houseNames").set(JSON.stringify(names)); } catch {}
+}
+};
+const DEFAULT_CLASS_NAMES = ["Playgroup","Nursery","KG","KG2","Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12"];
+const schoolClassKey = `ss_classNames_${loggedInUser?.schoolId || null}`;
+const [classNames, setClassNames] = useState(() => {
+try { const s = localStorage.getItem(schoolClassKey); if (s) return JSON.parse(s); } catch {}
+return [...DEFAULT_CLASS_NAMES];
+});
+useEffect(() => {
+if (!window.firebaseReady) return;
+const _cnRef = ssSchoolRef("classNames"); if(!_cnRef) return; _cnRef.once("value").then(snap => {
+const data = snap.val();
+if (data) { try { const parsed = JSON.parse(data); if (Array.isArray(parsed)) setClassNames(parsed); } catch {} }
+}).catch(()=>{});
+}, [loggedInUser?.schoolId]);
+const saveClassNames = (names) => {
+setClassNames(names);
+try { localStorage.setItem(schoolClassKey, JSON.stringify(names)); } catch {}
+if (window.firebaseReady) {
+try { ssSchoolRef("classNames").set(JSON.stringify(names)); } catch {}
+}
+};
+const [activeSection, setActiveSection] = useState("dashboard");
+const [students, setStudents] = usePersist("students", initStudents);
+useEffect(() => {
+if (!students || students.length === 0) return;
+if (window.isDeletingSchool) return; // Delete ke waqt cleanup mat karo
+const clean = deduplicateStudents(students);
+if (clean.length < students.length) {
+setStudents(clean); // setStudents → setPersist → Firebase (controlled write)
+}
+}, [students.length]);
+useParentPanicListener(role, loggedInUser, students||[]);
+const [teachers, setTeachers] = usePersist("teachers", initTeachers);
+useEffect(() => {
+if (!teachers || teachers.length === 0) return;
+if (window.isDeletingSchool) return;
+const seen = new Map();
+teachers.forEach(t => { if (t && t.id !== undefined) seen.set(t.id, t); });
+const clean = Array.from(seen.values());
+if (clean.length < teachers.length) {
+setTeachers(clean); // setTeachers → setPersist → Firebase (controlled write)
+}
+}, []);
+const [schools, setSchools] = usePersist("schools", initSchools);
+const [notices, setNotices] = usePersist("notices", initNotices);
+const [alerts, setAlerts] = usePersist("alerts", initAlerts);
+const [leaves, setLeaves] = usePersist("leaves", initLeaves);
+const [homework, setHomework] = usePersist("homework", initHomework);
+const [buses, setBuses] = usePersist("buses", initBuses);
+const [stopRequests, setStopRequests] = usePersist("stopRequests", []);
+const [fees, setFees] = usePersist("fees", initFees);
+const [feeDeleteRequests, setFeeDeleteRequests] = usePersist("feeDeleteRequests", []);
+const [feeStructure, setFeeStructure] = usePersist("feeStructure", []);
+const [expenses, setExpenses] = usePersist("expenses", [
+{ id:1, schoolId:1, category:"salary", name:"Teacher Salaries", amount:85000, date:"2026-05-01
