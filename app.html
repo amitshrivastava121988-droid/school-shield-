@@ -771,7 +771,7 @@ const ALL_PERM_SECTIONS = [
 {key:"timetable",          label:"Timetable",          icon:"📅"},
 {key:"canteen",            label:"Canteen",            icon:"🍱"},
 {key:"gallery",            label:"Gallery",            icon:"🖼️"},
-{key:"activities",         label:"Activity & Celebration", icon:"🎉"},
+{key:"activities",         label:"School Chat", icon:"🎉"},
 {key:"letterscerts",       label:"Letters & Certificates", icon:"🗂️"},
 {key:"expenses",           label:"Income & Expenses",  icon:"💰"},
 {key:"accounts",           label:"Accounts",           icon:"👤"},
@@ -817,7 +817,7 @@ const EMPLOYEE_DEFAULT_SECTIONS = [
 {key:"schoolpage",     icon:"🏫", label:"School Page",          defaultMode:"view"},
 {key:"unifiedcalendar",icon:"📅", label:"Calendar & Attendance",defaultMode:"view"},
 {key:"gallery",        icon:"🖼️", label:"Gallery",              defaultMode:"view"},
-{key:"activities",     icon:"🎉", label:"Activity & Celebration", defaultMode:"view"},
+{key:"activities",     icon:"🎉", label:"School Chat", defaultMode:"view"},
 ];
 const EMPLOYEE_DEFAULT_KEYS = new Set(EMPLOYEE_DEFAULT_SECTIONS.map(s=>s.key));
 const PERM_BASED_ROLES = new Set(["vice_principal","staff","reception","accountant","coordinator","transport_head","librarian","hostel_manager","driver"]);
@@ -2288,6 +2288,7 @@ const [timetable, setTimetable] = usePersist("timetable", initTimetable);
 const [canteen, setCanteen] = usePersist("canteen", initCanteen);
 const [gallery, setGallery] = usePersist("gallery", initGallery);
 const [activities, setActivities] = usePersist("activities", []);
+const [classChats, setClassChats] = usePersist("classChats", []);
 const [chats, setChats] = usePersist("chats", initChats);
 const [discounts, setDiscounts] = usePersist("discounts", initDiscounts);
 const [onlineClasses, setOnlineClasses] = usePersist("onlineClasses", initOnlineClasses);
@@ -2656,7 +2657,7 @@ if (!role) return <LoginScreen lang={lang} setLang={setLang} l={l} setRole={setR
 if (role !== "superadmin" && role !== "founder" && !schoolActive) {
 return <SubscriptionExpiredScreen l={l} lang={lang} setLang={setLang} setRole={setRole} />;
 }
-const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeDeleteRequests, setFeeDeleteRequests, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, activities, setActivities, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, progressReports, setProgressReports, principalFeedbacks, setPrincipalFeedbacks, polls, setPolls, ptmSchedules, setPtmSchedules, meetingRequests, setMeetingRequests, schoolRatings, setSchoolRatings, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection: setActiveSectionWithHistory, onlineClasses, setOnlineClasses, employees, saveEmployees, greetings, setGreetings, greetingsSentLog, setGreetingsSentLog, greetingSettings, setGreetingSettings, setGs_birthday, setGs_festival, setGs_parents, setGs_teachers, setGs_branding, setGs_lang, goBack, navHistory, hostelData, setHostelData, decisionHistory, setDecisionHistory };
+const ctx = { houseNames, setHouseNames, saveHouseNames, classNames, saveClassNames, lang, l, toast, modal, setModal, role, loggedInUser, setLoggedInUser, students, setStudents, teachers, setTeachers, schools, setSchools, notices, setNotices, alerts, setAlerts, leaves, setLeaves, homework, setHomework, buses, setBuses, stopRequests, setStopRequests, fees, setFees, feeDeleteRequests, setFeeDeleteRequests, feeStructure, setFeeStructure, expenses, setExpenses, pickups, setPickups, medicals, setMedicals, remarks, setRemarks, timetable, setTimetable, canteen, setCanteen, gallery, setGallery, activities, setActivities, classChats, setClassChats, chats, setChats, discounts, setDiscounts, marks, exams, setExams, examDuties, setExamDuties, examAnswerSheets, setExamAnswerSheets, progressReports, setProgressReports, principalFeedbacks, setPrincipalFeedbacks, polls, setPolls, ptmSchedules, setPtmSchedules, meetingRequests, setMeetingRequests, schoolRatings, setSchoolRatings, currentSchool, todayBirthdays, graceDays, aiLoading, aiResult, setAiResult, callAI, userAccounts, setUserAccounts, loggedInUser, attendanceLogs, setAttendanceLogs, schoolEvents, setSchoolEvents, themeMode, toggleTheme, library, setLibrary, thoughtOfDay, setThoughtOfDay, disciplineLog, setDisciplineLog, transferCertificates, setTransferCertificates, characterCertificates, setCharacterCertificates, migrationCertificates, setMigrationCertificates, bonafideCertificates, setBonafideCertificates, studyCertificates, setStudyCertificates, feeClearanceCertificates, setFeeClearanceCertificates, syllabus, setSyllabus, schoolPageData, setSchoolPageData, setActiveSection: setActiveSectionWithHistory, onlineClasses, setOnlineClasses, employees, saveEmployees, greetings, setGreetings, greetingsSentLog, setGreetingsSentLog, greetingSettings, setGreetingSettings, setGs_birthday, setGs_festival, setGs_parents, setGs_teachers, setGs_branding, setGs_lang, goBack, navHistory, hostelData, setHostelData, decisionHistory, setDecisionHistory };
 return (
 <div key={themeMode} style={{display:"flex", flexDirection:"column", height:"100vh", background:T.bg, transition:"background 0.3s"}}>
 
@@ -2666,7 +2667,7 @@ return (
 <MainContent section={activeSection} ctx={ctx} />
 </div>
 
-<Sidebar role={role} l={l} lang={lang} setLang={setLang} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activeSection={activeSection} setActiveSection={setActiveSectionWithHistory} setRole={setRole} toast={toast} loggedInUser={loggedInUser} userAccounts={userAccounts} setLoggedInUser={setLoggedInUser} students={students} chats={chats} currentSchool={currentSchool} displaySettings={displaySettings} onSaveDisplaySettings={function(s){ saveDisplaySettings(s, loggedInUser, loggedInUser && loggedInUser.schoolId); }} onResetDisplaySettings={function(){ resetDisplaySettings(loggedInUser, loggedInUser && loggedInUser.schoolId); }} />
+<Sidebar role={role} l={l} lang={lang} setLang={setLang} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} activeSection={activeSection} setActiveSection={setActiveSectionWithHistory} setRole={setRole} toast={toast} loggedInUser={loggedInUser} userAccounts={userAccounts} setLoggedInUser={setLoggedInUser} students={students} chats={chats} classChats={classChats} currentSchool={currentSchool} displaySettings={displaySettings} onSaveDisplaySettings={function(s){ saveDisplaySettings(s, loggedInUser, loggedInUser && loggedInUser.schoolId); }} onResetDisplaySettings={function(){ resetDisplaySettings(loggedInUser, loggedInUser && loggedInUser.schoolId); }} />
 
 <ToastStack toasts={toasts} />
 
@@ -3262,7 +3263,7 @@ founder: [
 {key:"leaves",icon:"📋",label:"leaveApplications"}, {key:"fees",icon:"💳",label:"fees"},
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"}, {key:"transport",icon:"🚌",label:"transport"},
 {key:"timetable",icon:"📅",label:"timetable"}, {key:"canteen",icon:"🍱",label:"canteen"},
-{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"Activity & Celebration"},
+{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"School Chat"},
 {key:"accounts",icon:"👤",label:"accounts"}, {key:"letterscerts",icon:"🗂️",label:"Letters & Certificates"},
 {key:"expenses",icon:"💰",label:"Expenses"}, {key:"unifiedcalendar",icon:"📅",label:"Calendar & Attendance"},
 {key:"datamanager",icon:"🗑️",label:"Data Manager"},{key:"exams",icon:"📝",label:"Exams"},
@@ -3281,7 +3282,7 @@ principal: [
 {key:"leaves",icon:"📋",label:"leaveApplications"}, {key:"fees",icon:"💳",label:"fees"},
 {key:"alertsnotices",icon:"🔔",label:"Alerts & Notices"}, {key:"transport",icon:"🚌",label:"transport"},
 {key:"timetable",icon:"📅",label:"timetable"}, {key:"canteen",icon:"🍱",label:"canteen"},
-{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"Activity & Celebration"},
+{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"School Chat"},
 {key:"accounts",icon:"👤",label:"accounts"}, {key:"letterscerts",icon:"🗂️",label:"Letters & Certificates"},
 {key:"expenses",icon:"💰",label:"Expenses"}, {key:"unifiedcalendar",icon:"📅",label:"Calendar & Attendance"},
 {key:"datamanager",icon:"🗑️",label:"Data Manager"},{key:"exams",icon:"📝",label:"Exams"},
@@ -3354,7 +3355,7 @@ teacher: [
 {key:"letterscerts",icon:"🗂️",label:"Letters & Certificates"},
 {key:"canteen",icon:"🍱",label:"canteen"},{key:"exams",icon:"📝",label:"Exams"},
 {key:"syllabus",icon:"📖",label:"Syllabus"},{key:"schoolpage",icon:"🏫",label:"School Page"},
-{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"Activity & Celebration"},
+{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"School Chat"},
 {key:"chat",icon:"💬",label:"chat"},
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"staffpanic",icon:"🆘",label:"Staff Emergency"},{key:"healthcheckin",icon:"🌡️",label:"Health Check-in"},{key:"healthgrowth",icon:"📏",label:"Child Health & Growth"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
@@ -3374,7 +3375,7 @@ parent: [
 {key:"examSyllabus",icon:"📝",label:"Exam & Syllabus"},{key:"unifiedcalendar",icon:"📅",label:"Calendar & Attendance"},
 {key:"reachedhome",icon:"🏠",label:"Reached Home"},{key:"busroute",icon:"🚌",label:"busRoute"},{key:"webcam",icon:"📹",label:"Live Cameras"},
 {key:"feedback",icon:"💌",label:"Feedback & Poll"},{key:"schoolpage",icon:"🏫",label:"School Page"},
-{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"Activity & Celebration"},
+{key:"gallery",icon:"🖼️",label:"gallery"},{key:"activities",icon:"🎉",label:"School Chat"},
 {key:"tripmanagement",icon:"🗺️",label:"Trip Management"},
 {key:"onlineclasses",icon:"🎥",label:"Online Classes"},
 {key:"meetingmanager",icon:"🤝",label:"PTM Booking"},
@@ -3557,8 +3558,9 @@ return <button key={ic.val} onClick={function(){ setLocalSettings(function(p){ r
 </div>
 );
 }
-function NavGrid({ role, l, loggedInUser, activeSection, setActiveSection, setRole, onClose, toast, userAccounts, setLoggedInUser, students, chats, displaySettings, onSaveDisplaySettings, onResetDisplaySettings }) {
+function NavGrid({ role, l, loggedInUser, activeSection, setActiveSection, setRole, onClose, toast, userAccounts, setLoggedInUser, students, chats, classChats, displaySettings, onSaveDisplaySettings, onResetDisplaySettings }) {
 const chatUnreadCount = computeUnreadChatCount(chats, role, loggedInUser, students);
+const classChatUnreadCount = computeUnreadClassChatCount(classChats, role, loggedInUser, students);
 const baseItems = resolveNavItemsWithVacancies(role, loggedInUser);
 const COLORS = ["#4F8EF7","#0ECB81","#A78BFA","#F5A623","#F75555","#22D3EE","#FB923C","#34D399"];
 const STORAGE_KEY = `ss_nav_order_${role}`;
@@ -3878,6 +3880,16 @@ display:"flex", alignItems:"center", justifyContent:"center",
 padding:"0 4px", fontFamily:"'Outfit',sans-serif",
 }}>{chatUnreadCount > 99 ? "99+" : chatUnreadCount}</div>
 )}
+{item.key === "activities" && classChatUnreadCount > 0 && (
+<div style={{
+position:"absolute", top:4, right:4,
+minWidth:18, height:18, borderRadius:99,
+background:"#FF3B30", border:"2px solid "+T.bg,
+fontSize:10, color:"#fff", fontWeight:800,
+display:"flex", alignItems:"center", justifyContent:"center",
+padding:"0 4px", fontFamily:"'Outfit',sans-serif",
+}}>{classChatUnreadCount > 99 ? "99+" : classChatUnreadCount}</div>
+)}
 <div style={{
 width: iconSizePx+16, height: iconSizePx+16, borderRadius:14,
 background: color+"22", border:"1.5px solid "+color+"50",
@@ -3965,7 +3977,7 @@ if (features[feat] === false) navKeys.forEach(k => locked.add(k));
 });
 return locked;
 }
-function Sidebar({ role, l, lang, setLang, sidebarOpen, setSidebarOpen, activeSection, setActiveSection, setRole, toast, loggedInUser, userAccounts, setLoggedInUser, students, chats, currentSchool, displaySettings, onSaveDisplaySettings, onResetDisplaySettings }) {
+function Sidebar({ role, l, lang, setLang, sidebarOpen, setSidebarOpen, activeSection, setActiveSection, setRole, toast, loggedInUser, userAccounts, setLoggedInUser, students, chats, classChats, currentSchool, displaySettings, onSaveDisplaySettings, onResetDisplaySettings }) {
 const allNavItems = resolveNavItemsWithVacancies(role, loggedInUser);
 const lockedKeys = getLockedNavKeys(currentSchool);
 const navItems = allNavItems.filter(i => !lockedKeys.has(i?.key));
@@ -4038,6 +4050,7 @@ userAccounts={userAccounts}
 setLoggedInUser={setLoggedInUser}
 students={students}
 chats={chats}
+classChats={classChats}
 displaySettings={displaySettings}
 onSaveDisplaySettings={onSaveDisplaySettings}
 onResetDisplaySettings={onResetDisplaySettings}
@@ -12650,6 +12663,11 @@ if (["fee_overdue_summary","fee_class_summary"].includes(a.type)) return ["princ
 if (["late_alert","speed_alert","bus_approaching"].includes(a.type)) {
 return ["principal","founder","superadmin","vice_principal","transport_head"].includes(role);
 }
+// Class Chat (School Chat) announcements are only relevant to management roles for oversight —
+// the matching parent already gets it above via targetClass, other staff don't need the noise.
+if (a.type === "class_chat_message") {
+return ["principal","founder","superadmin","vice_principal"].includes(role);
+}
 // Any alert that explicitly declares who it's for (e.g. Smart Decision Engine notifications) must only show to that audience.
 if (a.target_roles && a.target_roles.length > 0) return a.target_roles.indexOf(role) >= 0;
 if (a.forRoles && a.forRoles.length > 0) return a.forRoles.indexOf(role) >= 0;
@@ -16109,39 +16127,236 @@ const canAdd = ["principal","founder","superadmin","vice_principal","teacher","r
 const canDeleteAny = ["principal","founder","superadmin"].includes(role);
 const [showForm, setShowForm] = React.useState(false);
 const [caption, setCaption] = React.useState("");
-const [mediaUrl, setMediaUrl] = React.useState("");
-const [mediaType, setMediaType] = React.useState("photo");
+const [mediaList, setMediaList] = React.useState([]);
 const [uploading, setUploading] = React.useState(false);
 const [uploadPct, setUploadPct] = React.useState(0);
 const [viewItem, setViewItem] = React.useState(null);
 const fileRef = React.useRef(null);
+const videoFileRef = React.useRef(null);
+const MAX_ACT_PHOTOS = 10;
+const MAX_ACT_VIDEOS = 5;
 React.useEffect(function(){
 var stale = schoolActivities.filter(function(a){ return (Date.now() - (a.createdAt||0)) >= EXPIRY_MS; });
 if (stale.length === 0) return;
 var staleIds = new Set(stale.map(function(a){ return a.id; }));
 setActivities(function(p){ return (p||[]).filter(function(a){ return !staleIds.has(a.id); }); });
 }, []);
-const handleFile = function(e) {
-var file = e.target.files[0]; if (!file) return;
+const { classChats, setClassChats, students, classNames, setAlerts, setModal } = ctx;
+const [scTab, setScTab] = React.useState("activities");
+const CHAT_EXPIRY_MS = 2*24*60*60*1000;
+const viewerKey = String((loggedInUser && loggedInUser.id != null ? loggedInUser.id : null) || (loggedInUser && (loggedInUser.username || loggedInUser.name)) || role);
+const myChildCC = role === "parent" ? (function(){
+var pSid = loggedInUser && loggedInUser.studentId;
+var pSn = ((loggedInUser && (loggedInUser.studentName || loggedInUser.childName)) || "").trim().toLowerCase();
+var found = null;
+if (pSid) found = (students||[]).find(function(s){ return String(s.id)===String(pSid); });
+if (!found && pSn) found = (students||[]).find(function(s){ return (s.name||"").trim().toLowerCase()===pSn; });
+return found;
+})() : null;
+const myChildClassCC = myChildCC ? myChildCC.class : null;
+const teacherClassCC = role === "teacher" ? ((loggedInUser && loggedInUser.assignedClass) || null) : null;
+const isClassChatManager = ["principal","founder","superadmin","vice_principal"].includes(role);
+const canPostCC = role === "teacher" || isClassChatManager;
+const [selectedClassCC, setSelectedClassCC] = React.useState("");
+const viewClassCC = role === "parent" ? myChildClassCC : (role === "teacher" ? teacherClassCC : selectedClassCC);
+const CC_CLASS_LIST = (classNames && classNames.length > 0) ? classNames : ["Playgroup","Nursery","KG","KG2","Class 1","Class 2","Class 3","Class 4","Class 5","Class 6","Class 7","Class 8","Class 9","Class 10","Class 11","Class 12"];
+const schoolClassChats = (classChats||[]).filter(function(c){ return !c.schoolId || String(c.schoolId)===String(mySchoolId); });
+const liveClassChats = schoolClassChats.filter(function(c){ return (Date.now()-(c.createdAt||0)) < CHAT_EXPIRY_MS; });
+React.useEffect(function(){
+var staleCC = schoolClassChats.filter(function(c){ return (Date.now()-(c.createdAt||0)) >= CHAT_EXPIRY_MS; });
+if (staleCC.length === 0) return;
+var staleCCIds = new Set(staleCC.map(function(c){ return c.id; }));
+setClassChats(function(p){ return (p||[]).filter(function(c){ return !staleCCIds.has(c.id); }); });
+}, []);
+const classMessages = viewClassCC ? liveClassChats.filter(function(c){ return c.class===viewClassCC; }).sort(function(a,b){ return (a.createdAt||0)-(b.createdAt||0); }) : [];
+React.useEffect(function(){
+if (!viewClassCC || scTab !== "classchat") return;
+var unreadIds = classMessages.filter(function(c){ return !c.readBy || !c.readBy[viewerKey]; }).map(function(c){ return c.id; });
+if (unreadIds.length === 0) return;
+setClassChats(function(p){ return (p||[]).map(function(c){
+if (unreadIds.indexOf(c.id)===-1) return c;
+var rb = Object.assign({}, c.readBy || {});
+rb[viewerKey] = true;
+return Object.assign({}, c, {readBy: rb});
+}); });
+}, [viewClassCC, scTab, classMessages.length]);
+const [ccText, setCcText] = React.useState("");
+const [ccMediaList, setCcMediaList] = React.useState([]);
+const [ccUploading, setCcUploading] = React.useState(false);
+const [ccUploadPct, setCcUploadPct] = React.useState(0);
+const openCCMedia = function(url, type){
+setModal(
+<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+{type==="video" ? (
+<video src={url} controls autoPlay style={{maxWidth:"100%",maxHeight:"75vh",borderRadius:12,border:"2px solid "+T.accent,display:"block"}} />
+) : (
+<img src={url} style={{maxWidth:"100%",maxHeight:"75vh",borderRadius:12,objectFit:"contain",border:"2px solid "+T.accent,display:"block"}} />
+)}
+<div style={{display:"flex",gap:10}}>
+<a href={url} download={(type==="video"?"video_":"photo_")+Date.now()+(type==="video"?".mp4":".jpg")} target="_blank" rel="noreferrer"
+style={{background:T.accent,color:"#fff",padding:"7px 20px",borderRadius:8,textDecoration:"none",fontFamily:"Outfit,sans-serif",fontSize:13,fontWeight:700}}>
+{"⬇️ Download"}
+</a>
+<button onClick={function(){setModal(null);}} style={{background:"none",border:"1px solid #fff",color:"#fff",padding:"6px 20px",borderRadius:8,cursor:"pointer",fontFamily:"Outfit,sans-serif",fontSize:13}}>✕ Close</button>
+</div>
+</div>
+);
+};
+const ccFileRef = React.useRef(null);
+const ccVideoFileRef = React.useRef(null);
+const MAX_CC_PHOTOS = 10;
+const MAX_CC_VIDEOS = 5;
+const handleCCFile = function(e){
+var fileList = Array.prototype.slice.call(e.target.files || []);
+if (fileList.length === 0) return;
+var photoFiles = fileList.filter(function(f){ return !(f.type && f.type.indexOf("video/")===0); });
+var videoFiles = fileList.filter(function(f){ return f.type && f.type.indexOf("video/")===0; });
+if (photoFiles.length > 0 && videoFiles.length > 0) {
+toast("❌ Please select either photos OR videos at once, not both","error");
+e.target.value = "";
+return;
+}
+if (photoFiles.length > MAX_CC_PHOTOS) {
+toast("❌ You can send a maximum of "+MAX_CC_PHOTOS+" photos at once","error");
+e.target.value = "";
+return;
+}
+if (videoFiles.length > MAX_CC_VIDEOS) {
+toast("❌ You can send a maximum of "+MAX_CC_VIDEOS+" videos at once","error");
+e.target.value = "";
+return;
+}
+setCcUploading(true); setCcUploadPct(0);
+var total = fileList.length;
+var completed = 0;
+var results = [];
+var uploadNext = function(idx){
+if (idx >= fileList.length) {
+setCcUploading(false); setCcUploadPct(0);
+if (results.length > 0) setCcMediaList(function(p){ return p.concat(results); });
+e.target.value = "";
+return;
+}
+var file = fileList[idx];
 var isVideo = file.type && file.type.indexOf("video/")===0;
-setMediaType(isVideo ? "video" : "photo");
-setUploading(true); setUploadPct(0);
-window.uploadToCloudinary(file, function(pct){ setUploadPct(pct); }).then(function(url){
-setMediaUrl(url);
+window.uploadToCloudinary(file, function(pct){
+setCcUploadPct(Math.round(((completed + (pct/100)) / total) * 100));
+}).then(function(url){
+results.push({url: url, type: isVideo ? "video" : "photo"});
+completed += 1;
+uploadNext(idx+1);
 }).catch(function(err){
-if (err && err.message==="IMAGE_TOO_LARGE") toast("❌ Image 5MB se badi hai — compress karke try karo","error");
-else if (err && err.message==="VIDEO_TOO_LARGE") toast("❌ Video 100MB se badi hai","error");
-else toast("⚠️ Upload fail ho gaya, dobara try karein","error");
-}).finally(function(){ setUploading(false); setUploadPct(0); });
+if (err && err.message==="IMAGE_TOO_LARGE") toast("❌ An image is larger than 5MB — please compress and try again","error");
+else if (err && err.message==="VIDEO_TOO_LARGE") toast("❌ A video is larger than 100MB","error");
+else toast("⚠️ Some files failed to upload","error");
+completed += 1;
+uploadNext(idx+1);
+});
+};
+uploadNext(0);
+};
+const removeCCMedia = function(idx){
+setCcMediaList(function(p){ return p.filter(function(m,i){ return i!==idx; }); });
+};
+const sendClassMsg = function(){
+if (!viewClassCC) { toast("Please select a class first","error"); return; }
+if (!ccText.trim() && ccMediaList.length===0) { toast("Please write a message or attach a photo/video","error"); return; }
+var rb = {}; rb[viewerKey] = true;
+var newMsg = {
+id: Date.now(), schoolId: mySchoolId, class: viewClassCC,
+text: ccText.trim(), media: ccMediaList.slice(),
+senderName: (loggedInUser && loggedInUser.name) || role, senderRole: role, senderKey: viewerKey,
+createdAt: Date.now(), readBy: rb
+};
+setClassChats(function(p){ return [...(p||[]), newMsg]; });
+var vidCount = ccMediaList.filter(function(m){ return m.type==="video"; }).length;
+var picCount = ccMediaList.length - vidCount;
+var mediaCountMsg = vidCount > 0 ? ("🎥 "+vidCount+" video(s) shared") : (picCount > 0 ? ("📷 "+picCount+" photo(s) shared") : "");
+setAlerts(function(p){ return [...(p||[]), {
+id: Date.now()+1, schoolId: mySchoolId, type: "class_chat_message", targetClass: viewClassCC,
+message: "💬 " + viewClassCC + ": " + (ccText.trim() || mediaCountMsg),
+senderName: (loggedInUser && loggedInUser.name) || role, read: false, ts: Date.now()
+}]; });
+setCcText(""); setCcMediaList([]);
+toast("✅ Message sent!","success");
+};
+const deleteClassMsg = function(id){
+if (!window.confirm("Delete this message?")) return;
+setClassChats(function(p){ return (p||[]).filter(function(c){ return c.id!==id; }); });
+};
+const ccTimeStr = function(ts){
+var d = new Date(ts||0);
+return d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+};
+const ccTimeLeft = function(createdAt){
+var msLeft = CHAT_EXPIRY_MS - (Date.now()-(createdAt||0));
+if (msLeft<=0) return "Expiring...";
+var hrs = Math.floor(msLeft/(60*60*1000));
+if (hrs < 1) return Math.floor(msLeft/60000)+"m left";
+return hrs+"h left";
+};
+const handleFile = function(e) {
+var fileList = Array.prototype.slice.call(e.target.files || []);
+if (fileList.length === 0) return;
+var photoFiles = fileList.filter(function(f){ return !(f.type && f.type.indexOf("video/")===0); });
+var videoFiles = fileList.filter(function(f){ return f.type && f.type.indexOf("video/")===0; });
+if (photoFiles.length > MAX_ACT_PHOTOS) {
+toast("❌ You can upload a maximum of "+MAX_ACT_PHOTOS+" photos at once","error");
+e.target.value = "";
+return;
+}
+if (videoFiles.length > MAX_ACT_VIDEOS) {
+toast("❌ You can upload a maximum of "+MAX_ACT_VIDEOS+" videos at once","error");
+e.target.value = "";
+return;
+}
+setUploading(true); setUploadPct(0);
+var total = fileList.length;
+var completed = 0;
+var results = [];
+var uploadNext = function(idx){
+if (idx >= fileList.length) {
+setUploading(false); setUploadPct(0);
+if (results.length > 0) setMediaList(function(p){ return p.concat(results); });
+e.target.value = "";
+return;
+}
+var file = fileList[idx];
+var isVideo = file.type && file.type.indexOf("video/")===0;
+window.uploadToCloudinary(file, function(pct){
+setUploadPct(Math.round(((completed + (pct/100)) / total) * 100));
+}).then(function(url){
+results.push({url: url, type: isVideo ? "video" : "photo"});
+completed += 1;
+uploadNext(idx+1);
+}).catch(function(err){
+if (err && err.message==="IMAGE_TOO_LARGE") toast("❌ An image is larger than 5MB — please compress and try again","error");
+else if (err && err.message==="VIDEO_TOO_LARGE") toast("❌ A video is larger than 100MB","error");
+else toast("⚠️ Some files failed to upload","error");
+completed += 1;
+uploadNext(idx+1);
+});
+};
+uploadNext(0);
+};
+const removeActMedia = function(idx){
+setMediaList(function(p){ return p.filter(function(m,i){ return i!==idx; }); });
 };
 const addActivity = function(){
-if (!mediaUrl) { toast("Photo ya video upload karein","error"); return; }
-setActivities(function(p){ return [...(p||[]), {
-id: Date.now(), schoolId: mySchoolId, type: mediaType, mediaUrl: mediaUrl,
-caption: caption.trim(), addedByName: (loggedInUser && loggedInUser.name) || role,
-addedByRole: role, createdAt: Date.now()
-}]; });
-setCaption(""); setMediaUrl(""); setMediaType("photo"); setShowForm(false);
+if (mediaList.length === 0) { toast("Photo ya video upload karein","error"); return; }
+var addedByName = (loggedInUser && loggedInUser.name) || role;
+var now = Date.now();
+setActivities(function(p){
+var newItems = mediaList.map(function(m, i){
+return {
+id: now + i, schoolId: mySchoolId, type: m.type, mediaUrl: m.url,
+caption: caption.trim(), addedByName: addedByName,
+addedByRole: role, createdAt: now
+};
+});
+return [...(p||[]), ...newItems];
+});
+setCaption(""); setMediaList([]); setShowForm(false);
 toast("✅ Add ho gaya!","success");
 };
 const deleteActivity = function(id){
@@ -16158,7 +16373,21 @@ return hrs+"h left";
 const sorted = [...liveActivities].sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
 return (
 <div className="fadeUp">
-<SectionHeader title="🎉 Activity & Celebration" action={canAdd && <Btn onClick={function(){setShowForm(!showForm);}} color={T.accent}>+ Add</Btn>} />
+<SectionHeader title="🎉 School Chat" action={scTab==="activities" && canAdd && <Btn onClick={function(){setShowForm(!showForm);}} color={T.accent}>+ Add</Btn>} />
+
+<div style={{display:"flex",gap:6,marginBottom:16,background:T.surface,borderRadius:12,padding:4}}>
+<button onClick={function(){setScTab("activities");}}
+style={{flex:1,padding:"9px 6px",borderRadius:9,border:"none",background:scTab==="activities"?T.card:"transparent",color:scTab==="activities"?T.text:T.textMuted,fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:scTab==="activities"?800:500,cursor:"pointer"}}>
+🎉 Activities
+</button>
+<button onClick={function(){setScTab("classchat");}}
+style={{flex:1,padding:"9px 6px",borderRadius:9,border:"none",background:scTab==="classchat"?T.card:"transparent",color:scTab==="classchat"?T.text:T.textMuted,fontFamily:"Outfit,sans-serif",fontSize:12,fontWeight:scTab==="classchat"?800:500,cursor:"pointer"}}>
+💬 Class Chat
+</button>
+</div>
+
+{scTab==="activities" && (
+<div>
 <div style={{background:T.accent+"12",border:"1px solid "+T.accent+"30",borderRadius:12,padding:12,marginBottom:16}}>
 <p style={{fontSize:11,color:T.textMuted,lineHeight:1.6}}>📸 Daily activities aur celebrations ki photo/video yahan share karein. Sabhi photos/videos 2 din ke baad automatic delete ho jaate hain.</p>
 </div>
@@ -16166,10 +16395,14 @@ return (
 {showForm && canAdd && (
 <div style={{background:T.card, border:"1px solid "+T.border, borderRadius:12, padding:20, marginBottom:16}}>
 <p style={{fontWeight:700, color:T.text, marginBottom:14}}>📸 Naya Add Karein</p>
-<input ref={fileRef} type="file" accept="image/*,video/*" style={{display:"none"}} onChange={handleFile} />
+<input ref={fileRef} type="file" accept="image/*" multiple style={{display:"none"}} onChange={handleFile} />
+<input ref={videoFileRef} type="file" accept="video/*" multiple style={{display:"none"}} onChange={handleFile} />
 <div style={{display:"flex", gap:10, alignItems:"center", marginBottom:12}}>
 <Btn onClick={function(){ if(fileRef.current) fileRef.current.click(); }} color={T.purple} disabled={uploading}>
-{uploading ? "⏳ Uploading "+uploadPct+"%..." : "📷 Choose Photo/Video"}
+{uploading ? "⏳ "+uploadPct+"%..." : "📷 Photos"}
+</Btn>
+<Btn onClick={function(){ if(videoFileRef.current) videoFileRef.current.click(); }} color={T.purple} disabled={uploading}>
+{uploading ? "⏳ "+uploadPct+"%..." : "🎥 Videos"}
 </Btn>
 {uploading && (
 <div style={{flex:1, background:T.surface, borderRadius:6, height:8, overflow:"hidden"}}>
@@ -16177,16 +16410,29 @@ return (
 </div>
 )}
 </div>
-{mediaUrl && mediaType==="photo" && <img src={mediaUrl} style={{width:100,height:100,borderRadius:10,objectFit:"cover",border:"2px solid "+T.accent,marginBottom:12,display:"block"}} />}
-{mediaUrl && mediaType==="video" && (
-<video src={mediaUrl} controls style={{width:"100%",maxHeight:200,borderRadius:10,border:"2px solid "+T.accent,marginBottom:12,display:"block"}} />
+<p style={{fontSize:10,color:T.textMuted,marginBottom:8}}>{"📌 Max "+MAX_ACT_PHOTOS+" photos or "+MAX_ACT_VIDEOS+" videos per add"}</p>
+{mediaList.length > 0 && (
+<div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+{mediaList.map(function(m, mi){
+return (
+<div key={mi} style={{position:"relative"}}>
+{m.type==="photo" ? (
+<img src={m.url} style={{width:80,height:80,borderRadius:10,objectFit:"cover",border:"2px solid "+T.accent,display:"block"}} />
+) : (
+<video src={m.url} style={{width:120,height:80,borderRadius:10,border:"2px solid "+T.accent,display:"block"}} />
+)}
+<button onClick={function(){removeActMedia(mi);}} style={{position:"absolute",top:-6,right:-6,width:20,height:20,borderRadius:"50%",background:T.red,color:"#fff",border:"none",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>✕</button>
+</div>
+);
+})}
+</div>
 )}
 <FormField label="Caption (optional)">
 <FormInput value={caption} onChange={setCaption} placeholder="e.g. Annual Day rehearsal, Birthday celebration..." />
 </FormField>
 <div style={{display:"flex", gap:8, marginTop:8}}>
 <Btn onClick={addActivity} color={T.accent} full disabled={uploading}>✅ Share</Btn>
-<Btn onClick={function(){setShowForm(false); setMediaUrl(""); setCaption("");}} color={T.textMuted} outline>Cancel</Btn>
+<Btn onClick={function(){setShowForm(false); setMediaList([]); setCaption("");}} color={T.textMuted} outline>Cancel</Btn>
 </div>
 </div>
 )}
@@ -16253,6 +16499,142 @@ color:T.accent,fontSize:10,fontWeight:700,textDecoration:"none",textAlign:"cente
 </Card>
 );
 })}
+</div>
+)}
+</div>
+)}
+
+{scTab==="classchat" && (
+<div>
+<div style={{background:T.purple+"12",border:"1px solid "+T.purple+"30",borderRadius:12,padding:12,marginBottom:16}}>
+<p style={{fontSize:11,color:T.textMuted,lineHeight:1.6}}>💬 Class-wise announcement group. {canPostCC ? "You can send messages, photos or videos." : "You can only view messages here."} All messages are automatically deleted after 2 days.</p>
+</div>
+
+{isClassChatManager && (
+<div style={{marginBottom:14}}>
+<p style={{fontSize:12,color:T.textMuted,marginBottom:6,fontWeight:600}}>Select Class</p>
+<select value={selectedClassCC} onChange={function(e){setSelectedClassCC(e.target.value);}}
+style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRadius:10,padding:"12px 14px",color:T.text,fontSize:14,fontFamily:"Outfit,sans-serif",outline:"none",boxSizing:"border-box"}}>
+<option value="">— Select Class —</option>
+{CC_CLASS_LIST.map(function(cn){ return <option key={cn} value={cn}>{cn}</option>; })}
+</select>
+</div>
+)}
+
+{role === "teacher" && !teacherClassCC && (
+<div style={{padding:"28px 20px",textAlign:"center",background:T.card,border:"1px dashed "+T.border,borderRadius:14}}>
+<p style={{color:T.textMuted,fontSize:13}}>You are not assigned to any class.</p>
+</div>
+)}
+{role === "parent" && !myChildClassCC && (
+<div style={{padding:"28px 20px",textAlign:"center",background:T.card,border:"1px dashed "+T.border,borderRadius:14}}>
+<p style={{color:T.textMuted,fontSize:13}}>Could not find your child's class.</p>
+</div>
+)}
+
+{viewClassCC && (
+<div>
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:14,marginBottom:14}}>
+{classMessages.length===0 && (
+<p style={{color:T.textMuted,fontSize:13,textAlign:"center",padding:"20px 0"}}>No messages yet.</p>
+)}
+{classMessages.map(function(c){
+var isMine = c.senderKey === viewerKey;
+var canDeleteThis = isMine || ["principal","founder","superadmin"].includes(role);
+return (
+<div key={c.id} style={{display:"flex",justifyContent: isMine ? "flex-end" : "flex-start",marginBottom:10}}>
+<div style={{maxWidth:"85%",background: isMine ? T.accent+"18" : T.surface, border:"1px solid "+(isMine?T.accent+"40":T.border), borderRadius:12, padding:"8px 12px"}}>
+<p style={{fontSize:10,color:T.accent,fontWeight:700,marginBottom:4}}>{c.senderName+" ("+c.senderRole+")"}</p>
+{c.media && c.media.length > 0 && (
+<div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:c.text?6:0}}>
+{c.media.map(function(m, mi){
+return m.type==="video" ? (
+<div key={mi} style={{width:160}}>
+<div style={{position:"relative"}}>
+<video src={m.url} controls style={{width:160,maxHeight:160,borderRadius:8,display:"block"}} />
+<span style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,0.65)",color:"#fff",fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ccTimeLeft(c.createdAt)}</span>
+</div>
+<a href={m.url} download={"video_"+Date.now()+"_"+mi+".mp4"} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",fontSize:10,color:T.accent,fontWeight:700,marginTop:2,textDecoration:"none"}}>⬇️ Download</a>
+</div>
+) : (
+<div key={mi} style={{width:100}}>
+<div style={{position:"relative"}}>
+<img src={m.url} onClick={function(){openCCMedia(m.url, m.type);}} style={{width:100,height:100,borderRadius:8,objectFit:"cover",cursor:"pointer",display:"block"}} />
+<span style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.65)",color:"#fff",fontSize:8,padding:"1px 4px",borderRadius:4,fontWeight:700}}>{ccTimeLeft(c.createdAt)}</span>
+</div>
+<a href={m.url} download={"photo_"+Date.now()+"_"+mi+".jpg"} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",fontSize:10,color:T.accent,fontWeight:700,marginTop:2,textDecoration:"none"}}>⬇️ Download</a>
+</div>
+);
+})}
+</div>
+)}
+{!c.media && c.mediaUrl && c.mediaType==="photo" && (
+<div style={{marginBottom:c.text?6:0}}>
+<div style={{position:"relative"}}>
+<img src={c.mediaUrl} onClick={function(){openCCMedia(c.mediaUrl, c.mediaType);}} style={{width:160,maxHeight:160,borderRadius:8,objectFit:"cover",cursor:"pointer",display:"block"}} />
+<span style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,0.65)",color:"#fff",fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ccTimeLeft(c.createdAt)}</span>
+</div>
+<a href={c.mediaUrl} download={"photo_"+c.id+".jpg"} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",fontSize:10,color:T.accent,fontWeight:700,marginTop:2,textDecoration:"none"}}>⬇️ Download</a>
+</div>
+)}
+{!c.media && c.mediaUrl && c.mediaType==="video" && (
+<div style={{marginBottom:c.text?6:0}}>
+<div style={{position:"relative"}}>
+<video src={c.mediaUrl} controls style={{width:200,maxHeight:160,borderRadius:8,display:"block"}} />
+<span style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,0.65)",color:"#fff",fontSize:9,padding:"2px 6px",borderRadius:4,fontWeight:700}}>{ccTimeLeft(c.createdAt)}</span>
+</div>
+<a href={c.mediaUrl} download={"video_"+c.id+".mp4"} target="_blank" rel="noreferrer" style={{display:"block",textAlign:"center",fontSize:10,color:T.accent,fontWeight:700,marginTop:2,textDecoration:"none"}}>⬇️ Download</a>
+</div>
+)}
+{c.text && <p style={{fontSize:13,color:T.text,whiteSpace:"pre-wrap"}}>{c.text}</p>}
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4,gap:8}}>
+<p style={{fontSize:9,color:T.textMuted}}>{ccTimeStr(c.createdAt)}</p>
+{canDeleteThis && (
+<button onClick={function(){deleteClassMsg(c.id);}} style={{background:"none",border:"none",color:T.red,fontSize:10,fontWeight:700,cursor:"pointer",padding:0}}>🗑️ Delete</button>
+)}
+</div>
+</div>
+</div>
+);
+})}
+</div>
+
+{canPostCC && (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:12}}>
+<input ref={ccFileRef} type="file" accept="image/*" multiple style={{display:"none"}} onChange={handleCCFile} />
+<input ref={ccVideoFileRef} type="file" accept="video/*" multiple style={{display:"none"}} onChange={handleCCFile} />
+{ccMediaList.length > 0 && (
+<div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+{ccMediaList.map(function(m, mi){
+return (
+<div key={mi} style={{position:"relative"}}>
+{m.type==="photo" ? (
+<img src={m.url} style={{width:70,height:70,borderRadius:8,objectFit:"cover",border:"2px solid "+T.accent,display:"block"}} />
+) : (
+<video src={m.url} style={{width:100,height:70,borderRadius:8,border:"2px solid "+T.accent,display:"block"}} />
+)}
+<button onClick={function(){removeCCMedia(mi);}} style={{position:"absolute",top:-6,right:-6,width:20,height:20,borderRadius:"50%",background:T.red,color:"#fff",border:"none",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>✕</button>
+</div>
+);
+})}
+</div>
+)}
+<p style={{fontSize:10,color:T.textMuted,marginBottom:8}}>{"📌 Max "+MAX_CC_PHOTOS+" photos or "+MAX_CC_VIDEOS+" videos per message"}</p>
+<div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+<Btn onClick={function(){ if(ccFileRef.current) ccFileRef.current.click(); }} color={T.purple} disabled={ccUploading} small>
+{ccUploading ? "⏳ "+ccUploadPct+"%" : "📷"}
+</Btn>
+<Btn onClick={function(){ if(ccVideoFileRef.current) ccVideoFileRef.current.click(); }} color={T.purple} disabled={ccUploading} small>
+{ccUploading ? "⏳ "+ccUploadPct+"%" : "🎥"}
+</Btn>
+<textarea value={ccText} onChange={function(e){setCcText(e.target.value);}} placeholder="Type a message..."
+style={{flex:1,background:T.surface,border:"1px solid "+T.border,borderRadius:10,padding:"10px 12px",color:T.text,fontSize:13,fontFamily:"Outfit,sans-serif",outline:"none",resize:"none",minHeight:40,boxSizing:"border-box"}} />
+<Btn onClick={sendClassMsg} color={T.accent} disabled={ccUploading}>➤ Send</Btn>
+</div>
+</div>
+)}
+</div>
+)}
 </div>
 )}
 </div>
@@ -20062,6 +20444,32 @@ var classIds = (students||[]).filter(function(s){ return s.class===teacherClass 
 return chats.filter(function(c){
 return classIds.indexOf(c.studentId)!==-1 && c.from==="parent" && !c.read;
 }).length;
+}
+return 0;
+}
+function computeUnreadClassChatCount(classChats, role, loggedInUser, students) {
+if (!classChats || !loggedInUser) return 0;
+var mySchoolId = loggedInUser.schoolId || null;
+var viewerKey = String((loggedInUser.id != null ? loggedInUser.id : null) || loggedInUser.username || loggedInUser.name || role);
+var isUnread = function(c){ return !c.readBy || !c.readBy[viewerKey]; };
+var schoolMsgs = classChats.filter(function(c){ return !c.schoolId || sameId(c.schoolId, mySchoolId); });
+if (role === "parent") {
+var pSid = loggedInUser.studentId || null;
+var pSn = (loggedInUser.studentName || loggedInUser.childName || "").trim().toLowerCase();
+var myChild = null;
+if (pSid) myChild = (students||[]).find(function(s){ return String(s.id)===String(pSid); });
+if (!myChild && pSn) myChild = (students||[]).find(function(s){ return (s.name||"").trim().toLowerCase()===pSn; });
+var myClass = myChild ? myChild.class : null;
+if (!myClass) return 0;
+return schoolMsgs.filter(function(c){ return c.class===myClass && isUnread(c); }).length;
+}
+if (role === "teacher") {
+var teacherClass2 = loggedInUser.assignedClass || null;
+if (!teacherClass2) return 0;
+return schoolMsgs.filter(function(c){ return c.class===teacherClass2 && c.senderKey!==viewerKey && isUnread(c); }).length;
+}
+if (["principal","founder","superadmin","vice_principal"].includes(role)) {
+return schoolMsgs.filter(function(c){ return c.senderKey!==viewerKey && isUnread(c); }).length;
 }
 return 0;
 }
