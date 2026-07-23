@@ -32,28 +32,28 @@
   "screenshots": [
     {
       "src": "screenshots/1.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1080x2400",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Dashboard — quick access to all modules"
     },
     {
       "src": "screenshots/2.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1080x2400",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Exam Results — class-wise performance tracking"
     },
     {
       "src": "screenshots/3.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1080x2400",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Fees Management — session overview and collections"
     },
     {
       "src": "screenshots/4.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1080x2400",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Student Management — class-wise browsing"
