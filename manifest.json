@@ -1,0 +1,62 @@
+{
+  "id": "/app.html",
+  "name": "SchoolShield",
+  "short_name": "SchoolShield",
+  "description": "Complete School & College Management Platform",
+  "start_url": ".",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#01216C",
+  "theme_color": "#4F8EF7",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/1.jpg",
+      "sizes": "1080x2400",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Dashboard — quick access to all modules"
+    },
+    {
+      "src": "screenshots/2.jpg",
+      "sizes": "1080x2400",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Exam Results — class-wise performance tracking"
+    },
+    {
+      "src": "screenshots/3.jpg",
+      "sizes": "1080x2400",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Fees Management — session overview and collections"
+    },
+    {
+      "src": "screenshots/4.jpg",
+      "sizes": "1080x2400",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Student Management — class-wise browsing"
+    }
+  ]
+}

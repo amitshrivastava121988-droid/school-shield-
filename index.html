@@ -7,6 +7,7 @@
 <!-- Firebase for landing page content -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
 const landingFirebaseConfig = {
 apiKey: "AIzaSyC6RhJn8Pfb0wQ0VjNl-B0MgDuC0fRyFZc",
@@ -18,6 +19,24 @@ try {
 const landingApp = firebase.initializeApp(landingFirebaseConfig, "landing");
 window.landingDb = firebase.database(landingApp);
 } catch(e) { console.warn("Firebase init failed", e); }
+try {
+const mainSiteFirebaseConfig = {
+apiKey: "AIzaSyBZ-l1Mp-B4m024DLD-e2yRuXu49gld1Lg",
+authDomain: "school-shield-df230.firebaseapp.com",
+databaseURL: "https://school-shield-df230-default-rtdb.firebaseio.com",
+projectId: "school-shield-df230",
+storageBucket: "school-shield-df230.firebasestorage.app",
+messagingSenderId: "721192911180",
+appId: "1:721192911180:web:9ca9bda66514e2815f8fe9"
+};
+const mainSiteApp = firebase.initializeApp(mainSiteFirebaseConfig, "mainSite");
+window.mainSiteDb = firebase.database(mainSiteApp);
+window.mainSiteAuthReady = false;
+window.mainSiteAuthError = null;
+firebase.auth(mainSiteApp).signInAnonymously()
+.then(function(){ window.mainSiteAuthReady = true; })
+.catch(function(err){ window.mainSiteAuthReady = false; window.mainSiteAuthError = err ? (err.code + ": " + err.message) : "unknown"; });
+} catch(e) { console.warn("Main site Firebase init failed", e); }
 </script>
 <style>
 :root {
@@ -53,6 +72,27 @@ transition:color 0.2s;}
 padding:8px 20px;border-radius:6px;font-weight:600!important;text-decoration:none;font-size:14px;
 transition:opacity 0.2s!important;}
 .nav-cta:hover{opacity:0.9;}
+.school-search-box{position:relative;}
+.school-search-box input{background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,76,0.3);
+border-radius:20px;padding:8px 14px;color:#fff;font-size:13px;font-family:'DM Sans',sans-serif;
+outline:none;width:170px;}
+.school-search-box input::placeholder{color:rgba(255,255,255,0.5);}
+.school-search-box input:focus{border-color:var(--gold);}
+.school-search-results{position:absolute;top:calc(100% + 8px);left:0;right:0;
+background:#0a1628;border:1px solid rgba(201,168,76,0.35);border-radius:10px;
+overflow:hidden;z-index:1000;max-height:260px;overflow-y:auto;display:none;
+box-shadow:0 12px 30px rgba(0,0,0,0.5);min-width:220px;}
+.school-search-results.open{display:block;}
+.school-search-result-item{padding:10px 14px;cursor:pointer;font-size:13px;color:#fff;
+border-bottom:1px solid rgba(255,255,255,0.06);}
+.school-search-result-item:last-child{border-bottom:none;}
+.school-search-result-item:hover{background:rgba(201,168,76,0.15);}
+.school-search-result-item .ssr-code{color:var(--gold);font-size:11px;display:block;margin-top:2px;}
+.school-search-empty{padding:12px 14px;font-size:12px;color:#8a9ab0;}
+@media (max-width:900px){
+.school-search-box{width:100%;}
+.school-search-box input{width:100%;box-sizing:border-box;}
+}
 
 /* ── HERO ── */
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -120,6 +160,91 @@ background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05));
 border:1px solid rgba(201,168,76,0.2);}
 .feature-card h3{font-size:16px;font-weight:600;margin-bottom:8px;}
 .feature-card p{font-size:13px;color:var(--gray);line-height:1.6;}
+.feature-card{display:flex;flex-direction:column;}
+.feature-more{margin-top:14px;align-self:flex-start;border:1px solid rgba(201,168,76,0.4);
+color:var(--gold);background:transparent;border-radius:20px;padding:7px 16px;font-size:12.5px;
+font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background 0.2s,color 0.2s;}
+.feature-more:hover{background:var(--gold);color:var(--navy);}
+
+/* ── LANGUAGE TOGGLE ── */
+.lang-toggle{display:inline-flex;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+border-radius:24px;padding:4px;margin-top:28px;gap:4px;}
+.lang-btn{border:none;background:transparent;color:var(--gray);font-size:13px;font-weight:600;
+padding:8px 18px;border-radius:20px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+.lang-btn.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);}
+.lang-btn:hover:not(.active){color:var(--white);}
+
+/* ── FEATURE FILTERS ── */
+.feature-filters{display:flex;gap:10px;flex-wrap:wrap;margin-top:32px;margin-bottom:8px;}
+.ff-chip{border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.03);
+color:var(--gray);border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:500;
+font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;}
+.ff-chip:hover{border-color:rgba(201,168,76,0.4);color:var(--white);}
+.ff-chip.active{background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:700;}
+
+/* ── FEATURE DETAIL PAGE ── */
+.fd-page{position:fixed;inset:0;background:var(--navy);z-index:2000;display:none;overflow-y:auto;}
+.fd-page.open{display:block;}
+.fd-header{position:sticky;top:0;z-index:10;background:rgba(10,22,40,0.95);backdrop-filter:blur(12px);
+border-bottom:1px solid rgba(201,168,76,0.15);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.fd-back{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.75);font-size:14px;font-weight:500;
+border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:8px 16px;background:transparent;transition:all 0.2s;}
+.fd-back:hover{border-color:var(--gold);color:var(--gold);}
+.fd-hero{max-width:1160px;margin:0 auto;padding:64px 24px 40px;display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;}
+@media(max-width:860px){.fd-hero{grid-template-columns:1fr;padding-top:40px;gap:32px;}}
+.fd-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(201,168,76,0.1);
+border:1px solid rgba(201,168,76,0.3);border-radius:50px;padding:8px 18px;font-size:12px;color:var(--gold);
+font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:24px;}
+.fd-title{font-family:'Playfair Display',serif;font-size:clamp(36px,5.6vw,52px);font-weight:800;
+background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+line-height:1.15;margin-bottom:16px;}
+.fd-tagline{font-size:19px;font-weight:600;color:var(--white);margin-bottom:16px;}
+.fd-desc{font-size:15.5px;color:var(--gray);line-height:1.8;margin-bottom:36px;max-width:520px;}
+.fd-bullets{display:flex;flex-direction:column;gap:26px;}
+.fd-bullet{display:flex;gap:16px;align-items:flex-start;}
+.fd-bullet-icon{width:46px;height:46px;flex-shrink:0;border-radius:12px;border:1.5px solid rgba(201,168,76,0.4);
+background:rgba(201,168,76,0.08);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.fd-bullet h5{font-size:16px;font-weight:700;color:var(--gold2);margin-bottom:4px;}
+.fd-bullet p{font-size:14px;color:var(--gray);line-height:1.6;}
+.fd-mock-wrap{display:flex;justify-content:center;}
+.fd-monitor{width:100%;max-width:500px;background:#050b16;border-radius:16px;padding:16px;
+box-shadow:0 30px 70px rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.06);}
+.fd-monitor-inner{background:var(--navy2);border-radius:10px;padding:24px;min-height:380px;}
+.fd-mk-title{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:var(--gold);
+letter-spacing:0.08em;margin-bottom:18px;text-transform:uppercase;}
+.fd-mk-row{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.fd-mk-row:last-child{border-bottom:none;}
+.fd-mk-icon{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.06);flex-shrink:0;
+display:flex;align-items:center;justify-content:center;font-size:16px;}
+.fd-mk-primary{font-size:14px;font-weight:600;color:var(--white);}
+.fd-mk-secondary{font-size:12px;color:var(--gray);margin-top:2px;}
+.fd-mk-tag{margin-left:auto;font-size:11px;font-weight:700;padding:4px 11px;border-radius:12px;white-space:nowrap;}
+.fd-benefits{max-width:1160px;margin:30px auto 0;padding:56px 24px;text-align:center;}
+.fd-benefits h3{font-family:'Playfair Display',serif;font-size:32px;color:var(--gold);margin-bottom:8px;}
+.fd-benefits-line{width:56px;height:2px;background:var(--gold);opacity:0.5;margin:0 auto 44px;}
+.fd-benefits-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+@media(max-width:860px){.fd-benefits-grid{grid-template-columns:repeat(2,1fr);}}
+.fd-benefit-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+border-radius:16px;padding:34px 22px;text-align:center;}
+.fd-benefit-card .fd-b-icon{font-size:32px;margin-bottom:16px;}
+.fd-benefit-card h4{font-size:15.5px;font-weight:600;color:var(--white);margin-bottom:8px;}
+.fd-benefit-card p{font-size:13px;color:var(--gray);line-height:1.55;}
+.fd-cta-banner{max-width:1160px;margin:8px auto 48px;padding:34px 32px;border:1px solid rgba(201,168,76,0.25);
+border-radius:18px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:space-between;
+gap:28px;flex-wrap:wrap;}
+.fd-cta-left{display:flex;align-items:center;gap:18px;}
+.fd-cta-icon{width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,var(--gold),var(--gold2));
+display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;}
+.fd-cta-left h4{font-size:18px;font-weight:700;color:var(--white);}
+.fd-cta-left p{font-size:13.5px;color:var(--gray);margin-top:3px;}
+.fd-cta-checks{display:flex;flex-direction:column;gap:8px;}
+.fd-cta-checks div{font-size:13.5px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:8px;}
+.fd-cta-checks span{color:var(--gold);font-weight:800;}
+.fd-cta-actions{display:flex;gap:12px;}
+.fd-cta-actions a{padding:13px 24px;border-radius:8px;font-size:14.5px;font-weight:700;text-decoration:none;}
+@media(max-width:480px){.fd-cta-banner{flex-direction:column;align-items:flex-start;}}
+.fd-footer{max-width:1160px;margin:0 auto;padding:28px 24px 60px;display:flex;justify-content:space-between;
+flex-wrap:wrap;gap:12px;color:var(--gray);font-size:12.5px;border-top:1px solid rgba(255,255,255,0.06);}
 
 /* ── PLANS ── */
 #plans{background:var(--navy);}
@@ -257,7 +382,11 @@ background:var(--navy2);padding:20px;border-bottom:1px solid rgba(255,255,255,0.
 <a href="#plans">Plans</a>
 <a href="#roles">Who Uses It</a>
 <a href="#contact">Contact</a>
-<a href="#login" class="nav-cta">Login →</a>
+<div class="school-search-box">
+<input type="text" id="schoolSearchInput" placeholder="🔍 Find your school..." autocomplete="off" oninput="handleSchoolSearchInput(this.value)" onfocus="handleSchoolSearchInput(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();}"/>
+<div class="school-search-results" id="schoolSearchResults"></div>
+</div>
+<a href="app.html" class="nav-cta">Login →</a>
 </div>
 <div class="hamburger" onclick="document.getElementById('navLinks').classList.toggle('open')">
 <span></span><span></span><span></span>
@@ -448,25 +577,283 @@ background:var(--navy2);padding:20px;border-bottom:1px solid rgba(255,255,255,0.
 <!-- FEATURES -->
 <section id="features">
 <div class="container">
-<span class="section-tag reveal">Everything You Need</span>
-<h2 class="section-title reveal">Complete School Management<br/><span style="color:var(--gold)">In One Platform</span></h2>
-<p class="section-sub reveal">Students, staff, fees, attendance, transport, exams — manage everything in real-time without any hassle.</p>
-<div class="features-grid">
-<div class="feature-card reveal"><div class="feature-icon">👨‍🎓</div><h3>Student Management</h3><p>Complete student profiles with documents, ID cards, report cards, attendance aur fee tracking — sab ek jagah.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">💰</div><h3>Fee Management</h3><p>Installment plans, discount tracking, advance deposits, overdue alerts aur professional fee slips with one click.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">🚌</div><h3>Transport & GPS</h3><p>Bus routes, driver management, live tracking, stop-by-stop timeline aur parent alerts — complete transport solution.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">📊</div><h3>Attendance System</h3><p>Students, teachers aur employees ki attendance — class-wise, day-wise aur real-time dashboard.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">👨‍🏫</div><h3>Teacher & Staff Portal</h3><p>Role-based access, leave management, salary structure, payslips aur performance tracking.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">📝</div><h3>Exam & Results</h3><p>Exam scheduling, marks entry, result generation aur automatic report cards — paperless solution.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">📋</div><h3>Homework & Syllabus</h3><p>Digital homework assignment, file uploads, syllabus tracking aur online classes link management.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">🆘</div><h3>Staff Safety Features</h3><p>Students & Staff Panic Button, Reached Home tracking aur Health Check-in — unique safety features jo kisi aur app mein nahi.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">🔔</div><h3>Alerts & Notices</h3><p>Push notifications, FCM alerts, medicine reminders aur real-time SOS system for emergencies.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">🏫</div><h3>School Gallery & Page</h3><p>School ka digital profile, photo/video gallery with Cloudinary storage aur YouTube integration.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">👁️</div><h3>Visitor Management</h3><p>Reception ke liye complete visitor log — kaun aaya, kab aaya, kis se milne aaya — sab tracked.</p></div>
-<div class="feature-card reveal"><div class="feature-icon">🏆</div><h3>Multi-School SaaS</h3><p>Multiple schools on one platform — each school's data separate, secure and isolated. Perfect for chains.</p></div>
+<span class="section-tag reveal" id="featSectionTag">Everything You Need</span>
+<h2 class="section-title reveal" id="featSectionTitle">Complete School Management<br/><span style="color:var(--gold)">In One Platform</span></h2>
+<p class="section-sub reveal" id="featSectionSub">37 modules — academics, fees, safety, transport, admissions aur staff — sab real-time, ek hi app mein.</p>
+<div class="lang-toggle" id="langToggle">
+<button class="lang-btn active" data-lang="hi" onclick="setLang('hi')">🇮🇳 हिंदी</button>
+<button class="lang-btn" data-lang="en" onclick="setLang('en')">🇬🇧 English</button>
 </div>
+<div class="feature-filters" id="featureFilters"></div>
+<div class="features-grid" id="featuresGrid"></div>
 </div>
 </section>
+
+<!-- FEATURE DETAIL PAGE -->
+<div class="fd-page" id="fdPage">
+<div class="fd-header">
+<button class="fd-back" onclick="closeFeatureModal()">← Back to Features</button>
+<a href="#contact" class="nav-cta" onclick="closeFeatureModal()">Book a Demo →</a>
+</div>
+<div id="fdContent"></div>
+</div>
+
+<script>
+var SS_FEATURES = [
+{cat:"Academic",icon:"👨‍🎓",title:"Students",mockup:"idcard",short:"Complete student profiles — documents, records, ID cards aur history, sab ek jagah.",tagline:"Every Student. One Complete Profile.",desc:"Har student ka poora record — personal details, documents, ID cards, admission history aur academic progress — ek hi profile mein organized aur searchable.",bullets:[{icon:"📄",t:"Complete Records",d:"Documents, admission details aur history in one place."},{icon:"🪪",t:"ID Card Generation",d:"Photo, QR aur barcode ke saath bulk print-ready cards."},{icon:"🔍",t:"Instant Search",d:"Class, section ya name se turant student dhoondo."}]},
+{cat:"Academic",icon:"👨‍🏫",title:"Teachers",short:"Teacher profiles, subject allocation aur performance — role-based access ke saath.",tagline:"Every Teacher, Organized and Empowered.",desc:"Teacher profiles, subject aur class allocation, timetable access aur performance tracking — sab role-based permissions ke saath secure.",bullets:[{icon:"📚",t:"Subject Allocation",d:"Class aur subject assignment, ek dashboard se."},{icon:"🔐",t:"Role-Based Access",d:"Teachers sirf apni class ka data dekhte hain."},{icon:"📈",t:"Performance Tracking",d:"Feedback aur teaching insights, transparently."}]},
+{cat:"Academic",icon:"📝",title:"Exams",short:"Exam scheduling, marks entry aur auto-generated result cards — paperless.",tagline:"From Exam Schedule to Report Card, Automated.",desc:"Exam scheduling se marks entry tak, sab digital. Admit cards QR-verified auto-generate hote hain, aur marksheets grade-percentage-rank ke saath khud calculate hoti hain.",bullets:[{icon:"🎫",t:"Admit Card Generation",d:"QR-verified, roll no. aur centre auto-filled."},{icon:"🧮",t:"Auto Marksheet",d:"Grade, percentage aur rank instantly calculate."},{icon:"📊",t:"Result Analysis",d:"Class-wise performance reports, one click mein."}]},
+{cat:"Academic",icon:"🗓️",title:"Timetable",short:"Class, teacher aur room-wise timetable — automated aur conflict-free.",tagline:"No More Clashing Schedules.",desc:"Class-wise, teacher-wise timetable automatically generate hota hai, conflicts detect karke — substitutions bhi seamlessly manage hoti hain.",bullets:[{icon:"⚙️",t:"Auto-Generated",d:"Manual timetable banane ki zarurat nahi."},{icon:"🔄",t:"Substitution Handling",d:"Teacher absent ho to auto-suggested replacement."},{icon:"📲",t:"Instant Sharing",d:"Har update turant students aur teachers tak."}]},
+{cat:"Academic",icon:"📆",title:"Calendar & Attendance",short:"Students, teachers aur staff ki attendance — class-wise aur real-time.",tagline:"One Tap Attendance. Full Visibility.",desc:"Daily attendance ek tap mein mark ho jati hai, aur school calendar ke saath integrated — holidays, events aur exams sab ek jagah dikhte hain.",bullets:[{icon:"✅",t:"One-Tap Marking",d:"Class-wise attendance, seconds mein complete."},{icon:"📅",t:"Integrated Calendar",d:"Holidays, exams aur events ek hi view mein."},{icon:"📊",t:"Real-Time Reports",d:"Absentee trends turant dashboard par."}]},
+{cat:"Academic",icon:"📖",title:"Syllabus",short:"NCERT-linked syllabus — class aur subject-wise book download, one tap mein.",tagline:"Class-Wise. Subject-Wise. One Tap Download.",desc:"Official NCERT book links pre-mapped har class aur subject ke liye — students aur parents ko sahi textbook dhoondne ki zarurat nahi.",bullets:[{icon:"🏛️",t:"Official NCERT Links",d:"Pre-mapped, hamesha correct edition."},{icon:"🏫",t:"Class-Wise",d:"Browse karo class ke hisaab se, bina search kiye."},{icon:"⬇️",t:"One-Tap Download",d:"Direct download, app ke andar hi."}]},
+{cat:"Academic",icon:"🎥",title:"Online Classes",short:"Live virtual classroom — meeting links, schedule aur attendance sab saath.",tagline:"Every Lecture, Live and Organized.",desc:"Online lecture mapping se teachers apna Zoom/Meet link schedule kar sakte hain, aur students ek click mein class join karte hain — sab app ke andar.",bullets:[{icon:"🔗",t:"Meeting Link Mapping",d:"Har class ka apna scheduled link aur time."},{icon:"👨‍🏫",t:"Teacher Dashboard",d:"Lecture schedule, ek jagah se manage."},{icon:"📱",t:"Student Access",d:"Ek tap mein class join, no confusion."}]},
+{cat:"Academic",icon:"📚",title:"Library",short:"Book stock, issue-return tracking aur barcode-based search.",tagline:"Every Book, Tracked and Searchable.",desc:"Library stock register automated hai — book issue, return, late fine aur barcode generation, sab digital aur error-free.",bullets:[{icon:"🔍",t:"Instant Search",d:"Title, author ya subject se book dhoondo."},{icon:"🏷️",t:"Barcode Support",d:"Existing barcodes reuse, ya naye generate karo."},{icon:"📆",t:"Issue Tracking",d:"Due dates aur late fines automatically track."}]},
+{cat:"Records",icon:"🗂️",title:"Letters & Certificates",short:"Transfer certificate, bonafide, marksheet aur official letters — auto-generated.",tagline:"Every Document, One Click Away.",desc:"TC, bonafide certificate aur other official letters, school ke pre-designed templates se auto-generate hote hain — koi manual typing nahi.",bullets:[{icon:"📄",t:"Auto TC Generation",d:"Student data se, error-free aur instant."},{icon:"✉️",t:"Custom Letters",d:"Bonafide, recommendation, aur bhi templates."},{icon:"🖨️",t:"Print-Ready",d:"Letterhead-formatted, direct print ke liye."}]},
+{cat:"Safety",icon:"📋",title:"Discipline Report",short:"Student behaviour tracking — uniform, conduct aur incidents, sab logged.",tagline:"Track Behaviour. Build Better Habits.",desc:"Teachers har student ka conduct record karte hain — uniform, behaviour, incidents — aur parents ko SMS/email se turant inform kiya jata hai.",bullets:[{icon:"📝",t:"Behaviour Logging",d:"Fights, uniform, conduct — sab tracked."},{icon:"📲",t:"Parent Notification",d:"Indiscipline ki turant SMS/email alert."},{icon:"📊",t:"Feedback Reports",d:"Pattern analysis, better school culture."}]},
+{cat:"Safety",icon:"🚪",title:"Visitors",short:"Complete visitor log — kaun aaya, kab, kis se milne — sab tracked.",tagline:"Every Visitor, Verified and Logged.",desc:"Reception ke liye complete visitor management — name, phone, purpose aur photo capture, plus unauthorized entry par instant alert.",bullets:[{icon:"📸",t:"Photo & Details",d:"Har visitor ka record, verified entry."},{icon:"🚨",t:"Intruder Alert",d:"Unauthorized entry par admin ko alert."},{icon:"📜",t:"Full History",d:"Kab, kaun, kis se mila — sab searchable."}]},
+{cat:"Safety",icon:"📹",title:"Live Cameras",short:"School premises ki live CCTV feed, app ke andar hi accessible.",tagline:"See Your School, Anytime, Anywhere.",desc:"Authorized staff aur management school ke CCTV cameras ki live feed app ke andar hi dekh sakte hain — koi separate software ki zarurat nahi.",bullets:[{icon:"📡",t:"Live Streaming",d:"Real-time feed, seedha app mein."},{icon:"🔐",t:"Role-Based Viewing",d:"Sirf authorized roles ko access."},{icon:"🏫",t:"Multi-Camera",d:"Poora campus, multiple angles se."}]},
+{cat:"Safety",icon:"🚗",title:"Authorized Pickup",short:"Sirf approved guardians hi student ko school se le ja sakte hain.",tagline:"Only the Right Person, Every Pickup.",desc:"Parents apne authorized pickup contacts pre-register karte hain — reception verify karta hai har pickup pe, unauthorized attempts par alert milta hai.",bullets:[{icon:"✅",t:"Pre-Approved List",d:"Parents khud authorized contacts add karein."},{icon:"🔍",t:"Reception Verification",d:"Har pickup verified hai, gate se."},{icon:"🚨",t:"Instant Alert",d:"Unknown pickup attempt par turant notify."}]},
+{cat:"Safety",icon:"🏠",title:"Reached Home",short:"Student safely ghar pohcha ya nahi — parents ko real-time confirmation.",tagline:"Peace of Mind, Confirmed Daily.",desc:"Jab student school se nikalta hai aur ghar pohchta hai, parents ko real-time confirmation milta hai — bus ho ya walk, dono trackable.",bullets:[{icon:"📍",t:"Departure Tracking",d:"School se nikalne ka time logged."},{icon:"🏠",t:"Arrival Confirmation",d:"Ghar pohchne par instant notification."},{icon:"🧘",t:"Parent Peace of Mind",d:"Har din confirmation, koi guesswork nahi."}]},
+{cat:"Safety",icon:"🌡️",title:"Health Check-in",short:"Daily health screening — temperature, symptoms aur quick flagging.",tagline:"A Quick Check, Every Morning.",desc:"Daily health check-in se koi bhi symptom ya fever turant flag hota hai — nurse aur parents dono ko real-time visibility milti hai.",bullets:[{icon:"🩺",t:"Daily Screening",d:"Quick symptom aur temperature check."},{icon:"🚩",t:"Instant Flagging",d:"Concern hone par turant highlight."},{icon:"📲",t:"Parent Visibility",d:"Health status, seedha parent app mein."}]},
+{cat:"Safety",icon:"📏",title:"Child Health & Growth",short:"Height, weight aur growth tracking — vaccination records ke saath.",tagline:"Every Milestone, Recorded.",desc:"Student ki height, weight, eyesight aur vaccination history systematically record hoti hai — family doctor details bhi emergency ke liye saved rehte hain.",bullets:[{icon:"📐",t:"Growth Tracking",d:"Height, weight, eyesight — trend ke saath."},{icon:"💉",t:"Vaccination Records",d:"Complete immunization history."},{icon:"🚑",t:"Emergency Contacts",d:"Family doctor details, hamesha ready."}]},
+{cat:"Safety",icon:"🔔",title:"Alerts & Notices",mockup:"panic",short:"Push notifications, panic alerts aur medicine reminders — real-time.",tagline:"One Tap. Everyone Who Matters, Notified.",desc:"Panic button se principal aur affected parents ko instant alert milta hai — reason aur time ke saath poora log maintain hota hai, emergencies ke liye.",bullets:[{icon:"🚨",t:"Instant Panic Alert",d:"One tap, principal aur parents notified."},{icon:"📲",t:"Multi-Channel Push",d:"App, SMS aur email — sab ek saath."},{icon:"📜",t:"Full Alert Log",d:"Kab, kis wajah se — sab recorded."}]},
+{cat:"Communication",icon:"💬",title:"School Chat",mockup:"chat",short:"WhatsApp-jaisa class-wise announcement chat — photo aur video ke saath.",tagline:"WhatsApp-Familiar. Built for School.",desc:"Har class ka apna announcement group — teachers text, photo aur video broadcast karte hain, unread badges ke saath, aur 2-din baad auto-clear.",bullets:[{icon:"🏫",t:"Class-Wise Groups",d:"Har class ki apni announcement space."},{icon:"📷",t:"Photo & Video",d:"Directly chat mein share, extra app nahi."},{icon:"🔴",t:"Unread Badges",d:"Parents kuch bhi miss nahi karte."}]},
+{cat:"Communication",icon:"💌",title:"Feedback & Poll",short:"Parents aur teachers se feedback aur polls — school decisions ke liye.",tagline:"Every Voice, Heard and Counted.",desc:"School events, teaching quality ya policies par parents aur staff se structured feedback aur polls collect karo — real data, better decisions.",bullets:[{icon:"📊",t:"Quick Polls",d:"One-tap voting, instant results."},{icon:"📝",t:"Structured Feedback",d:"Teaching aur events par honest input."},{icon:"📈",t:"Actionable Insights",d:"Trends dekho, decisions improve karo."}]},
+{cat:"Communication",icon:"📋",title:"Meeting Manager",short:"PTM aur staff meetings schedule karo, notifications automatic.",tagline:"Every Meeting, Scheduled and Reminded.",desc:"Parent-teacher meetings aur staff meetings schedule karo — automatic reminders sabko milte hain, aur attendance bhi track hoti hai.",bullets:[{icon:"📅",t:"Easy Scheduling",d:"Date, time aur agenda, ek jagah se."},{icon:"🔔",t:"Auto Reminders",d:"Sabko notification, koi miss nahi."},{icon:"✅",t:"Attendance Tracking",d:"Kaun aaya, kaun nahi — record ke saath."}]},
+{cat:"Communication",icon:"🖼️",title:"Gallery",short:"School events ki photo aur video gallery — Cloudinary-powered.",tagline:"Every Moment, Beautifully Archived.",desc:"Sports day, annual function, ya daily activities — sabki photos aur videos ek organized gallery mein, parents ke liye accessible.",bullets:[{icon:"📸",t:"Event-Wise Albums",d:"Har event ka apna organized album."},{icon:"☁️",t:"Cloud Storage",d:"Fast loading, Cloudinary-powered."},{icon:"👨‍👩‍👧",t:"Parent Access",d:"Apne bacche ki activities, kabhi bhi dekho."}]},
+{cat:"Communication",icon:"🏫",title:"School Page",short:"School ka digital public profile — info, gallery aur YouTube integrated.",tagline:"Your School's Digital Front Door.",desc:"School ka apna public page — info, achievements, gallery aur YouTube videos — parents aur prospective families ke liye ek professional presence.",bullets:[{icon:"🌐",t:"Public Profile",d:"School ki digital identity, live."},{icon:"🎬",t:"YouTube Integration",d:"Videos directly embed, extra upload nahi."},{icon:"🏆",t:"Showcase Achievements",d:"Awards aur milestones, sabko dikhaye."}]},
+{cat:"Finance",icon:"💳",title:"Fees",mockup:"fees",short:"Installments, discounts aur overdue alerts — auto-calculated fee management.",tagline:"Set Once. Automate Forever.",desc:"Class-wise fee structure ek baar define karo — installments, discounts aur transport fees automatically calculate hote hain, dues real-time trackable.",bullets:[{icon:"🔀",t:"Auto-Split Installments",d:"Discount apply, bina manual calculation."},{icon:"📊",t:"Live Dues Dashboard",d:"Pending payments, real-time visible."},{icon:"⏰",t:"Payment Reminders",d:"Parents ko due date se pehle notify."}]},
+{cat:"Finance",icon:"👤",title:"Accounts",short:"School ke financial accounts — income, ledgers aur reconciliation.",tagline:"Every Transaction, Clearly Recorded.",desc:"Income aur expense ledgers, fee collections ke saath automatically reconcile hote hain — no more manual bookkeeping errors.",bullets:[{icon:"📒",t:"Auto Reconciliation",d:"Fee collection se ledger, seamlessly linked."},{icon:"🧮",t:"Error-Free Totals",d:"Manual calculation mistakes eliminated."},{icon:"📄",t:"Exportable Reports",d:"Audit-ready statements, one click mein."}]},
+{cat:"Finance",icon:"💰",title:"Expenses",short:"School ke daily expenses track karo — category-wise aur budget-aligned.",tagline:"Every Rupee Spent, Accounted For.",desc:"Maintenance, supplies ya salaries — har expense category-wise log hoti hai, budget ke against real-time comparison ke saath.",bullets:[{icon:"🏷️",t:"Category Tracking",d:"Har expense properly classified."},{icon:"📊",t:"Budget Comparison",d:"Planned vs actual, ek glance mein."},{icon:"🧾",t:"Receipt Records",d:"Har transaction ka proof, digitally saved."}]},
+{cat:"Finance",icon:"👔",title:"Employees",short:"Staff records, payroll aur HR functions — sab ek dashboard mein.",tagline:"Every Employee, Fully Managed.",desc:"Employee records, salary structure, payslips aur performance — HR ke sabhi kaam ek hi dashboard se, digitally organized.",bullets:[{icon:"📋",t:"Complete Records",d:"Personal aur professional details, secure."},{icon:"💵",t:"Payroll & Payslips",d:"Salary generation, auto-calculated."},{icon:"📈",t:"Performance Tracking",d:"Reviews aur growth, documented."}]},
+{cat:"Finance",icon:"📄",title:"Leave Applications",short:"Online leave requests — auto-routed approval workflow ke saath.",tagline:"Apply, Approve, Track — All Online.",desc:"Staff online leave apply karte hain, request automatically supervisor tak route hoti hai — leave balance real-time visible rehta hai.",bullets:[{icon:"📝",t:"Online Application",d:"Leave type aur dates, seconds mein submit."},{icon:"🔄",t:"Auto-Routed Approval",d:"Sahi supervisor tak, bina delay."},{icon:"📊",t:"Live Leave Balance",d:"Kitni leave bachi, hamesha visible."}]},
+{cat:"Finance",icon:"📇",title:"Staff Directory",short:"Poore staff ki searchable directory — role, contact aur department-wise.",tagline:"Every Staff Member, One Search Away.",desc:"Department, role ya name se koi bhi staff member turant dhoondo — contact details aur designation, ek organized directory mein.",bullets:[{icon:"🔍",t:"Instant Search",d:"Name, role ya department se filter."},{icon:"📇",t:"Contact Details",d:"Phone aur email, ek jagah se."},{icon:"🏢",t:"Department-Wise",d:"Har team clearly organized."}]},
+{cat:"Finance",icon:"📦",title:"Inventory",short:"School assets aur supplies — stock, procurement aur tracking.",tagline:"Every Asset, Accounted For.",desc:"Lab equipment, furniture ya stationery — sab kuch tracked hai, restocking alerts ke saath, bina manual registers ke.",bullets:[{icon:"📋",t:"Stock Tracking",d:"Har item ka current quantity, live."},{icon:"🔔",t:"Restock Alerts",d:"Low stock hone par turant notify."},{icon:"📊",t:"Procurement Records",d:"Purchases aur usage, fully logged."}]},
+{cat:"Growth",icon:"📝",title:"Admission Enquiry",short:"\"Apply Now\" form se leads capture karo, New se Enrolled tak track.",tagline:"From Inquiry to Enrolled, In One Flow.",desc:"Website par live \"Apply Now\" form se parent details automatically capture hote hain, aur status New → Contacted → Enrolled tak tracked rehta hai.",bullets:[{icon:"🌐",t:"Public Apply Form",d:"School ki apni website par live."},{icon:"📥",t:"Auto-Captured Leads",d:"Zero manual data entry."},{icon:"🚦",t:"Status Tracking",d:"Har lead ka stage, hamesha visible."}]},
+{cat:"Growth",icon:"💼",title:"Vacancies",short:"Careers page se resumes seedha HR dashboard mein — apply online.",tagline:"Post a Role. Receive the Resumes.",desc:"Open roles apni careers page par post karo, candidates resume directly upload karte hain — HR sab applications ek dashboard se review karta hai.",bullets:[{icon:"🌐",t:"Public Careers Page",d:"School ke apne link par hosted."},{icon:"📎",t:"Direct Resume Upload",d:"Email inbox manage karne ki zarurat nahi."},{icon:"🗂️",t:"HR Dashboard",d:"Har application, ek organized view mein."}]},
+{cat:"Growth",icon:"🎓",title:"Alumni Management",short:"Ex-students ka network maintain karo — events aur mentorship ke liye.",tagline:"Once a Student, Always Connected.",desc:"Alumni ka database maintain karo, unhe events ke liye invite karo, aur current students ke liye mentorship connections banao.",bullets:[{icon:"🗂️",t:"Alumni Database",d:"Contact aur career details, organized."},{icon:"🎉",t:"Event Invitations",d:"Reunions aur functions, easy outreach."},{icon:"🤝",t:"Mentorship Network",d:"Seniors se juniors ko real guidance."}]},
+{cat:"Operations",icon:"🚌",title:"Transport",mockup:"trip",short:"Bus routes, live GPS tracking aur parent alerts — end-to-end.",tagline:"Know Exactly Where the Bus Is.",desc:"Bus aur route master, live GPS tracking parent app par, aur role-based views drivers aur transport heads ke liye — full visibility, har trip par.",bullets:[{icon:"📍",t:"Live GPS Tracking",d:"Parents dekhein bus real map par."},{icon:"⏱️",t:"Real-Time ETA",d:"Exact arrival time, guesswork nahi."},{icon:"👤",t:"Role-Based Views",d:"Drivers aur transport heads, apna dashboard."}]},
+{cat:"Operations",icon:"🗺️",title:"Trip Management",short:"Educational trips aur excursions — planning se attendance tak.",tagline:"Every Trip, Planned and Tracked.",desc:"School trips ke liye permission slips, attendance aur route planning — sab ek jagah, safety aur organization ke saath.",bullets:[{icon:"📝",t:"Permission Tracking",d:"Parent consent, digitally recorded."},{icon:"🗺️",t:"Route Planning",d:"Trip itinerary, clearly mapped."},{icon:"✅",t:"Trip Attendance",d:"Har student accounted for, throughout."}]},
+{cat:"Operations",icon:"🏠",title:"Hostel Management",mockup:"hostel",short:"Room allocation, resident records aur dedicated hostel manager role.",tagline:"Every Room. Every Resident. Tracked.",desc:"Room allocation, boarder records aur daily hostel operations — dedicated hostel manager role ke through, warden-level control ke saath.",bullets:[{icon:"🚪",t:"Room Allocation",d:"Assign aur reassign, kuch taps mein."},{icon:"🧑‍🎓",t:"Resident Records",d:"Har boarder ki details, always updated."},{icon:"👤",t:"Hostel Manager Role",d:"Dedicated warden-level access."}]},
+{cat:"Operations",icon:"🍱",title:"Canteen",short:"Menu, orders aur billing — school canteen digitally managed.",tagline:"Every Meal, Ordered and Tracked.",desc:"Daily menu publish karo, students/staff order karein aur billing automatic ho jaye — canteen operations ka poora digital record.",bullets:[{icon:"📋",t:"Digital Menu",d:"Daily items, sabko instantly visible."},{icon:"🧾",t:"Auto Billing",d:"Orders se bill, seamlessly generate."},{icon:"📊",t:"Sales Insights",d:"Popular items aur revenue, ek glance mein."}]},
+{cat:"Operations",icon:"🏅",title:"Sports & Co-curricular",short:"Sports, art aur talent activities — achievements ke saath tracked.",tagline:"Every Talent, Recognized.",desc:"Sports events, art competitions aur co-curricular activities record karo — student achievements showcase hote hain, poore school ke saamne.",bullets:[{icon:"🏆",t:"Achievement Tracking",d:"Wins aur participation, sab logged."},{icon:"🎨",t:"Activity Records",d:"Sports se lekar art tak, sab covered."},{icon:"🌟",t:"Student Showcase",d:"Talent recognized, motivation boosted."}]}
+];
+
+var SS_LANG = "hi";
+
+var SS_FEATURES_EN = {
+"Students":{short:"Complete student profiles — documents, records, ID cards and history, all in one place.",tagline:"Every Student. One Complete Profile.",desc:"Every student's complete record — personal details, documents, ID cards, admission history and academic progress — organized and searchable in one profile.",bullets:[{t:"Complete Records",d:"Documents, admission details and history in one place."},{t:"ID Card Generation",d:"Photo, QR and barcode included, in bulk print-ready cards."},{t:"Instant Search",d:"Find any student instantly by class, section or name."}]},
+"Teachers":{short:"Teacher profiles, subject allocation and performance — with role-based access.",tagline:"Every Teacher, Organized and Empowered.",desc:"Teacher profiles, subject and class allocation, timetable access and performance tracking — all secured with role-based permissions.",bullets:[{t:"Subject Allocation",d:"Class and subject assignment, from one dashboard."},{t:"Role-Based Access",d:"Teachers only see their own class data."},{t:"Performance Tracking",d:"Feedback and teaching insights, transparently."}]},
+"Exams":{short:"Exam scheduling, marks entry and auto-generated result cards — fully paperless.",tagline:"From Exam Schedule to Report Card, Automated.",desc:"From exam scheduling to marks entry, everything is digital. Admit cards are QR-verified and auto-generated, and marksheets calculate grade, percentage and rank automatically.",bullets:[{t:"Admit Card Generation",d:"QR-verified, with roll number and centre auto-filled."},{t:"Auto Marksheet",d:"Grade, percentage and rank calculated instantly."},{t:"Result Analysis",d:"Class-wise performance reports in one click."}]},
+"Timetable":{short:"Class, teacher and room-wise timetable — automated and conflict-free.",tagline:"No More Clashing Schedules.",desc:"Class-wise and teacher-wise timetables generate automatically, detecting conflicts — substitutions are also handled seamlessly.",bullets:[{t:"Auto-Generated",d:"No need to build timetables manually."},{t:"Substitution Handling",d:"Auto-suggested replacement when a teacher is absent."},{t:"Instant Sharing",d:"Every update reaches students and teachers immediately."}]},
+"Calendar & Attendance":{short:"Attendance for students, teachers and staff — class-wise and real-time.",tagline:"One Tap Attendance. Full Visibility.",desc:"Daily attendance is marked in one tap, integrated with the school calendar — holidays, events and exams all appear in one place.",bullets:[{t:"One-Tap Marking",d:"Class-wise attendance, complete in seconds."},{t:"Integrated Calendar",d:"Holidays, exams and events in a single view."},{t:"Real-Time Reports",d:"Absentee trends, instantly on the dashboard."}]},
+"Syllabus":{short:"NCERT-linked syllabus — class and subject-wise book downloads, in one tap.",tagline:"Class-Wise. Subject-Wise. One Tap Download.",desc:"Official NCERT book links are pre-mapped to every class and subject — students and parents never need to search for the right textbook.",bullets:[{t:"Official NCERT Links",d:"Pre-mapped, always the correct edition."},{t:"Class-Wise",d:"Browse by class, no searching needed."},{t:"One-Tap Download",d:"Direct download, right inside the app."}]},
+"Online Classes":{short:"Live virtual classroom — meeting links, schedule and attendance together.",tagline:"Every Lecture, Live and Organized.",desc:"With online lecture mapping, teachers can schedule their own Zoom/Meet link, and students join class in one click — all inside the app.",bullets:[{t:"Meeting Link Mapping",d:"Every class has its own scheduled link and time."},{t:"Teacher Dashboard",d:"Manage the lecture schedule from one place."},{t:"Student Access",d:"Join class in one tap, no confusion."}]},
+"Library":{short:"Book stock, issue-return tracking and barcode-based search.",tagline:"Every Book, Tracked and Searchable.",desc:"The library stock register is automated — book issues, returns, late fines and barcode generation, all digital and error-free.",bullets:[{t:"Instant Search",d:"Find a book by title, author or subject."},{t:"Barcode Support",d:"Reuse existing barcodes, or generate new ones."},{t:"Issue Tracking",d:"Due dates and late fines tracked automatically."}]},
+"Letters & Certificates":{short:"Transfer certificates, bonafide, marksheets and official letters — auto-generated.",tagline:"Every Document, One Click Away.",desc:"TCs, bonafide certificates and other official letters auto-generate from the school's own pre-designed templates — no manual typing required.",bullets:[{t:"Auto TC Generation",d:"From student data, error-free and instant."},{t:"Custom Letters",d:"Bonafide, recommendation, and more templates."},{t:"Print-Ready",d:"Letterhead-formatted, ready for direct printing."}]},
+"Discipline Report":{short:"Student behaviour tracking — uniform, conduct and incidents, all logged.",tagline:"Track Behaviour. Build Better Habits.",desc:"Teachers record each student's conduct — uniform, behaviour, incidents — and parents are informed instantly by SMS/email.",bullets:[{t:"Behaviour Logging",d:"Fights, uniform, conduct — all tracked."},{t:"Parent Notification",d:"Instant SMS/email alert for indiscipline."},{t:"Feedback Reports",d:"Pattern analysis for a better school culture."}]},
+"Visitors":{short:"Complete visitor log — who came, when, and to meet whom — all tracked.",tagline:"Every Visitor, Verified and Logged.",desc:"Complete visitor management for reception — name, phone, purpose and photo capture, plus instant alerts for unauthorized entry.",bullets:[{t:"Photo & Details",d:"Every visitor's record, with verified entry."},{t:"Intruder Alert",d:"Admin alerted on unauthorized entry."},{t:"Full History",d:"Who, when, and who they met — all searchable."}]},
+"Live Cameras":{short:"Live CCTV feed of the school premises, accessible right inside the app.",tagline:"See Your School, Anytime, Anywhere.",desc:"Authorized staff and management can view the school's CCTV live feed right inside the app — no separate software needed.",bullets:[{t:"Live Streaming",d:"Real-time feed, directly in the app."},{t:"Role-Based Viewing",d:"Only authorized roles get access."},{t:"Multi-Camera",d:"The entire campus, from multiple angles."}]},
+"Authorized Pickup":{short:"Only approved guardians can pick up a student from school.",tagline:"Only the Right Person, Every Pickup.",desc:"Parents pre-register their authorized pickup contacts — reception verifies every pickup, and unauthorized attempts trigger an alert.",bullets:[{t:"Pre-Approved List",d:"Parents add authorized contacts themselves."},{t:"Reception Verification",d:"Every pickup verified, right at the gate."},{t:"Instant Alert",d:"Unknown pickup attempts notify instantly."}]},
+"Reached Home":{short:"Confirms in real-time whether a student reached home safely.",tagline:"Peace of Mind, Confirmed Daily.",desc:"When a student leaves school and reaches home, parents get a real-time confirmation — whether by bus or on foot, both are trackable.",bullets:[{t:"Departure Tracking",d:"Time of leaving school is logged."},{t:"Arrival Confirmation",d:"Instant notification on reaching home."},{t:"Parent Peace of Mind",d:"Daily confirmation, no more guesswork."}]},
+"Health Check-in":{short:"Daily health screening — temperature, symptoms and quick flagging.",tagline:"A Quick Check, Every Morning.",desc:"Daily health check-ins flag any symptom or fever instantly — nurses and parents both get real-time visibility.",bullets:[{t:"Daily Screening",d:"Quick symptom and temperature check."},{t:"Instant Flagging",d:"Concerns are highlighted immediately."},{t:"Parent Visibility",d:"Health status, right in the parent app."}]},
+"Child Health & Growth":{short:"Height, weight and growth tracking — with vaccination records.",tagline:"Every Milestone, Recorded.",desc:"A student's height, weight, eyesight and vaccination history are systematically recorded — family doctor details stay saved for emergencies.",bullets:[{t:"Growth Tracking",d:"Height, weight, eyesight — with trends."},{t:"Vaccination Records",d:"Complete immunization history."},{t:"Emergency Contacts",d:"Family doctor details, always ready."}]},
+"Alerts & Notices":{short:"Push notifications, panic alerts and medicine reminders — in real-time.",tagline:"One Tap. Everyone Who Matters, Notified.",desc:"The panic button sends an instant alert to the principal and affected parents — a complete log of reason and time is maintained for emergencies.",bullets:[{t:"Instant Panic Alert",d:"One tap, principal and parents notified."},{t:"Multi-Channel Push",d:"App, SMS and email — all at once."},{t:"Full Alert Log",d:"When, and for what reason — all recorded."}]},
+"School Chat":{short:"WhatsApp-like class-wise announcement chat — with photo and video.",tagline:"WhatsApp-Familiar. Built for School.",desc:"Every class gets its own announcement group — teachers broadcast text, photos and video, with unread badges, auto-clearing after 2 days.",bullets:[{t:"Class-Wise Groups",d:"Every class has its own announcement space."},{t:"Photo & Video",d:"Shared directly in chat, no extra app."},{t:"Unread Badges",d:"Parents never miss a thing."}]},
+"Feedback & Poll":{short:"Feedback and polls from parents and teachers — for school decisions.",tagline:"Every Voice, Heard and Counted.",desc:"Collect structured feedback and polls from parents and staff on events, teaching quality or policies — real data for better decisions.",bullets:[{t:"Quick Polls",d:"One-tap voting, instant results."},{t:"Structured Feedback",d:"Honest input on teaching and events."},{t:"Actionable Insights",d:"See trends, improve decisions."}]},
+"Meeting Manager":{short:"Schedule PTMs and staff meetings, with automatic notifications.",tagline:"Every Meeting, Scheduled and Reminded.",desc:"Schedule parent-teacher meetings and staff meetings — everyone gets automatic reminders, and attendance is tracked too.",bullets:[{t:"Easy Scheduling",d:"Date, time and agenda, from one place."},{t:"Auto Reminders",d:"Notifications for everyone, nothing missed."},{t:"Attendance Tracking",d:"Who attended, who didn't — on record."}]},
+"Gallery":{short:"Photo and video gallery of school events — powered by Cloudinary.",tagline:"Every Moment, Beautifully Archived.",desc:"Sports day, annual functions, or daily activities — all photos and videos in one organized gallery, accessible to parents.",bullets:[{t:"Event-Wise Albums",d:"Every event gets its own organized album."},{t:"Cloud Storage",d:"Fast loading, powered by Cloudinary."},{t:"Parent Access",d:"See your child's activities, anytime."}]},
+"School Page":{short:"School's digital public profile — with info, gallery and YouTube integration.",tagline:"Your School's Digital Front Door.",desc:"The school's own public page — info, achievements, gallery and YouTube videos — a professional presence for parents and prospective families.",bullets:[{t:"Public Profile",d:"The school's digital identity, live."},{t:"YouTube Integration",d:"Videos embed directly, no extra upload."},{t:"Showcase Achievements",d:"Show off awards and milestones to everyone."}]},
+"Fees":{short:"Installments, discounts and overdue alerts — auto-calculated fee management.",tagline:"Set Once. Automate Forever.",desc:"Define your class-wise fee structure once — installments, discounts and transport fees calculate automatically, with dues trackable in real-time.",bullets:[{t:"Auto-Split Installments",d:"Discounts apply without manual calculation."},{t:"Live Dues Dashboard",d:"Pending payments, visible in real-time."},{t:"Payment Reminders",d:"Parents notified before the due date."}]},
+"Accounts":{short:"The school's financial accounts — income, ledgers and reconciliation.",tagline:"Every Transaction, Clearly Recorded.",desc:"Income and expense ledgers reconcile automatically with fee collections — no more manual bookkeeping errors.",bullets:[{t:"Auto Reconciliation",d:"Fee collection linked seamlessly to the ledger."},{t:"Error-Free Totals",d:"Manual calculation mistakes eliminated."},{t:"Exportable Reports",d:"Audit-ready statements in one click."}]},
+"Expenses":{short:"Track the school's daily expenses — category-wise and budget-aligned.",tagline:"Every Rupee Spent, Accounted For.",desc:"Maintenance, supplies or salaries — every expense is logged by category, with real-time comparison against budget.",bullets:[{t:"Category Tracking",d:"Every expense properly classified."},{t:"Budget Comparison",d:"Planned vs actual, at a glance."},{t:"Receipt Records",d:"Proof of every transaction, saved digitally."}]},
+"Employees":{short:"Staff records, payroll and HR functions — all in one dashboard.",tagline:"Every Employee, Fully Managed.",desc:"Employee records, salary structure, payslips and performance — every HR task from one digitally organized dashboard.",bullets:[{t:"Complete Records",d:"Personal and professional details, secure."},{t:"Payroll & Payslips",d:"Salary generation, auto-calculated."},{t:"Performance Tracking",d:"Reviews and growth, documented."}]},
+"Leave Applications":{short:"Online leave requests — with auto-routed approval workflow.",tagline:"Apply, Approve, Track — All Online.",desc:"Staff apply for leave online, requests route automatically to the right supervisor — leave balance stays visible in real-time.",bullets:[{t:"Online Application",d:"Leave type and dates, submitted in seconds."},{t:"Auto-Routed Approval",d:"Reaches the right supervisor, without delay."},{t:"Live Leave Balance",d:"Remaining leave, always visible."}]},
+"Staff Directory":{short:"A searchable directory of all staff — by role, contact and department.",tagline:"Every Staff Member, One Search Away.",desc:"Find any staff member instantly by department, role or name — contact details and designation, in one organized directory.",bullets:[{t:"Instant Search",d:"Filter by name, role or department."},{t:"Contact Details",d:"Phone and email, in one place."},{t:"Department-Wise",d:"Every team clearly organized."}]},
+"Inventory":{short:"School assets and supplies — stock, procurement and tracking.",tagline:"Every Asset, Accounted For.",desc:"Lab equipment, furniture or stationery — everything is tracked, with restocking alerts, no manual registers needed.",bullets:[{t:"Stock Tracking",d:"Current quantity of every item, live."},{t:"Restock Alerts",d:"Instant notification on low stock."},{t:"Procurement Records",d:"Purchases and usage, fully logged."}]},
+"Admission Enquiry":{short:"Capture leads via an \"Apply Now\" form, tracked from New to Enrolled.",tagline:"From Inquiry to Enrolled, In One Flow.",desc:"A live \"Apply Now\" form on the website automatically captures parent details, with status tracked from New → Contacted → Enrolled.",bullets:[{t:"Public Apply Form",d:"Live on the school's own website."},{t:"Auto-Captured Leads",d:"Zero manual data entry."},{t:"Status Tracking",d:"Every lead's stage, always visible."}]},
+"Vacancies":{short:"Resumes flow straight from the careers page to the HR dashboard — apply online.",tagline:"Post a Role. Receive the Resumes.",desc:"Post open roles on your own careers page, candidates upload resumes directly — HR reviews every application from one dashboard.",bullets:[{t:"Public Careers Page",d:"Hosted on the school's own link."},{t:"Direct Resume Upload",d:"No need to manage an email inbox."},{t:"HR Dashboard",d:"Every application, in one organized view."}]},
+"Alumni Management":{short:"Maintain a network of former students — for events and mentorship.",tagline:"Once a Student, Always Connected.",desc:"Maintain an alumni database, invite them to events, and build mentorship connections for current students.",bullets:[{t:"Alumni Database",d:"Contact and career details, organized."},{t:"Event Invitations",d:"Easy outreach for reunions and functions."},{t:"Mentorship Network",d:"Real guidance from seniors to juniors."}]},
+"Transport":{short:"Bus routes, live GPS tracking and parent alerts — end-to-end.",tagline:"Know Exactly Where the Bus Is.",desc:"Bus and route master, live GPS tracking on the parent app, and role-based views for drivers and transport heads — full visibility on every trip.",bullets:[{t:"Live GPS Tracking",d:"Parents see the bus on a real map."},{t:"Real-Time ETA",d:"Exact arrival time, no guesswork."},{t:"Role-Based Views",d:"Drivers and transport heads get their own dashboard."}]},
+"Trip Management":{short:"Educational trips and excursions — from planning to attendance.",tagline:"Every Trip, Planned and Tracked.",desc:"Permission slips, attendance and route planning for school trips — all in one place, with safety and organization.",bullets:[{t:"Permission Tracking",d:"Parent consent, recorded digitally."},{t:"Route Planning",d:"Trip itinerary, clearly mapped."},{t:"Trip Attendance",d:"Every student accounted for, throughout."}]},
+"Hostel Management":{short:"Room allocation, resident records and a dedicated hostel manager role.",tagline:"Every Room. Every Resident. Tracked.",desc:"Room allocation, boarder records and daily hostel operations — through a dedicated hostel manager role with warden-level control.",bullets:[{t:"Room Allocation",d:"Assign and reassign in a few taps."},{t:"Resident Records",d:"Every boarder's details, always updated."},{t:"Hostel Manager Role",d:"Dedicated warden-level access."}]},
+"Canteen":{short:"Menu, orders and billing — the school canteen, digitally managed.",tagline:"Every Meal, Ordered and Tracked.",desc:"Publish a daily menu, students/staff order, and billing happens automatically — a complete digital record of canteen operations.",bullets:[{t:"Digital Menu",d:"Daily items, instantly visible to everyone."},{t:"Auto Billing",d:"Bills generated seamlessly from orders."},{t:"Sales Insights",d:"Popular items and revenue, at a glance."}]},
+"Sports & Co-curricular":{short:"Sports, art and talent activities — tracked with achievements.",tagline:"Every Talent, Recognized.",desc:"Record sports events, art competitions and co-curricular activities — student achievements are showcased for the whole school.",bullets:[{t:"Achievement Tracking",d:"Wins and participation, all logged."},{t:"Activity Records",d:"From sports to art, everything covered."},{t:"Student Showcase",d:"Talent recognized, motivation boosted."}]}
+};
+
+var SS_SECTION_TEXT={
+hi:{sub:"37 modules — academics, fees, safety, transport, admissions aur staff — sab real-time, ek hi app mein."},
+en:{sub:"37 modules — academics, fees, safety, transport, admissions and staff — everything real-time, in one app."}
+};
+
+function setLang(lang){
+SS_LANG=lang;
+document.querySelectorAll(".lang-btn").forEach(function(b){
+b.classList.toggle("active",b.getAttribute("data-lang")===lang);
+});
+document.getElementById("featSectionSub").textContent=SS_SECTION_TEXT[lang].sub;
+ssRenderGrid();
+}
+
+var SS_CATS = ["All","Academic","Records","Safety","Communication","Finance","Growth","Operations"];
+var ssActiveCat = "All";
+
+function ssRenderFilters(){
+var row=document.getElementById("featureFilters");row.innerHTML="";
+SS_CATS.forEach(function(c){
+var chip=document.createElement("button");
+chip.className="ff-chip"+(c===ssActiveCat?" active":"");
+chip.textContent=c;
+chip.onclick=function(){ssActiveCat=c;ssRenderFilters();ssRenderGrid();};
+row.appendChild(chip);
+});
+}
+
+function ssRenderGrid(){
+var grid=document.getElementById("featuresGrid");grid.innerHTML="";
+SS_FEATURES.forEach(function(f,idx){
+if(ssActiveCat!=="All"&&f.cat!==ssActiveCat)return;
+var shortText=f.short;
+if(SS_LANG==="en"&&SS_FEATURES_EN[f.title]){shortText=SS_FEATURES_EN[f.title].short;}
+var card=document.createElement("div");
+card.className="feature-card reveal";
+card.innerHTML='<div class="feature-icon">'+f.icon+'</div><h3>'+f.title+'</h3><p>'+shortText+'</p>'+
+'<button class="feature-more" data-idx="'+idx+'">Read More →</button>';
+grid.appendChild(card);
+});
+grid.querySelectorAll(".feature-more").forEach(function(btn){
+btn.onclick=function(){openFeatureModal(parseInt(this.getAttribute("data-idx")));};
+});
+var reveals=grid.querySelectorAll(".reveal");
+if(window.__ssObserver){reveals.forEach(function(el){window.__ssObserver.observe(el);});}
+else{reveals.forEach(function(el){el.classList.add("visible");});}
+}
+
+var CATEGORY_BENEFITS={
+Academic:[{icon:"⏱️",t:"Saves Teacher Time",d:"Manual registers aur paperwork, khatam."},{icon:"✅",t:"Always Up to Date",d:"Records real-time update hote hain."},{icon:"🎯",t:"Error-Free",d:"Manual calculation mistakes eliminated."},{icon:"📱",t:"Accessible Anywhere",d:"Phone se hi, kabhi bhi access karo."}],
+Records:[{icon:"⚡",t:"Zero Manual Typing",d:"Data records se auto-fill hota hai."},{icon:"📄",t:"Professional Output",d:"Letterhead-formatted, print-ready."},{icon:"🚀",t:"Instant Generation",d:"Minutes mein, din nahi lagte."},{icon:"🎯",t:"Always Accurate",d:"Source data se directly, no typos."}],
+Safety:[{icon:"⚡",t:"Faster Response",d:"Emergencies mein seconds matter."},{icon:"📜",t:"Full Accountability",d:"Har action logged, time ke saath."},{icon:"🧘",t:"Parent Peace of Mind",d:"Real-time visibility, kam tension."},{icon:"👁️",t:"Nothing Missed",d:"Alerts sabtak turant pohochte hain."}],
+Communication:[{icon:"📣",t:"Everyone Informed",d:"One broadcast, poori class tak."},{icon:"📱",t:"No Extra App",d:"Sab kuch SchoolShield ke andar hi."},{icon:"🗂️",t:"Organized & Searchable",d:"Purana message dhoondna aasan."},{icon:"🤝",t:"Builds Trust",d:"Transparent communication, better relations."}],
+Finance:[{icon:"🧮",t:"No Manual Math",d:"Calculations khud ho jati hain."},{icon:"👁️",t:"Full Transparency",d:"Har transaction clearly visible."},{icon:"🎯",t:"Fewer Errors",d:"Automation se human mistakes kam."},{icon:"📊",t:"Real-Time Visibility",d:"Dues aur dashboard, hamesha current."}],
+Growth:[{icon:"📈",t:"More Leads Captured",d:"Koi inquiry miss nahi hoti."},{icon:"⏱️",t:"Faster Follow-Up",d:"Naye leads turant dikhte hain."},{icon:"🤝",t:"Professional Impression",d:"Modern application experience."},{icon:"🗂️",t:"Organized Pipeline",d:"Har lead ka stage, clearly visible."}],
+Operations:[{icon:"⚙️",t:"Smoother Operations",d:"Daily tasks, zyada organized."},{icon:"👁️",t:"Full Visibility",d:"Sab kuch dashboard se trackable."},{icon:"📉",t:"Less Paperwork",d:"Registers aur files, digital ho gaye."},{icon:"🗓️",t:"Better Planning",d:"Data se informed decisions lo."}]
+};
+
+var CATEGORY_BENEFITS_EN={
+Academic:[{icon:"⏱️",t:"Saves Teacher Time",d:"No more manual registers and paperwork."},{icon:"✅",t:"Always Up to Date",d:"Records update in real-time."},{icon:"🎯",t:"Error-Free",d:"Manual calculation mistakes eliminated."},{icon:"📱",t:"Accessible Anywhere",d:"Access from your phone, anytime."}],
+Records:[{icon:"⚡",t:"Zero Manual Typing",d:"Auto-fills from existing records."},{icon:"📄",t:"Professional Output",d:"Letterhead-formatted, print-ready."},{icon:"🚀",t:"Instant Generation",d:"Minutes, not days."},{icon:"🎯",t:"Always Accurate",d:"Straight from source data, no typos."}],
+Safety:[{icon:"⚡",t:"Faster Response",d:"Every second matters in an emergency."},{icon:"📜",t:"Full Accountability",d:"Every action logged, with time."},{icon:"🧘",t:"Parent Peace of Mind",d:"Real-time visibility, less worry."},{icon:"👁️",t:"Nothing Missed",d:"Alerts reach everyone instantly."}],
+Communication:[{icon:"📣",t:"Everyone Informed",d:"One broadcast reaches the whole class."},{icon:"📱",t:"No Extra App",d:"Everything inside SchoolShield itself."},{icon:"🗂️",t:"Organized & Searchable",d:"Easy to find old messages."},{icon:"🤝",t:"Builds Trust",d:"Transparent communication, better relations."}],
+Finance:[{icon:"🧮",t:"No Manual Math",d:"Calculations happen automatically."},{icon:"👁️",t:"Full Transparency",d:"Every transaction clearly visible."},{icon:"🎯",t:"Fewer Errors",d:"Automation reduces human mistakes."},{icon:"📊",t:"Real-Time Visibility",d:"Dues and dashboards, always current."}],
+Growth:[{icon:"📈",t:"More Leads Captured",d:"No inquiry ever gets missed."},{icon:"⏱️",t:"Faster Follow-Up",d:"New leads appear instantly."},{icon:"🤝",t:"Professional Impression",d:"A modern application experience."},{icon:"🗂️",t:"Organized Pipeline",d:"Every lead's stage, clearly visible."}],
+Operations:[{icon:"⚙️",t:"Smoother Operations",d:"Daily tasks, more organized."},{icon:"👁️",t:"Full Visibility",d:"Everything trackable from the dashboard."},{icon:"📉",t:"Less Paperwork",d:"Registers and files, now digital."},{icon:"🗓️",t:"Better Planning",d:"Make informed decisions from data."}]
+};
+
+function fdMockRow(icon,primary,secondary,tag,tagBg,tagColor){
+return '<div class="fd-mk-row"><div class="fd-mk-icon">'+icon+'</div><div style="flex-grow:1;"><div class="fd-mk-primary">'+primary+'</div>'+
+(secondary?'<div class="fd-mk-secondary">'+secondary+'</div>':'')+'</div>'+
+(tag?'<span class="fd-mk-tag" style="background:'+tagBg+';color:'+tagColor+';">'+tag+'</span>':'')+'</div>';
+}
+
+function mockupHTML(f){
+if(f.mockup==="idcard"){
+return '<div class="fd-mk-title">Student Records</div>'+
+fdMockRow("🪪","Aarav Sharma","Class 5-B · Roll 24","✓ ID Ready","rgba(63,167,150,.2)","#3FA796")+
+fdMockRow("📄","Diya Patel","Class 5-B · Roll 11","✓ Complete","rgba(63,167,150,.2)","#3FA796")+
+fdMockRow("🔍","247 Students","Search: \"5-B\"",null);
+}
+if(f.mockup==="fees"){
+return '<div class="fd-mk-title">Fee Installment</div>'+
+'<div style="background:rgba(255,255,255,.04);border-radius:12px;padding:18px;margin-bottom:14px;">'+
+'<div style="font-size:12px;color:var(--gray);">Installment 2 of 4</div>'+
+'<div style="font-family:\'Playfair Display\',serif;font-size:32px;font-weight:800;color:var(--gold2);margin-top:6px;">₹8,400</div>'+
+'<div style="height:8px;background:rgba(255,255,255,.08);border-radius:4px;margin-top:12px;overflow:hidden;"><div style="width:50%;height:100%;background:var(--gold);"></div></div>'+
+'<div style="font-size:12px;color:var(--gray);margin-top:8px;">50% paid · 2 remaining</div></div>'+
+fdMockRow("⏰","Reminder Sent","Due in 3 days","Parent","rgba(201,168,76,.2)","#e8c76a");
+}
+if(f.mockup==="chat"){
+return '<div class="fd-mk-title">Class 5-B Group</div>'+
+'<div style="background:rgba(63,167,150,.18);border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:14px;">Kal PTM hai, 10 AM</div>'+
+'<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:14px;">📷 Sports Day photos uploaded</div>'+
+'<div style="background:rgba(255,255,255,.09);border-radius:10px;padding:14px 16px;margin-left:20%;font-size:14px;">Dhanyavaad 👍</div>';
+}
+if(f.mockup==="panic"){
+return '<div class="fd-mk-title">⚠ Alert Triggered</div>'+
+'<div style="border:1px solid #E4694F;border-radius:12px;padding:16px;margin-bottom:14px;">'+
+'<div style="font-size:14.5px;font-weight:700;">Class 4-A · Main Building</div>'+
+'<div style="font-size:12.5px;color:var(--gray);margin-top:4px;">Reason: Medical Emergency</div></div>'+
+fdMockRow("✅","Principal notified",null,null)+
+fdMockRow("✅","18 Parents notified",null,null);
+}
+if(f.mockup==="trip"){
+return '<div class="fd-mk-title">Live Trip · Route 4</div>'+
+'<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border-radius:12px;padding:18px;margin-bottom:14px;">'+
+'<span style="font-size:26px;">🚌</span><div style="flex-grow:1;height:2px;background:repeating-linear-gradient(90deg,var(--gray) 0 6px,transparent 6px 12px);"></div>'+
+'<span style="width:12px;height:12px;border-radius:50%;background:#3FA796;"></span></div>'+
+fdMockRow("⏱️","ETA","5 minutes",null)+
+fdMockRow("👤","Driver","R. Yadav",null);
+}
+if(f.mockup==="hostel"){
+var rooms="";var labels=["101","102","103","104","105","106"];
+for(var i=0;i<6;i++){var full=i%3===0;
+rooms+='<div style="border-radius:10px;padding:14px 8px;text-align:center;font-size:12px;background:'+(full?"rgba(201,168,76,.15);color:#e8c76a;":"rgba(63,167,150,.15);color:#3FA796;")+'">Room '+labels[i]+'<br/>'+(full?"Full":"Open")+'</div>';
+}
+return '<div class="fd-mk-title">Hostel Block A</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'+rooms+'</div>';
+}
+// generic fallback: derive rows from this feature's own bullets
+var rows=f.bullets.map(function(b){return fdMockRow(b.icon,b.t,b.d,null);}).join("");
+return '<div class="fd-mk-title">'+f.title+'</div>'+rows+
+fdMockRow("✅","Live on SchoolShield","Updated in real-time","Active","rgba(63,167,150,.2)","#3FA796");
+}
+
+function openFeatureModal(idx){
+var f=SS_FEATURES[idx];
+var tagline=f.tagline, desc=f.desc, bulletsData=f.bullets;
+if(SS_LANG==="en"&&SS_FEATURES_EN[f.title]){
+var en=SS_FEATURES_EN[f.title];
+tagline=en.tagline;desc=en.desc;
+bulletsData=f.bullets.map(function(b,i){return {icon:b.icon,t:en.bullets[i].t,d:en.bullets[i].d};});
+}
+var bullets=bulletsData.map(function(b){
+return '<div class="fd-bullet"><div class="fd-bullet-icon">'+b.icon+'</div><div><h5>'+b.t+'</h5><p>'+b.d+'</p></div></div>';
+}).join("");
+var benefitsSource=SS_LANG==="en"?CATEGORY_BENEFITS_EN:CATEGORY_BENEFITS;
+var benefitsList=benefitsSource[f.cat]||benefitsSource.Operations;
+var benefitsHTML=benefitsList.map(function(b){
+return '<div class="fd-benefit-card"><div class="fd-b-icon">'+b.icon+'</div><h4>'+b.t+'</h4><p>'+b.d+'</p></div>';
+}).join("");
+
+document.getElementById("fdContent").innerHTML=
+'<div class="fd-hero">'+
+'<div><span class="fd-badge">'+f.icon+' '+f.cat.toUpperCase()+'</span>'+
+'<div class="fd-title">'+f.title+'</div>'+
+'<div class="fd-tagline">'+tagline+'</div>'+
+'<p class="fd-desc">'+desc+'</p>'+
+'<div class="fd-bullets">'+bullets+'</div></div>'+
+'<div class="fd-mock-wrap"><div class="fd-monitor"><div class="fd-monitor-inner">'+mockupHTML({mockup:f.mockup,title:f.title,bullets:bulletsData})+'</div></div></div>'+
+'</div>'+
+'<div class="fd-benefits"><h3>Key Benefits</h3><div class="fd-benefits-line"></div>'+
+'<div class="fd-benefits-grid">'+benefitsHTML+'</div></div>'+
+'<div class="fd-cta-banner">'+
+'<div class="fd-cta-left"><div class="fd-cta-icon">🛡️</div><div><h4>One App. All School Features.</h4><p>Stay connected. Stay ahead.</p></div></div>'+
+'<div class="fd-cta-checks"><div><span>✓</span> 37 Modules, One Platform</div><div><span>✓</span> Real-Time & Reliable</div><div><span>✓</span> Secure & Easy to Use</div></div>'+
+'<div class="fd-cta-actions"><a href="#contact" class="btn-primary" onclick="closeFeatureModal()">Book a Demo</a><a href="app.html" class="btn-secondary">Login</a></div>'+
+'</div>'+
+'<div class="fd-footer"><span>🌐 www.schoolshield.pro</span><span>© 2026 SchoolShield. All rights reserved.</span></div>';
+
+document.getElementById("fdPage").classList.add("open");
+document.body.style.overflow="hidden";
+document.getElementById("fdPage").scrollTop=0;
+}
+
+function closeFeatureModal(){
+document.getElementById("fdPage").classList.remove("open");
+document.body.style.overflow="";
+}
+
+ssRenderFilters();
+ssRenderGrid();
+</script>
 
 <!-- PLANS -->
 <section id="plans">
@@ -605,7 +992,7 @@ background:var(--navy2);padding:20px;border-bottom:1px solid rgba(255,255,255,0.
 <div class="contact-icon">📧</div>
 <div>
 <h4>Email Support</h4>
-<a href="mailto:amitshrivastava121988@gmail.com">amitshrivastava121988@gmail.com</a>
+<a href="mailto:schoolshieldpro@gmail.com">schoolshieldpro@gmail.com</a>
 </div>
 </div>
 <div class="contact-item">
@@ -761,7 +1148,7 @@ style="display:block;padding:12px;background:#25D366;color:#fff;border-radius:8p
 <ul>
 <li><a href="tel:8839913233">Call: 8839913233</a></li>
 <li><a href="https://wa.me/918839913233">WhatsApp</a></li>
-<li><a href="mailto:amitshrivastava121988@gmail.com">Email Us</a></li>
+<li><a href="mailto:schoolshieldpro@gmail.com">Email Us</a></li>
 </ul>
 </div>
 </div>
@@ -784,6 +1171,7 @@ observer.unobserve(entry.target);
 });
 }, { threshold: 0.1 });
 reveals.forEach(el => observer.observe(el));
+window.__ssObserver = observer;
 
 // Form submit
 function submitForm(btn) {
@@ -1107,6 +1495,100 @@ document.querySelectorAll('.nav-links a').forEach(a => {
 a.addEventListener('click', () => document.getElementById('navLinks').classList.remove('open'));
 });
 
+</script>
+
+<!-- School Search -->
+<script>
+var __ssPublicSchools = null;
+var __ssSchoolsLoading = false;
+
+function ssEffectiveCode(s) {
+if (s.schoolCode) return String(s.schoolCode).toUpperCase();
+return "SCH" + String(s.id).padStart(3, "0");
+}
+
+function loadPublicSchoolList(cb) {
+if (__ssPublicSchools) { cb(__ssPublicSchools, "ok"); return; }
+if (!window.mainSiteDb) { console.error("[SchoolSearch] mainSiteDb not initialized"); cb([], "no_db", "mainSiteDb was never created — Firebase App/Database SDK may have failed to load."); return; }
+if (__ssSchoolsLoading) { setTimeout(function(){ loadPublicSchoolList(cb); }, 300); return; }
+if (!window.mainSiteAuthReady) {
+if (window.__ssAuthWaitCount === undefined) window.__ssAuthWaitCount = 0;
+if (window.__ssAuthWaitCount > 30) { console.error("[SchoolSearch] Anonymous auth never completed."); cb([], "no_auth", "Anonymous sign-in error: " + (window.mainSiteAuthError || "timed out, no error captured")); return; }
+window.__ssAuthWaitCount++;
+setTimeout(function(){ loadPublicSchoolList(cb); }, 200);
+return;
+}
+__ssSchoolsLoading = true;
+var settled = false;
+var safetyTimer = setTimeout(function(){
+if (settled) return;
+settled = true;
+__ssSchoolsLoading = false;
+console.error("[SchoolSearch] Timed out reading schoolshield/schoolList (8s).");
+cb([], "timeout", "Database read timed out after 8 seconds.");
+}, 8000);
+window.mainSiteDb.ref('schoolshield/schoolList').once('value').then(function(snap) {
+if (settled) return;
+settled = true;
+clearTimeout(safetyTimer);
+var list = [];
+try { list = JSON.parse(snap.val() || "[]"); } catch(e) { list = []; }
+console.log("[SchoolSearch] Loaded " + list.length + " total schools from Firebase.");
+__ssPublicSchools = list.filter(function(s){ return s && s.isPublic; });
+console.log("[SchoolSearch] " + __ssPublicSchools.length + " school(s) have Public Listing ON:", __ssPublicSchools.map(function(s){return s.name;}));
+__ssSchoolsLoading = false;
+cb(__ssPublicSchools, __ssPublicSchools.length === 0 ? "none_public" : "ok", "Total schools found: " + list.length + ", Public: " + __ssPublicSchools.length);
+}).catch(function(err) {
+if (settled) return;
+settled = true;
+clearTimeout(safetyTimer);
+__ssSchoolsLoading = false;
+console.error("[SchoolSearch] Firebase read failed:", err && err.message ? err.message : err);
+cb([], "permission_denied", "Firebase error: " + (err && err.code ? err.code : "") + " " + (err && err.message ? err.message : String(err)));
+});
+}
+
+function handleSchoolSearchInput(val) {
+var resultsBox = document.getElementById('schoolSearchResults');
+var q = (val || "").trim().toLowerCase();
+if (!q) { resultsBox.classList.remove('open'); resultsBox.innerHTML = ""; return; }
+loadPublicSchoolList(function(list, reason, debugDetail) {
+var matches = list.filter(function(s) {
+var name = (s.name || "").toLowerCase();
+var code = ssEffectiveCode(s).toLowerCase();
+return name.indexOf(q) >= 0 || code.indexOf(q) >= 0;
+}).slice(0, 6);
+if (matches.length === 0) {
+var msg = "No matching school found.";
+if (reason === "no_auth" || reason === "timeout" || reason === "permission_denied" || reason === "no_db") {
+msg = "Could not connect right now. Please try again in a moment.";
+} else if (reason === "none_public") {
+msg = "No schools have enabled public listing yet.";
+}
+resultsBox.innerHTML = "<div class='school-search-empty'>" + msg +
+"<br><span style='opacity:0.6;font-size:10px;'>[debug] reason=" + reason + " — " + (debugDetail||"") + "</span></div>";
+} else {
+resultsBox.innerHTML = matches.map(function(s) {
+var code = ssEffectiveCode(s);
+return "<div class='school-search-result-item' onclick=\"goToSchoolPage('" + code.replace(/'/g,"") + "')\">" +
+(s.name || "School") +
+"<span class='ssr-code'>" + code + "</span></div>";
+}).join("");
+}
+resultsBox.classList.add('open');
+});
+}
+
+function goToSchoolPage(code) {
+window.location.href = "app.html#school/" + code;
+}
+
+document.addEventListener('click', function(e) {
+var box = document.querySelector('.school-search-box');
+if (box && !box.contains(e.target)) {
+document.getElementById('schoolSearchResults').classList.remove('open');
+}
+});
 </script>
 <!-- Admin Login Panel -->
 <div id="adminLoginPanel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;">
