@@ -54,9 +54,6 @@ signer.end();
 const signature = signer.sign(serviceAccount.private_key).toString('base64url');
 const jwt = toSign + '.' + signature;
 
-const resp = await httpRequest('POST', 'https://oauth2.googleapis.com/token', { 'Content-Type': 'application/x-www-form-urlencoded' },
-null);
-// Manual form body since httpRequest json-encodes by default
 return new Promise((resolve, reject) => {
 const bodyStr = 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=' + encodeURIComponent(jwt);
 const req = https.request({
