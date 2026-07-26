@@ -16581,7 +16581,10 @@ mySchoolId={mySchoolId}
 )}
 
 {canManageTransport && thTab === "routes" && (
+<>
+<AllBusesMapCard buses={myBuses} currentSchool={currentSchool} />
 <TransportRouteSummaryTab myBuses={myBuses} students={students} />
+</>
 )}
 
 {(!canManageTransport || thTab === "buses") && (
@@ -23584,6 +23587,76 @@ style={{flex:1, background:T.surface, border:`1px solid ${T.border}`, borderRadi
 </div>
 );
 }
+function AllBusesMapCard({ buses, currentSchool }) {
+var schoolId = currentSchool && currentSchool.id;
+var schoolBuses = (buses||[]).filter(function(b){ return sameId(b.schoolId, schoolId); });
+var mapRef = React.useRef(null);
+var leafletMapRef = React.useRef(null);
+var markersRef = React.useRef({});
+var _liveState = React.useState({}); var liveData = _liveState[0]; var setLiveData = _liveState[1];
+React.useEffect(function() {
+if (!window.firebaseReady || !window.db) return;
+var listeners = [];
+schoolBuses.forEach(function(b) {
+if (!b.id) return;
+var ref = window.db.ref("schoolshield/busLocations/" + b.id);
+ref.on("value", function(snap) {
+if (snap.exists()) {
+var val = snap.val();
+setLiveData(function(prev) { var n = Object.assign({}, prev); n[b.id] = val; return n; });
+}
+});
+listeners.push(ref);
+});
+return function() { listeners.forEach(function(r){ r.off(); }); };
+}, [schoolBuses.map(function(b){return b.id;}).join(",")]);
+React.useEffect(function() {
+if (!mapRef.current || leafletMapRef.current || schoolBuses.length === 0) return;
+var withGeo = schoolBuses.filter(function(b){ var l = liveData[b.id]||{}; return (l.lat||b.busLat); });
+var centerLat = withGeo.length ? (parseFloat((liveData[withGeo[0].id]||{}).lat || withGeo[0].busLat)) : 22.5971;
+var centerLng = withGeo.length ? (parseFloat((liveData[withGeo[0].id]||{}).lng || withGeo[0].busLng)) : 75.7881;
+var map = L.map(mapRef.current, { zoomControl: true, attributionControl: false }).setView([centerLat, centerLng], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+leafletMapRef.current = map;
+}, [mapRef.current, schoolBuses.length]);
+React.useEffect(function() {
+if (!leafletMapRef.current) return;
+var map = leafletMapRef.current;
+var bounds = [];
+schoolBuses.forEach(function(b) {
+var live = liveData[b.id] || {};
+var lat = parseFloat(live.lat || b.busLat);
+var lng = parseFloat(live.lng || b.busLng);
+if (!lat || !lng) return;
+var isRunning = live.sharingActive || b.status === "running";
+var popupHtml = "<b>🚌 " + (b.busNo||"Bus") + "</b><br>" + (live.currentStop || b.currentStop || "En Route") + (isRunning ? "<br><span style=\"color:#22C55E\">🟢 Running</span>" : "<br><span style=\"color:#94A3B8\">🔴 Parked</span>");
+if (markersRef.current[b.id]) {
+markersRef.current[b.id].setLatLng([lat, lng]);
+markersRef.current[b.id].setPopupContent(popupHtml);
+} else {
+var busIcon = L.divIcon({
+html: "<div style=\"font-size:26px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))\">🚌</div>",
+className: "", iconAnchor: [13, 26]
+});
+var marker = L.marker([lat, lng], { icon: busIcon }).addTo(map);
+marker.bindPopup(popupHtml);
+markersRef.current[b.id] = marker;
+}
+bounds.push([lat, lng]);
+});
+if (bounds.length > 1) { map.fitBounds(bounds, { padding: [40, 40] }); }
+}, [liveData, schoolBuses.length]);
+if (schoolBuses.length === 0) return null;
+return (
+<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,overflow:"hidden",marginBottom:14}}>
+<div style={{padding:"10px 14px",background:"linear-gradient(135deg,"+T.accent+"15,"+T.purple+"10)",borderBottom:"1px solid "+T.border}}>
+<p style={{fontWeight:800,fontSize:13,color:T.text}}>🗺️ All Buses — Live Map</p>
+<p style={{fontSize:11,color:T.textMuted}}>Saari buses ki current location ek sath</p>
+</div>
+<div ref={mapRef} style={{width:"100%",height:280}}></div>
+</div>
+);
+}
 function AdminLiveBusView({ buses, currentSchool }) {
 var schoolId = currentSchool && currentSchool.id;
 var schoolBuses = (buses||[]).filter(function(b){ return sameId(b.schoolId, schoolId); });
@@ -23612,6 +23685,7 @@ if (schoolBuses.length === 0) return (
 );
 return (
 <div>
+<AllBusesMapCard buses={buses} currentSchool={currentSchool} />
 <p style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:12}}>📡 Live Bus Tracking</p>
 {schoolBuses.map(function(b) {
 var live = liveData[b.id] || {};
