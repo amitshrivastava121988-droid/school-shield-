@@ -3,7 +3,7 @@
   "name": "SchoolShield",
   "short_name": "SchoolShield",
   "description": "Complete School & College Management Platform",
-  "start_url": ".",
+  "start_url": "app.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
