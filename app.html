@@ -790,6 +790,55 @@ return hashArray.map(function(b){ return b.toString(16).padStart(2, "0"); }).joi
 function ssLooksHashed(str) {
 return typeof str === "string" && /^[a-f0-9]{64}$/i.test(str);
 }
+var SS_LOGIN_MAX_ATTEMPTS = 5;
+var SS_LOGIN_LOCKOUT_MS = 10 * 60 * 1000;
+function ssLoginAttemptsKey(username) {
+return "ss_login_attempts_" + String(username||"").toLowerCase().trim();
+}
+function ssCheckLoginLockout(username) {
+try {
+var raw = localStorage.getItem(ssLoginAttemptsKey(username));
+if (!raw) return { locked:false, remainingMs:0, attemptsLeft: SS_LOGIN_MAX_ATTEMPTS };
+var data = JSON.parse(raw);
+if (data.count >= SS_LOGIN_MAX_ATTEMPTS) {
+var elapsed = Date.now() - data.lastAttempt;
+if (elapsed < SS_LOGIN_LOCKOUT_MS) {
+return { locked:true, remainingMs: SS_LOGIN_LOCKOUT_MS - elapsed, attemptsLeft: 0 };
+}
+localStorage.removeItem(ssLoginAttemptsKey(username));
+return { locked:false, remainingMs:0, attemptsLeft: SS_LOGIN_MAX_ATTEMPTS };
+}
+return { locked:false, remainingMs:0, attemptsLeft: SS_LOGIN_MAX_ATTEMPTS - data.count };
+} catch(e) { return { locked:false, remainingMs:0, attemptsLeft: SS_LOGIN_MAX_ATTEMPTS }; }
+}
+function ssRecordFailedLogin(username) {
+try {
+var key = ssLoginAttemptsKey(username);
+var raw = localStorage.getItem(key);
+var data = raw ? JSON.parse(raw) : { count:0, lastAttempt:0 };
+data.count = (data.count||0) + 1;
+data.lastAttempt = Date.now();
+localStorage.setItem(key, JSON.stringify(data));
+return data.count;
+} catch(e) { return 0; }
+}
+function ssResetLoginAttempts(username) {
+try { localStorage.removeItem(ssLoginAttemptsKey(username)); } catch(e) {}
+}
+function ssFormatLockoutTime(ms) {
+var mins = Math.ceil(ms / 60000);
+return mins + " min";
+}
+function ssSanitizeText(str) {
+if (typeof str !== "string") return str;
+return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+}
+function ssIsValidEmail(str) {
+return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(str||"").trim());
+}
+function ssIsValidPhone(str) {
+return /^[0-9]{10}$/.test(String(str||"").replace(/[^0-9]/g,""));
+}
 const forSchool = (arr, sid) => (arr || []).filter(x => sid != null && sameId(x.schoolId, sid));
 const forSchoolOrGlobal = (arr, sid) => (arr || []).filter(x => !x.schoolId || sameId(x.schoolId, sid));
 function getMeetingDateFromNotice(n) {
@@ -4484,6 +4533,11 @@ const roleCards = [
 const handleLogin = () => {
 if (!navigator.onLine && !window.firebaseReady) {
 }
+const ssLockStatus = ssCheckLoginLockout(loginUsername);
+if (ssLockStatus.locked) {
+toast("Bahut zyada galat attempts. " + ssFormatLockoutTime(ssLockStatus.remainingMs) + " baad try karein 🔒", "error");
+return;
+}
 if (loginUsername === "superadmin") {
 const checkPass = async () => {
 let expectedPass = "super123";
@@ -4511,12 +4565,19 @@ await window.db.ref("schoolshield/superadmin_password").set(upgraded);
 localStorage.setItem("ss_sa_pass", upgraded);
 } catch {}
 }
+ssResetLoginAttempts(loginUsername);
 setRole("superadmin");
 setLoggedInUser({ role:"superadmin", username:"superadmin", schoolId: null });
 setActiveSection("dashboard");
 toast("Welcome Super Admin 👑", "success");
 } else {
-toast("Galat password ❌", "error");
+const ssFailCount = ssRecordFailedLogin(loginUsername);
+const ssLeft = SS_LOGIN_MAX_ATTEMPTS - ssFailCount;
+if (ssLeft > 0) {
+toast("Galat password ❌ (" + ssLeft + " attempts left)", "error");
+} else {
+toast("Bahut zyada galat attempts. 10 min baad try karein 🔒", "error");
+}
 }
 };
 checkPass(); return;
@@ -4530,6 +4591,7 @@ a.password === pw &&
 a.active
 );
 if (rollAcc) {
+ssResetLoginAttempts(loginUsername);
 setRole(rollAcc.role);
 setLoggedInUser(rollAcc);
 if (rollAcc.schoolId) {
@@ -4542,6 +4604,7 @@ return;
 }
 }
 if (acc) {
+ssResetLoginAttempts(loginUsername);
 if (acc.role === "group_founder") {
 setGroupFounderAcc(acc);
 setGroupFounderMode(true);
@@ -4607,7 +4670,13 @@ if (loginSchool && loginSchool.coverPhotoUrl) {
 }
 return;
 }
-toast("Invalid username or password!", "error");
+const ssFailCount2 = ssRecordFailedLogin(loginUsername);
+const ssLeft2 = SS_LOGIN_MAX_ATTEMPTS - ssFailCount2;
+if (ssLeft2 > 0) {
+toast("Invalid username or password! (" + ssLeft2 + " attempts left)", "error");
+} else {
+toast("Bahut zyada galat attempts. 10 min baad try karein 🔒", "error");
+}
 };
 var registerBiometric = function(acc) {
   if (!window.PublicKeyCredential) return;
@@ -4905,7 +4974,12 @@ style={{flex:1,padding:"12px",background:T.surface,border:`1px solid ${T.border}
 style={{width:"100%", background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:"10px 14px", color:T.text, fontSize:14, outline:"none"}} />
 </div>
 ))}
-<Btn onClick={()=>{ setSchools(p=>p.map(s=>s.accessCode===accessCode?{...s,name:setupData.name,logo:setupData.logo,contact:setupData.contact,setup:true}:s)); setMode("main"); toast("School setup complete!", "success"); }} color={T.green} full>{l("setup")}</Btn>
+<Btn onClick={()=>{
+if (!setupData.name || !setupData.name.trim()) { toast("School name zaroori hai!", "error"); return; }
+if (setupData.contact && !ssIsValidPhone(setupData.contact)) { toast("Valid 10-digit contact number daalein!", "error"); return; }
+const ssCleanName = ssSanitizeText(setupData.name);
+const ssCleanContact = ssSanitizeText(setupData.contact);
+setSchools(p=>p.map(s=>s.accessCode===accessCode?{...s,name:ssCleanName,logo:setupData.logo,contact:ssCleanContact,setup:true}:s)); setMode("main"); toast("School setup complete!", "success"); }} color={T.green} full>{l("setup")}</Btn>
 </div>
 )}
 {mode === "discount" && (
@@ -34744,9 +34818,8 @@ style={{width:"100%",background:T.surface,border:"1px solid "+T.border,borderRad
 <button onClick={handleUnlock} style={{width:"100%",background:T.red,color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:15,fontWeight:700,cursor:"pointer"}}>
 🔓 Unlock Data Manager
 </button>
-<div style={{marginTop:20,background:T.yellow+"22",border:"1px solid "+T.yellow+"50",borderRadius:10,padding:"10px 14px"}}>
-<p style={{fontSize:12,color:T.yellow}}>Default password: <b>clear@123</b> — change karna na bhoolen!</p>
-</div>
+
+
 </div>
 </div>
 );
