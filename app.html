@@ -190,13 +190,22 @@ document.head.appendChild(earlyHideStyle);
     this.col = this.fs.collection('kv');
     this._listeners = {};
     var self = this;
-    this._ready = new Promise(function (resolve) {
-      try {
-        var un = firebase.auth().onAuthStateChanged(function (u) { if (u) { resolve(); } });
-      } catch (e) { resolve(); }
-    });
+    var lastUid = null, resolveReady;
+    this._ready = new Promise(function (resolve) { resolveReady = resolve; });
+    try {
+      firebase.auth().onAuthStateChanged(function (u) {
+        if (!u) return;
+        var changed = lastUid !== null && u.uid !== lastUid;
+        lastUid = u.uid; resolveReady();
+        if (changed) self._restartAll();
+      });
+    } catch (e) { resolveReady(); }
     this.ref = function (path) { return new Ref(self, path || ''); };
   }
+  DB.prototype._restartAll = function () {
+    var L = this._listeners;
+    Object.keys(L).forEach(function (k) { (L[k] || []).forEach(function (e) { if (!e.dead && e.start) e.start(); }); });
+  };
   DB.prototype._assemble = function (container, qs) {
     var out = {};
     qs.forEach(function (d) {
@@ -356,17 +365,23 @@ document.head.appendChild(earlyHideStyle);
       if (entry.last === s) return; entry.last = s;
       cb(snap);
     };
-    db._ready.then(function () {
+    entry.start = function () {
       if (entry.dead) return;
-      var target = p.container ? db._containerQuery(p.container) : db.col.doc(docIdOf(p));
-      entry.unsub = target.onSnapshot(function (s) {
-        var val;
-        if (p.container) val = db._assemble(p.container, s);
-        else val = s.exists ? getIn(parseV(s), p.rest) : null;
-        deliver(val);
-      }, fail);
-      if (entry.dead && entry.unsub) entry.unsub();
-    }).catch(fail);
+      if (entry.unsub) { try { entry.unsub(); } catch (x) {} entry.unsub = null; }
+      entry.last = undefined;
+      db._ready.then(function () {
+        if (entry.dead) return;
+        var target = p.container ? db._containerQuery(p.container) : db.col.doc(docIdOf(p));
+        entry.unsub = target.onSnapshot(function (s) {
+          var val;
+          if (p.container) val = db._assemble(p.container, s);
+          else val = s.exists ? getIn(parseV(s), p.rest) : null;
+          deliver(val);
+        }, fail);
+        if (entry.dead && entry.unsub) entry.unsub();
+      }).catch(fail);
+    };
+    entry.start();
     (db._listeners[ref.path] = db._listeners[ref.path] || []).push(entry);
     return cb;
   }
@@ -379,6 +394,13 @@ document.head.appendChild(earlyHideStyle);
     });
   }
 
+  root.SS_SA_EMAIL = 'superadmin@schoolshield.app';
+  root.__ssGetProfile = function (uid) {
+    return root.firebase.firestore().collection('users').doc(uid).get().then(function (s) { return s.exists ? s.data() : null; });
+  };
+  root.__ssAuthLogout = function () {
+    try { var u = root.firebase.auth().currentUser; if (u && !u.isAnonymous) root.firebase.auth().signOut(); } catch (e) {}
+  };
   root.__ssCreateDB = function (firebase) { return new DB(firebase); };
   root.__ssShim = { parsePath: parsePath, docIdOf: docIdOf, setIn: setIn, getIn: getIn, DB: DB };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -434,13 +456,23 @@ window.db = window.__ssCreateDB(firebase);
 window.firebaseReady = true;
 window.__SS_ALERT_DEBUG = false;
 window.firebaseAuthReady = false;
-firebase.auth().signInAnonymously()
-.then(() => {
+(function(){
+var _a = firebase.auth(), _first = true;
+_a.onAuthStateChanged(function(u){
+if (!u) { _a.signInAnonymously().catch(function(){ window.firebaseAuthReady = false; }); return; }
 window.firebaseAuthReady = true;
-})
-.catch(e => {
-window.firebaseAuthReady = false;
+if (_first) {
+_first = false;
+try {
+var r = localStorage.getItem("ss_session_role");
+if (u.isAnonymous && r === "superadmin") {
+localStorage.removeItem("ss_session_role"); localStorage.removeItem("ss_session_user");
+window.location.reload();
+}
+} catch(e) {}
+}
 });
+})();
 try {
 window.fcmMessaging = firebase.messaging();
 } catch(me) {
@@ -3041,7 +3073,7 @@ const setRole = (r, cb) => {
 setRoleState(r);
 try {
 if (r) { localStorage.setItem("ss_session_role", r); }
-else { localStorage.removeItem("ss_session_role"); localStorage.removeItem("ss_session_user"); }
+else { localStorage.removeItem("ss_session_role"); localStorage.removeItem("ss_session_user"); if (window.__ssAuthLogout) window.__ssAuthLogout(); }
 } catch {}
 if (window.firebaseReady) {
 const sesRef = window.db.ref("schoolshield/sessions/" + DEVICE_ID);
@@ -4815,38 +4847,17 @@ toast("Bahut zyada galat attempts. " + ssFormatLockoutTime(ssLockStatus.remainin
 return;
 }
 if (loginUsername === "superadmin") {
-const checkPass = async () => {
-let expectedPass = "super123";
-try { const lp = localStorage.getItem("ss_sa_pass"); if (lp) expectedPass = lp; } catch {}
-if (window.firebaseReady) {
+const saLogin = async () => {
 try {
-const snap = await Promise.race([
-window.db.ref("schoolshield/superadmin_password").once("value"),
-new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 3000))
-]);
-if (snap.val()) {
-expectedPass = snap.val();
-try { localStorage.setItem("ss_sa_pass", expectedPass); } catch {}
-}
-} catch {}
-}
-const isMatch = ssLooksHashed(expectedPass)
-? (await ssHashPassword(pw)) === expectedPass
-: pw === expectedPass;
-if (isMatch) {
-if (!ssLooksHashed(expectedPass) && window.firebaseReady) {
-try {
-const upgraded = await ssHashPassword(pw);
-await window.db.ref("schoolshield/superadmin_password").set(upgraded);
-localStorage.setItem("ss_sa_pass", upgraded);
-} catch {}
-}
+const cred = await firebase.auth().signInWithEmailAndPassword(window.SS_SA_EMAIL, pw);
+const prof = await window.__ssGetProfile(cred.user.uid);
+if (!prof || prof.role !== "superadmin" || prof.active === false) { await firebase.auth().signOut(); throw new Error("no-superadmin-profile"); }
 ssResetLoginAttempts(loginUsername);
 setRole("superadmin");
-setLoggedInUser({ role:"superadmin", username:"superadmin", schoolId: null });
+setLoggedInUser({ role:"superadmin", username:"superadmin", schoolId: null, uid: cred.user.uid });
 setActiveSection("dashboard");
 toast("Welcome Super Admin 👑", "success");
-} else {
+} catch (e) {
 const ssFailCount = ssRecordFailedLogin(loginUsername);
 const ssLeft = SS_LOGIN_MAX_ATTEMPTS - ssFailCount;
 if (ssLeft > 0) {
@@ -4856,7 +4867,7 @@ toast("Bahut zyada galat attempts. 10 min baad try karein 🔒", "error");
 }
 }
 };
-checkPass(); return;
+saLogin(); return;
 }
 const acc = (userAccounts||[]).find(a => a.username === loginUsername && a.password === pw && a.active);
 if (!acc) {
@@ -5145,7 +5156,7 @@ onKeyDown={e=>e.key==="Enter" && handleLogin()} />
 <button onClick={function(){ if(window.confirm("Remove fingerprint login data?")){ localStorage.removeItem("ss_bio_cred"); setBioStored(false); toast("Fingerprint removed","success"); } }} style={{background:"none",border:"none",color:"#F75555",fontSize:11,cursor:"pointer",marginTop:2,width:"100%",fontFamily:"Outfit,sans-serif"}}>{"🗑️ Remove Fingerprint"}</button>
 )}
 {loginUsername === "superadmin" && (
-<button onClick={()=>setForgotMode(true)}
+<button onClick={()=>toast("Superadmin password reset: Firebase Console → Authentication → user → Reset password","info")}
 style={{background:"none",border:"none",color:T.accent,cursor:"pointer",fontSize:12,fontWeight:600,marginTop:4,textAlign:"center",width:"100%"}}>
 🔑 Forgot Password?
 </button>
@@ -5184,7 +5195,7 @@ style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderR
 <div style={{display:"flex",gap:8}}>
 <button onClick={async()=>{
 if(!recoveryCode.trim()){toast("Code daalo ❗","error");return;}
-let expected = "SCHOOLSHIELD-RESET";
+let expected = "__disabled__" + Math.random();
 if(window.firebaseReady){
 try{ const s=await window.db.ref("schoolshield/superadmin_recovery_code").once("value"); if(s.val()) expected=s.val(); }catch{}
 }
@@ -31305,7 +31316,7 @@ style={{ width:"100%", background:T.surface, border:`1px solid ${T.border}`, bor
 }
 function RecoveryCodeSetup({ toast }) {
 const FIREBASE_RC_PATH = "schoolshield/superadmin_recovery_code";
-const DEFAULT_CODE = "SCHOOLSHIELD-RESET";
+const DEFAULT_CODE = "";
 const [currentCode, setCurrentCode] = React.useState("");
 const [newCode, setNewCode]         = React.useState("");
 const [loading, setLoading]         = React.useState(false);
@@ -31360,41 +31371,23 @@ const [confirmPass, setConfirm] = React.useState("");
 const [showCur, setShowCur]     = React.useState(false);
 const [showNew, setShowNew]     = React.useState(false);
 const [loading, setLoading]     = React.useState(false);
-const [savedPass, setSavedPass] = React.useState("super123");
-React.useEffect(() => {
-if (!window.firebaseReady) return;
-window.db.ref(FIREBASE_SA_PASS_PATH).once("value").then(snap => {
-const v = snap.val();
-if (v) setSavedPass(v);
-});
-}, []);
 const handleChange = async () => {
 if (!curPass || !newPass || !confirmPass) { toast("Please fill all fields ❗", "error"); return; }
-const curMatches = ssLooksHashed(savedPass)
-? (await ssHashPassword(curPass)) === savedPass
-: curPass === savedPass;
-if (!curMatches) { toast("Current password is incorrect ❌", "error"); return; }
 if (newPass.length < 6) { toast("New password must be at least 6 characters ❗", "error"); return; }
 if (newPass !== confirmPass) { toast("New password and confirm password do not match ❌", "error"); return; }
 setLoading(true);
-const hashedNewPass = await ssHashPassword(newPass);
-if (window.firebaseReady) {
-window.db.ref(FIREBASE_SA_PASS_PATH).set(hashedNewPass).then(() => {
-setSavedPass(hashedNewPass);
+try {
+const u = firebase.auth().currentUser;
+if (!u || u.isAnonymous) throw new Error("login-again");
+await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, curPass));
+await u.updatePassword(newPass);
 setCurPass(""); setNewPass(""); setConfirm("");
 toast("✅ Password changed successfully!", "success");
-setLoading(false);
-}).catch(() => {
-toast("Firebase error — please try again ❌", "error");
-setLoading(false);
-});
-} else {
-try { localStorage.setItem("ss_sa_pass", hashedNewPass); } catch {}
-setSavedPass(hashedNewPass);
-setCurPass(""); setNewPass(""); setConfirm("");
-toast("✅ Password changed! (offline mode)", "success");
-setLoading(false);
+} catch (e) {
+const wrong = e && (e.code === "auth/wrong-password" || e.code === "auth/invalid-credential");
+toast(wrong ? "Current password is incorrect ❌" : "Password change failed — dobara login karke try karo ❌", "error");
 }
+setLoading(false);
 };
 const inputStyle = {
 width:"100%", background:T.surface, border:`1px solid ${T.border}`,
@@ -31467,7 +31460,7 @@ cursor: loading ? "not-allowed" : "pointer", fontFamily:"Outfit,sans-serif"}}>
 <div style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:18, padding:24, marginTop:20}}>
 <p style={{color:T.text, fontWeight:700, fontSize:15, marginBottom:4}}>🛡️ Recovery Code Setup</p>
 <p style={{color:T.textMuted, fontSize:12, marginBottom:16}}>This code will be used to reset your password. Set a unique code and keep it somewhere safe.</p>
-<RecoveryCodeSetup toast={toast} />
+<p style={{color:T.textMuted,fontSize:12}}>Recovery code ab use nahi hota. Password bhool jao to Firebase Console → Authentication me reset karo.</p>
 </div>
 </div>
 </div>
