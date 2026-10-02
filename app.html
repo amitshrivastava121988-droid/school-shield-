@@ -4846,24 +4846,33 @@ if (ssLockStatus.locked) {
 toast("Bahut zyada galat attempts. " + ssFormatLockoutTime(ssLockStatus.remainingMs) + " baad try karein 🔒", "error");
 return;
 }
-if (loginUsername === "superadmin") {
+if (loginUsername === "superadmin" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(loginUsername).trim())) {
+const saEmail = String(loginUsername).indexOf("@") > 0 ? String(loginUsername).trim() : window.SS_SA_EMAIL;
 const saLogin = async () => {
+const withTimeout = (pr, label) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => { const er = new Error(label + " timeout"); er.code = "ss/timeout-" + label; rej(er); }, 15000))]);
+toast("Login ho raha hai… (build 4b-1)", "info");
+let step = "auth";
 try {
-const cred = await firebase.auth().signInWithEmailAndPassword(window.SS_SA_EMAIL, pw);
-const prof = await window.__ssGetProfile(cred.user.uid);
-if (!prof || prof.role !== "superadmin" || prof.active === false) { await firebase.auth().signOut(); throw new Error("no-superadmin-profile"); }
+const cred = await withTimeout(firebase.auth().signInWithEmailAndPassword(saEmail, pw), "auth");
+step = "profile";
+const prof = await withTimeout(window.__ssGetProfile(cred.user.uid), "profile");
+if (!prof || prof.role !== "superadmin" || prof.active === false) { await firebase.auth().signOut(); const er = new Error("profile-missing"); er.code = "ss/no-superadmin-profile"; throw er; }
 ssResetLoginAttempts(loginUsername);
 setRole("superadmin");
 setLoggedInUser({ role:"superadmin", username:"superadmin", schoolId: null, uid: cred.user.uid });
 setActiveSection("dashboard");
 toast("Welcome Super Admin 👑", "success");
 } catch (e) {
+const code = (e && e.code) || "";
+const credErr = ["auth/wrong-password","auth/invalid-credential","auth/user-not-found","auth/invalid-email"].indexOf(code) >= 0;
+if (credErr) {
 const ssFailCount = ssRecordFailedLogin(loginUsername);
 const ssLeft = SS_LOGIN_MAX_ATTEMPTS - ssFailCount;
-if (ssLeft > 0) {
-toast("Galat password ❌ (" + ssLeft + " attempts left)", "error");
+if (ssLeft > 0) { toast("Galat password ❌ (" + ssLeft + " attempts left)", "error"); }
+else { toast("Bahut zyada galat attempts. 10 min baad try karein 🔒", "error"); }
 } else {
-toast("Bahut zyada galat attempts. 10 min baad try karein 🔒", "error");
+console.error("superadmin login failed at " + step, e);
+toast("Login error [" + step + "]: " + (code || (e && e.message) || String(e)), "error");
 }
 }
 };
@@ -5156,7 +5165,7 @@ onKeyDown={e=>e.key==="Enter" && handleLogin()} />
 <button onClick={function(){ if(window.confirm("Remove fingerprint login data?")){ localStorage.removeItem("ss_bio_cred"); setBioStored(false); toast("Fingerprint removed","success"); } }} style={{background:"none",border:"none",color:"#F75555",fontSize:11,cursor:"pointer",marginTop:2,width:"100%",fontFamily:"Outfit,sans-serif"}}>{"🗑️ Remove Fingerprint"}</button>
 )}
 {loginUsername === "superadmin" && (
-<button onClick={()=>toast("Superadmin password reset: Firebase Console → Authentication → user → Reset password","info")}
+<button onClick={()=>{ const em = String(loginUsername||"").trim(); if (em.indexOf("@") > 0) { firebase.auth().sendPasswordResetEmail(em).then(()=>toast("Reset link email pe bhej diya ✅ (spam bhi dekho)","success")).catch(e=>toast("Reset error: "+((e&&e.code)||e),"error")); } else { toast("Username box me apna email likho, phir Forgot Password dabao","info"); } }}
 style={{background:"none",border:"none",color:T.accent,cursor:"pointer",fontSize:12,fontWeight:600,marginTop:4,textAlign:"center",width:"100%"}}>
 🔑 Forgot Password?
 </button>
