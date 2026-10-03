@@ -406,6 +406,184 @@ document.head.appendChild(earlyHideStyle);
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
+<script>
+/* SchoolShield staff accounts <-> Firebase Auth (Spark plan, no server).
+   - Staff (non-parent) accounts get a Firebase Auth user + users/{uid} profile.
+   - Passwords are never stored in Firestore; strong random ones are generated for new accounts.
+   - "Reset" (admin changes password) = re-issue: new login id + new password. Self change = updatePassword. */
+(function (root) {
+  'use strict';
+  var fresh = root.__ssFreshPw = {};      // accId -> password (memory only, for display this session)
+  var inflight = {};
+  function fb() { return root.firebase; }
+  function needsAuth(a) { return a && a.role !== 'parent' && a.loginType !== 'rollno' && a.username; }
+  function staffEmail(u) { return String(u || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '-') + '@staff.schoolshield.app'; }
+  root.__ssStaffEmail = staffEmail;
+  function genPw() {
+    var ch = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789', out = '', arr = new Uint32Array(10);
+    (root.crypto || {}).getRandomValues ? root.crypto.getRandomValues(arr) : arr.forEach(function (_, i) { arr[i] = Math.floor(Math.random() * 4294967295); });
+    for (var i = 0; i < 10; i++) out += ch.charAt(arr[i] % ch.length);
+    return out;
+  }
+  function secondaryAuth() {
+    var app; try { app = fb().app('ssSecondary'); } catch (e) { app = fb().initializeApp(fb().app().options, 'ssSecondary'); }
+    return app.auth();
+  }
+  function profileOf(acc, uid, email) {
+    var c = Object.assign({}, acc); delete c.password; delete c.authPending; c.authUid = uid;
+    return { role: acc.role, schoolId: acc.schoolId == null ? '' : String(acc.schoolId), active: acc.active !== false,
+             username: acc.username, name: acc.name || '', accId: String(acc.id), email: email || '', acc: JSON.stringify(c) };
+  }
+  function sanitizedJson(a) { var c = Object.assign({}, a); delete c.password; delete c.authPending; return JSON.stringify(c); }
+  function bump(u, n) { return String(u).replace(/\d+$/, '') + n; }
+
+  // create Auth user (secondary app so the admin stays logged in) + profile doc
+  async function createStaff(acc, pw) {
+    var sa = secondaryAuth(), real = acc.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acc.email) ? String(acc.email).trim().toLowerCase() : '';
+    var username = acc.username, uid = null, email = '';
+    for (var n = 2; n < 40; n++) {
+      email = real || staffEmail(username);
+      try { var cred = await sa.createUserWithEmailAndPassword(email, pw); uid = cred.user.uid; break; }
+      catch (e) {
+        if (e && e.code === 'auth/email-already-in-use' && !real) { username = bump(acc.username, n); continue; }
+        throw e;
+      }
+    }
+    if (!uid) throw new Error('could not create unique login id');
+    try { await sa.signOut(); } catch (e) {}
+    var a2 = Object.assign({}, acc, { username: username });
+    await fb().firestore().collection('users').doc(uid).set(profileOf(a2, uid, email));
+    return { uid: uid, username: username, email: email };
+  }
+  function setState(accId, patch) {
+    if (root.__ssSetUserAccounts) root.__ssSetUserAccounts(function (p) {
+      return (p || []).map(function (a) { return String(a.id) === String(accId) ? Object.assign({}, a, patch) : a; });
+    });
+  }
+  async function provision(acc, minLen, results) {
+    var key = 'new:' + acc.id; if (inflight[key]) return; inflight[key] = 1;
+    var pw = acc.password;
+    if (!pw || pw.length < minLen) pw = genPw();
+    fresh[acc.id] = pw;
+    try {
+      var r = await createStaff(acc, pw);
+      setState(acc.id, { username: r.username, authUid: r.uid, password: pw });
+      results.push({ name: acc.name, role: acc.role, username: r.username, email: acc.email && r.email === String(acc.email).toLowerCase() ? r.email : '', password: pw });
+    } catch (e) {
+      console.error('[auth] provision failed', acc.username, e);
+      results.push({ name: acc.name, role: acc.role, username: acc.username, password: pw, error: (e && (e.code || e.message)) || String(e) });
+    } finally { delete inflight[key]; }
+  }
+  async function reissue(acc, results) {
+    var key = 'reset:' + acc.id; if (inflight[key]) return; inflight[key] = 1;
+    var pw = acc.password; if (!pw || pw.length < 8) pw = genPw();
+    fresh[acc.id] = pw;
+    try {
+      var oldUid = acc.authUid, r = await createStaff(Object.assign({}, acc, { username: bump(acc.username, 2) }), pw);
+      try { await fb().firestore().collection('users').doc(oldUid).delete(); } catch (e) { console.warn('old profile delete failed', e); }
+      setState(acc.id, { username: r.username, authUid: r.uid, password: pw });
+      results.push({ name: acc.name, role: acc.role, username: r.username, password: pw, note: 'reset: naya login ID' });
+    } catch (e) {
+      console.error('[auth] reset failed', e);
+      results.push({ name: acc.name, role: acc.role, username: acc.username, password: pw, error: (e && (e.code || e.message)) || String(e) });
+    } finally { delete inflight[key]; }
+  }
+  async function selfChange(acc, results) {
+    try { await fb().auth().currentUser.updatePassword(acc.password); results.push({ name: acc.name, role: acc.role, username: acc.username, password: '(aapka naya password set ho gaya)' }); }
+    catch (e) { results.push({ name: acc.name, role: acc.role, username: acc.username, error: 'Password change fail: ' + ((e && e.code) || e) + ' — dobara login karke try karo' }); }
+  }
+  async function runBatch(jobs, label) {
+    var results = [];
+    for (var i = 0; i < jobs.length; i++) { await jobs[i](results); }
+    if (results.length) root.__ssShowCreds(results, label || 'Naye login details');
+  }
+
+  // Called from setPersist for key "userAccounts": returns the JSON string to store.
+  root.__ssAccountsHook = function (prev, next) {
+    var user = fb().auth().currentUser;
+    if (!Array.isArray(next) || !user || user.isAnonymous) return JSON.stringify(next);
+    var pmap = {}; (Array.isArray(prev) ? prev : []).forEach(function (a) { pmap[a.id] = a; });
+    var nmap = {}; next.forEach(function (a) { nmap[a.id] = a; });
+    var jobs = [], strip = {};
+    next.forEach(function (a) {
+      if (!needsAuth(a)) return;
+      var p = pmap[a.id];
+      if (!a.authUid) {
+        if (a.password && !inflight['new:' + a.id]) { strip[a.id] = 1; (function (acc) { jobs.push(function (res) { return provision(acc, 8, res); }); })(a); }
+        else if (inflight['new:' + a.id]) strip[a.id] = 1;
+        return;
+      }
+      strip[a.id] = 1;
+      var changedPw = a.password && a.password !== (p && p.password) && a.password !== fresh[a.id];
+      if (changedPw) {
+        (function (acc) { jobs.push(function (res) { return acc.authUid === user.uid ? selfChange(acc, res) : reissue(acc, res); }); })(a);
+      } else if (p && p.authUid === a.authUid && sanitizedJson(p) !== sanitizedJson(a)) {
+        (function (acc) { // keep profile in sync (permissions, active, name ...)
+          fb().firestore().collection('users').doc(acc.authUid).set(profileOf(acc, acc.authUid, ''), { merge: true }).catch(function (e) { console.warn('profile sync failed', e); });
+        })(a);
+      }
+    });
+    Object.keys(pmap).forEach(function (id) { // deleted accounts -> remove profile (access revoked)
+      var p = pmap[id]; if (p && p.authUid && needsAuth(p) && !nmap[id]) fb().firestore().collection('users').doc(p.authUid).delete().catch(function () {});
+    });
+    if (jobs.length) setTimeout(function () { runBatch(jobs); }, 0);
+    return JSON.stringify(next.map(function (a) {
+      if (!strip[a.id]) return a;
+      var c = Object.assign({}, a); delete c.password; delete c.authPending; return c;
+    }));
+  };
+  // keep this session's passwords visible after the snapshot (sanitized) comes back
+  root.__ssMergeFresh = function (arr) {
+    if (!Array.isArray(arr)) return arr;
+    return arr.map(function (a) { return (a && !a.password && fresh[a.id]) ? Object.assign({}, a, { password: fresh[a.id] }) : a; });
+  };
+  // schools: never keep plaintext principal/founder passwords in the shared blob
+  root.__ssSchoolsJson = function (next) {
+    if (!Array.isArray(next)) return JSON.stringify(next);
+    return JSON.stringify(next.map(function (s) {
+      if (!s || typeof s !== 'object') return s; var c = Object.assign({}, s);
+      Object.keys(c).forEach(function (k) { if (/password/i.test(k)) delete c[k]; });
+      return c;
+    }));
+  };
+
+  // superadmin: move existing (legacy) staff accounts to Firebase Auth
+  root.__ssMigrateAccounts = async function () {
+    var u = fb().auth().currentUser;
+    if (!u || u.isAnonymous) { alert('Pehle superadmin se login karo.'); return; }
+    var list = (root.__ssUserAccounts || []).filter(function (a) { return needsAuth(a) && !a.authUid && a.password; });
+    if (!list.length) { alert('Migrate karne ke liye koi purana staff account nahi mila.'); return; }
+    if (!confirm(list.length + ' staff accounts Firebase Auth pe le jaaye? Chhote (6 se kam akshar) passwords nayi strong password se badal jayenge.')) return;
+    var jobs = list.map(function (a) { return function (res) { return provision(a, 6, res); }; });
+    await runBatch(jobs, 'Migration ho gaya — details save kar lo');
+  };
+
+  // simple credentials dialog (copy / share)
+  root.__ssShowCreds = function (rows, title) {
+    var old = document.getElementById('ss-creds'); if (old) old.remove();
+    var wrap = document.createElement('div'); wrap.id = 'ss-creds';
+    wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:12px;font-family:sans-serif';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#12203f;color:#fff;border-radius:14px;max-width:520px;width:100%;max-height:85vh;overflow:auto;padding:16px;border:1px solid #2c4a8a';
+    var h = document.createElement('div'); h.textContent = '🔐 ' + (title || 'Login details'); h.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:6px';
+    var warn = document.createElement('div'); warn.textContent = 'Password sirf abhi dikhega, server pe save nahi hota. Abhi copy/share kar lo.'; warn.style.cssText = 'font-size:12px;color:#ffd27a;margin-bottom:10px';
+    box.appendChild(h); box.appendChild(warn);
+    var text = [];
+    rows.forEach(function (r) {
+      var d = document.createElement('div'); d.style.cssText = 'background:#0b1530;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px;line-height:1.5;word-break:break-all';
+      var line = (r.name || '') + ' (' + (r.role || '') + ')\nLogin ID: ' + (r.email || r.username) + (r.password ? '\nPassword: ' + r.password : '') + (r.note ? '\n' + r.note : '') + (r.error ? '\n⚠️ ERROR: ' + r.error : '');
+      d.style.whiteSpace = 'pre-wrap'; d.textContent = line; if (r.error) d.style.border = '1px solid #ff6b6b'; box.appendChild(d); text.push(line);
+    });
+    var btns = document.createElement('div'); btns.style.cssText = 'display:flex;gap:8px;margin-top:8px';
+    function mk(label, fn) { var b = document.createElement('button'); b.textContent = label; b.style.cssText = 'flex:1;padding:10px;border-radius:10px;border:0;background:#2f6bff;color:#fff;font-weight:600;font-size:14px'; b.onclick = fn; return b; }
+    btns.appendChild(mk('📋 Copy', function () { var t = text.join('\n\n'); try { navigator.clipboard.writeText(t); } catch (e) {} }));
+    btns.appendChild(mk('WhatsApp', function () { window.open('https://wa.me/?text=' + encodeURIComponent(text.join('\n\n')), '_blank'); }));
+    btns.appendChild(mk('Close', function () { wrap.remove(); }));
+    box.appendChild(btns); wrap.appendChild(box); document.body.appendChild(wrap);
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
 <!-- Razorpay Payment Gateway: loaded on-demand in window.openRazorpay, not upfront, to keep initial load fast -->
 <!-- Leaflet for live bus map -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -465,7 +643,7 @@ if (_first) {
 _first = false;
 try {
 var r = localStorage.getItem("ss_session_role");
-if (u.isAnonymous && r === "superadmin") {
+if (u.isAnonymous && ["superadmin","founder","principal","vice_principal","coordinator","teacher","staff","reception","accountant","librarian","hostel_manager","store_keeper","transport_head","driver"].indexOf(r) >= 0 && !window.__isDemoMode) {
 localStorage.removeItem("ss_session_role"); localStorage.removeItem("ss_session_user");
 window.location.reload();
 }
@@ -1779,7 +1957,7 @@ clean = key === "students" ? deduplicateStudents(parsedArr) : deduplicateById(pa
 } else {
 clean = parsed;
 }
-setVal(clean);
+setVal(key === "userAccounts" && window.__ssMergeFresh ? window.__ssMergeFresh(clean) : clean);
 try { localStorage.setItem(cacheKey, JSON.stringify(clean)); } catch {}
 } catch(e) {
 }
@@ -1800,7 +1978,12 @@ return next;
 if (window.isDeletingSchool && !GLOBAL_KEYS.includes(key)) {
 return next;
 }
-const jsonStr = JSON.stringify(next);
+let jsonStr;
+try {
+if (key === "userAccounts" && window.__ssAccountsHook && !window.__isDemoMode) jsonStr = window.__ssAccountsHook(prev, next);
+else if (key === "schools" && window.__ssSchoolsJson && !window.__isDemoMode) jsonStr = window.__ssSchoolsJson(next);
+} catch (e) { console.error("sanitize hook failed", e); }
+if (typeof jsonStr !== "string") jsonStr = JSON.stringify(next);
 const fbPath = getFirebasePath(key);
 const isGlobal = GLOBAL_KEYS.includes(key) || key.startsWith("houseNames_") || key.startsWith("classNames_");
 const canWrite = fbPath && (isGlobal || window.currentSchoolId);
@@ -3349,6 +3532,7 @@ const setGreetingSettings = function(updater) {
   if (next.defaultLang !== prev.defaultLang) setGs_lang(next.defaultLang);
 };
 const [userAccounts, setUserAccounts] = usePersist("userAccounts", initUserAccounts);
+window.__ssSetUserAccounts = setUserAccounts; window.__ssUserAccounts = userAccounts;
 const [decisionHistory, setDecisionHistory] = usePersist("decisionHistory", []);
 const [attendanceLogs, setAttendanceLogs] = usePersist("attendanceLogs", {});
 React.useEffect(function(){
@@ -4856,6 +5040,7 @@ try {
 const cred = await withTimeout(firebase.auth().signInWithEmailAndPassword(saEmail, pw), "auth");
 step = "profile";
 const prof = await withTimeout(window.__ssGetProfile(cred.user.uid), "profile");
+if (prof && prof.role !== "superadmin" && prof.active !== false && prof.acc) { let accy = null; try { accy = JSON.parse(prof.acc); } catch (e3) {} if (accy) { accy.authUid = cred.user.uid; ssResetLoginAttempts(loginUsername); proceedAcc(accy); return; } }
 if (!prof || prof.role !== "superadmin" || prof.active === false) { await firebase.auth().signOut(); const er = new Error("profile-missing"); er.code = "ss/no-superadmin-profile"; throw er; }
 ssResetLoginAttempts(loginUsername);
 setRole("superadmin");
@@ -4899,7 +5084,7 @@ toast(`Welcome ${rollAcc.name}! 👋`, "success");
 return;
 }
 }
-if (acc) {
+function proceedAcc(acc) {
 ssResetLoginAttempts(loginUsername);
 if (acc.role === "group_founder") {
 setGroupFounderAcc(acc);
@@ -4966,13 +5151,32 @@ if (loginSchool && loginSchool.coverPhotoUrl) {
 }
 return;
 }
+if (acc) { proceedAcc(acc); return; }
+(async () => {
+const withTimeout = (pr, label) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => { const er = new Error(label + " timeout"); er.code = "ss/timeout-" + label; rej(er); }, 15000))]);
+let step = "auth";
+try {
+const cred = await withTimeout(firebase.auth().signInWithEmailAndPassword(window.__ssStaffEmail(loginUsername), pw), "auth");
+step = "profile";
+const prof = await withTimeout(window.__ssGetProfile(cred.user.uid), "profile");
+let accx = null; try { accx = prof && prof.acc ? JSON.parse(prof.acc) : null; } catch (e2) {}
+if (!prof || prof.active === false || !accx || prof.role === "superadmin") { await firebase.auth().signOut(); const er = new Error("no-profile"); er.code = "ss/no-profile"; throw er; }
+accx.authUid = cred.user.uid;
+proceedAcc(accx);
+} catch (e) {
+const code = (e && e.code) || "";
+const credErr = code.indexOf("auth/") === 0 && ["auth/network-request-failed","auth/too-many-requests","auth/operation-not-allowed"].indexOf(code) < 0 || code === "ss/no-profile";
+if (credErr) {
 const ssFailCount2 = ssRecordFailedLogin(loginUsername);
 const ssLeft2 = SS_LOGIN_MAX_ATTEMPTS - ssFailCount2;
-if (ssLeft2 > 0) {
-toast("Invalid username or password! (" + ssLeft2 + " attempts left)", "error");
+if (ssLeft2 > 0) { toast("Invalid username or password! (" + ssLeft2 + " attempts left)", "error"); }
+else { toast("Bahut zyada galat attempts. 10 min baad try karein 🔒", "error"); }
 } else {
-toast("Bahut zyada galat attempts. 10 min baad try karein 🔒", "error");
+console.error("staff login failed at " + step, e);
+toast("Login error [" + step + "]: " + (code || (e && e.message) || String(e)), "error");
 }
+}
+})();
 };
 var registerBiometric = function(acc) {
   if (!window.PublicKeyCredential) return;
@@ -31469,7 +31673,8 @@ cursor: loading ? "not-allowed" : "pointer", fontFamily:"Outfit,sans-serif"}}>
 <div style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:18, padding:24, marginTop:20}}>
 <p style={{color:T.text, fontWeight:700, fontSize:15, marginBottom:4}}>🛡️ Recovery Code Setup</p>
 <p style={{color:T.textMuted, fontSize:12, marginBottom:16}}>This code will be used to reset your password. Set a unique code and keep it somewhere safe.</p>
-<p style={{color:T.textMuted,fontSize:12}}>Recovery code ab use nahi hota. Password bhool jao to Firebase Console → Authentication me reset karo.</p>
+<p style={{color:T.textMuted,fontSize:12}}>Recovery code ab use nahi hota. Password bhool jao to Username box me email likho aur Forgot Password dabao.</p>
+<button onClick={()=>window.__ssMigrateAccounts && window.__ssMigrateAccounts()} style={{marginTop:10,padding:"10px 14px",borderRadius:10,border:"1px solid #2f6bff",background:"transparent",color:"#7fb0ff",fontWeight:600,cursor:"pointer"}}>🔐 Purane staff accounts ko Firebase Auth pe migrate karo</button>
 </div>
 </div>
 </div>
@@ -32210,7 +32415,7 @@ const lastFour = data.phone.slice(-4);
 setUserAccounts(p => {
 const dup = p.find(a => sameId(a.schoolId,mySchId) && a.role==="teacher" && a.name?.trim().toLowerCase()===data.name?.trim().toLowerCase() && a.phone?.slice(-10)===data.phone.slice(-10));
 if (dup) return p;
-return [...p, {id:newId+1, schoolId:mySchId, role:"teacher", name:data.name, username:(String(mySchId).replace(/[^0-9]/g,"")||String(mySchId).replace(/[^a-zA-Z0-9]/g,"").slice(0,4))+"teacher_"+data.name.toLowerCase().split(" ")[0], password:lastFour, phone:data.phone, assignedClass:data.assignedClass||"Class 1", active:true, linkedId:newId}];
+return [...p, {id:newId+1, schoolId:mySchId, role:"teacher", email:data.email||"", name:data.name, username:(String(mySchId).replace(/[^0-9]/g,"")||String(mySchId).replace(/[^a-zA-Z0-9]/g,"").slice(0,4))+"teacher_"+data.name.toLowerCase().split(" ")[0], password:lastFour, phone:data.phone, assignedClass:data.assignedClass||"Class 1", active:true, linkedId:newId}];
 });
 }
 toast("Teacher + Account dono create ho gaye! 🎉", "success");
@@ -32239,7 +32444,7 @@ const permKey = {vice_principal:"vpPermissions",coordinator:"coordinatorPermissi
 const uPrefix = {vice_principal:"vp_",coordinator:"coord_",accountant:"acc_",reception:"reception_",transport_head:"th_",librarian:"lib_",staff:"staff_",driver:"driver_",store_keeper:"stk_"}[accRole]||"staff_";
 const lastFour = data.phone.slice(-4);
 const dup = (userAccounts||[]).find(a => sameId(a.schoolId,mySchId) && a.role===accRole && a.name?.trim().toLowerCase()===data.name?.trim().toLowerCase() && a.phone?.slice(-10)===data.phone.slice(-10));
-if (!dup) setUserAccounts(p=>[...p,{id:Date.now()+1,schoolId:mySchId,name:data.name,phone:data.phone,role:accRole,username:(String(mySchId).replace(/[^0-9]/g,"")||String(mySchId).replace(/[^a-zA-Z0-9]/g,"").slice(0,4))+uPrefix+data.name.toLowerCase().split(" ")[0],password:lastFour,active:true,linkedEmployeeId:empId,[permKey]:["dashboard"]}]);
+if (!dup) setUserAccounts(p=>[...p,{id:Date.now()+1,schoolId:mySchId,name:data.name,phone:data.phone,role:accRole,email:data.email||"",username:(String(mySchId).replace(/[^0-9]/g,"")||String(mySchId).replace(/[^a-zA-Z0-9]/g,"").slice(0,4))+uPrefix+data.name.toLowerCase().split(" ")[0],password:lastFour,active:true,linkedEmployeeId:empId,[permKey]:["dashboard"]}]);
 }
 toast("Employee + Account dono create ho gaye! 🎉", "success");
 setModal(null);
