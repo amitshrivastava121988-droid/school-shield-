@@ -396,7 +396,7 @@ document.head.appendChild(earlyHideStyle);
 
   root.SS_SA_EMAIL = 'superadmin@schoolshield.app';
   root.__ssGetProfile = function (uid) {
-    return root.firebase.firestore().collection('users').doc(uid).get().then(function (s) { return s.exists ? s.data() : null; });
+    return root.firebase.firestore().collection('users').doc(uid).get().then(function (s) { var d = s.exists ? s.data() : null; if (d) root.__ssMyProf = Object.assign({ uid: uid }, d); return d; });
   };
   root.__ssAuthLogout = function () {
     try { var u = root.firebase.auth().currentUser; if (u && !u.isAnonymous) root.firebase.auth().signOut(); } catch (e) {}
@@ -416,7 +416,15 @@ document.head.appendChild(earlyHideStyle);
   var fresh = root.__ssFreshPw = {};      // accId -> password (memory only, for display this session)
   var inflight = {};
   function fb() { return root.firebase; }
-  function needsAuth(a) { return a && a.role !== 'parent' && a.loginType !== 'rollno' && a.username; }
+  function needsAuth(a) { return a && a.username && a.role !== 'superadmin'; }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  var HEADS = ['superadmin','principal','founder','vice_principal'];
+  function ensureProf() {
+    var u = fb().auth().currentUser; if (!u || u.isAnonymous) return Promise.resolve(null);
+    if (root.__ssMyProf && root.__ssMyProf.uid === u.uid) return Promise.resolve(root.__ssMyProf);
+    return root.__ssGetProfile(u.uid).then(function (p) { root.__ssMyProf = p ? Object.assign({ uid: u.uid }, p) : null; return root.__ssMyProf; }).catch(function () { return null; });
+  }
+  function canProvision() { return ensureProf().then(function (p) { return !!p && HEADS.indexOf(p.role) >= 0; }); }
   function staffEmail(u) { return String(u || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '-') + '@staff.schoolshield.app'; }
   root.__ssStaffEmail = staffEmail;
   function genPw() {
@@ -432,10 +440,10 @@ document.head.appendChild(earlyHideStyle);
   function profileOf(acc, uid, email) {
     var c = Object.assign({}, acc); delete c.password; delete c.authPending; c.authUid = uid;
     return { role: acc.role, schoolId: acc.schoolId == null ? '' : String(acc.schoolId), active: acc.active !== false,
-             username: acc.username, name: acc.name || '', accId: String(acc.id), email: email || '', acc: JSON.stringify(c) };
+             username: acc.username, name: acc.name || '', accId: String(acc.id), studentId: acc.studentId == null ? '' : String(acc.studentId), email: email || '', acc: JSON.stringify(c) };
   }
   function sanitizedJson(a) { var c = Object.assign({}, a); delete c.password; delete c.authPending; return JSON.stringify(c); }
-  function bump(u, n) { return String(u).replace(/\d+$/, '') + n; }
+  function bump(u, n) { return String(u).replace(/_v\d+$/, '') + '_v' + n; }
 
   // create Auth user (secondary app so the admin stays logged in) + profile doc
   async function createStaff(acc, pw) {
@@ -445,7 +453,15 @@ document.head.appendChild(earlyHideStyle);
       email = real || staffEmail(username);
       try { var cred = await sa.createUserWithEmailAndPassword(email, pw); uid = cred.user.uid; break; }
       catch (e) {
-        if (e && e.code === 'auth/email-already-in-use' && !real) { username = bump(acc.username, n); continue; }
+        if (e && e.code === 'auth/email-already-in-use') {
+          // maybe WE created it earlier (app closed before authUid was saved) -> adopt if profile is ours / missing
+          try {
+            var c2 = await sa.signInWithEmailAndPassword(email, pw);
+            var pd = await fb().firestore().collection('users').doc(c2.user.uid).get();
+            if (!pd.exists || String(pd.data().accId) === String(acc.id)) { uid = c2.user.uid; break; }
+          } catch (e2) { /* different password / not ours */ }
+          if (!real) { username = bump(acc.username, n); continue; }
+        }
         throw e;
       }
     }
@@ -468,14 +484,17 @@ document.head.appendChild(earlyHideStyle);
     try {
       var r = await createStaff(acc, pw);
       setState(acc.id, { username: r.username, authUid: r.uid, password: pw });
-      results.push({ name: acc.name, role: acc.role, username: r.username, email: acc.email && r.email === String(acc.email).toLowerCase() ? r.email : '', password: pw });
+      status.done++;
+      if (!(acc.role === 'parent' && pw === acc.password && r.username === acc.username)) results.push({ name: acc.name, role: acc.role, username: r.username, email: acc.email && r.email === String(acc.email).toLowerCase() ? r.email : '', password: pw });
     } catch (e) {
-      console.error('[auth] provision failed', acc.username, e);
+      status.fail++; console.error('[auth] provision failed', acc.username, e);
       results.push({ name: acc.name, role: acc.role, username: acc.username, password: pw, error: (e && (e.code || e.message)) || String(e) });
     } finally { delete inflight[key]; }
   }
   async function reissue(acc, results) {
-    var key = 'reset:' + acc.id; if (inflight[key]) return; inflight[key] = 1;
+    var key = 'reset:' + acc.id; if (inflight[key]) return;
+    if (!(await canProvision())) { results.push({ name: acc.name, role: acc.role, username: acc.username, error: 'Password reset sirf principal/superadmin kar sakta hai' }); return; }
+    inflight[key] = 1;
     var pw = acc.password; if (!pw || pw.length < 8) pw = genPw();
     fresh[acc.id] = pw;
     try {
@@ -492,10 +511,48 @@ document.head.appendChild(earlyHideStyle);
     try { await fb().auth().currentUser.updatePassword(acc.password); results.push({ name: acc.name, role: acc.role, username: acc.username, password: '(aapka naya password set ho gaya)' }); }
     catch (e) { results.push({ name: acc.name, role: acc.role, username: acc.username, error: 'Password change fail: ' + ((e && e.code) || e) + ' — dobara login karke try karo' }); }
   }
+  var status = { done: 0, fail: 0, total: 0, el: null };
+  function paint() {
+    if (!status.total) return;
+    if (!status.el) { status.el = document.createElement('div'); status.el.style.cssText = 'position:fixed;left:10px;bottom:10px;z-index:99998;background:#12203f;color:#fff;border:1px solid #2f6bff;border-radius:10px;padding:8px 12px;font:12px sans-serif'; document.body.appendChild(status.el); }
+    var left = status.total - status.done - status.fail;
+    status.el.textContent = left > 0 ? ('🔐 Accounts secure ho rahe hain: ' + (status.done + status.fail) + '/' + status.total + ' (app khula rakho)') : ('✅ ' + status.done + ' accounts secure' + (status.fail ? ', ' + status.fail + ' fail' : ''));
+    if (left <= 0) { var el = status.el; setTimeout(function () { if (el.parentNode) el.remove(); if (status.el === el) status.el = null; }, 6000); status.total = status.done = status.fail = 0; }
+  }
+  var busy = false, queue = [];
   async function runBatch(jobs, label) {
+    var ok = await canProvision();
+    var selfOnly = jobs.filter(function (j) { return j.self; });
+    if (!ok) jobs = selfOnly;
+    jobs.forEach(function (j) { if (!j.self) status.total++; queue.push(j); });
+    paint();
+    if (busy) return; busy = true;
     var results = [];
-    for (var i = 0; i < jobs.length; i++) { await jobs[i](results); }
+    try {
+      while (queue.length) {
+        var j = queue.shift();
+        await j(results);
+        paint();
+        if (!j.self && queue.length) await sleep(1200);   // be gentle with Firebase signup limits
+      }
+    } finally { busy = false; }
     if (results.length) root.__ssShowCreds(results, label || 'Naye login details');
+    paint();
+  }
+  // resume provisioning of accounts that still have a stored password and no Auth user
+  var resumeT = null;
+  function scheduleResume(arr) {
+    if (resumeT || !Array.isArray(arr)) return;
+    var pend = arr.filter(function (a) { return needsAuth(a) && !a.authUid && a.password && !inflight['new:' + a.id]; });
+    if (!pend.length) return;
+    resumeT = setTimeout(async function () {
+      resumeT = null;
+      if (!(await canProvision())) return;
+      var mp = root.__ssMyProf || {};
+      pend = pend.filter(function (a) { return mp.role === 'superadmin' || String(a.schoolId).replace(/^SCH_/, '') === String(mp.schoolId).replace(/^SCH_/, ''); });
+      var jobs = pend.filter(function (a) { return !inflight['new:' + a.id]; }).map(function (a) { return function (res) { return provision(a, a.role === 'parent' ? 6 : 8, res); }; });
+      if (jobs.length) runBatch(jobs, 'Naye login details');
+    }, 2500);
   }
 
   // Called from setPersist for key "userAccounts": returns the JSON string to store.
@@ -509,14 +566,13 @@ document.head.appendChild(earlyHideStyle);
       if (!needsAuth(a)) return;
       var p = pmap[a.id];
       if (!a.authUid) {
-        if (a.password && !inflight['new:' + a.id]) { strip[a.id] = 1; (function (acc) { jobs.push(function (res) { return provision(acc, 8, res); }); })(a); }
-        else if (inflight['new:' + a.id]) strip[a.id] = 1;
+        if (a.password && !inflight['new:' + a.id]) { (function (acc) { jobs.push(function (res) { return provision(acc, acc.role === 'parent' ? 6 : 8, res); }); })(a); }
         return;
       }
       strip[a.id] = 1;
       var changedPw = a.password && a.password !== (p && p.password) && a.password !== fresh[a.id];
       if (changedPw) {
-        (function (acc) { jobs.push(function (res) { return acc.authUid === user.uid ? selfChange(acc, res) : reissue(acc, res); }); })(a);
+        (function (acc) { var j = function (res) { return acc.authUid === user.uid ? selfChange(acc, res) : reissue(acc, res); }; j.self = acc.authUid === user.uid; jobs.push(j); })(a);
       } else if (p && p.authUid === a.authUid && sanitizedJson(p) !== sanitizedJson(a)) {
         (function (acc) { // keep profile in sync (permissions, active, name ...)
           fb().firestore().collection('users').doc(acc.authUid).set(profileOf(acc, acc.authUid, ''), { merge: true }).catch(function (e) { console.warn('profile sync failed', e); });
@@ -535,6 +591,7 @@ document.head.appendChild(earlyHideStyle);
   // keep this session's passwords visible after the snapshot (sanitized) comes back
   root.__ssMergeFresh = function (arr) {
     if (!Array.isArray(arr)) return arr;
+    try { scheduleResume(arr); } catch (e) {}
     return arr.map(function (a) { return (a && !a.password && fresh[a.id]) ? Object.assign({}, a, { password: fresh[a.id] }) : a; });
   };
   // schools: never keep plaintext principal/founder passwords in the shared blob
@@ -551,9 +608,10 @@ document.head.appendChild(earlyHideStyle);
   root.__ssMigrateAccounts = async function () {
     var u = fb().auth().currentUser;
     if (!u || u.isAnonymous) { alert('Pehle superadmin se login karo.'); return; }
-    var list = (root.__ssUserAccounts || []).filter(function (a) { return needsAuth(a) && !a.authUid && a.password; });
+    await ensureProf(); var mp = root.__ssMyProf || {};
+    var list = (root.__ssUserAccounts || []).filter(function (a) { return needsAuth(a) && !a.authUid && a.password && (mp.role === 'superadmin' || String(a.schoolId).replace(/^SCH_/, '') === String(mp.schoolId).replace(/^SCH_/, '')); });
     if (!list.length) { alert('Migrate karne ke liye koi purana staff account nahi mila.'); return; }
-    if (!confirm(list.length + ' staff accounts Firebase Auth pe le jaaye? Chhote (6 se kam akshar) passwords nayi strong password se badal jayenge.')) return;
+    if (!confirm(list.length + ' accounts (staff + parents) Firebase Auth pe le jaaye? Isme kuch minute lag sakte hain, app khula rakhna. Chhote (6 se kam akshar) passwords nayi strong password se badal jayenge.')) return;
     var jobs = list.map(function (a) { return function (res) { return provision(a, 6, res); }; });
     await runBatch(jobs, 'Migration ho gaya — details save kar lo');
   };
@@ -580,6 +638,74 @@ document.head.appendChild(earlyHideStyle);
     btns.appendChild(mk('WhatsApp', function () { window.open('https://wa.me/?text=' + encodeURIComponent(text.join('\n\n')), '_blank'); }));
     btns.appendChild(mk('Close', function () { wrap.remove(); }));
     box.appendChild(btns); wrap.appendChild(box); document.body.appendChild(wrap);
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* One-time copy: old Realtime Database (schoolshield/*) -> new Firestore (via the shim). Superadmin only. */
+(function (root) {
+  'use strict';
+  function loadScript(src) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('script load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+  // flatten the RTDB tree into "units" the shim stores as one doc each
+  function flatten(path, val, out, parsePath) {
+    var segs = path.split('/').filter(Boolean);
+    var last = segs[segs.length - 1] || '';
+    if (/^school_.+/.test(last) && segs.length === 2 && val && typeof val === 'object') {   // schoolshield/school_X/<name>
+      Object.keys(val).forEach(function (k) { flatten(path + '/' + k, val[k], out, parsePath); }); return;
+    }
+    var p = parsePath(path);
+    if (p.container) { if (val && typeof val === 'object') Object.keys(val).forEach(function (k) { flatten(path + '/' + k, val[k], out, parsePath); }); return; }
+    if (/\/(superadmin_password|superadmin_recovery_code)$/.test(path)) return;   // old login secrets: never copied
+    if (val !== null && val !== undefined) out.push({ path: path, val: val });
+  }
+  function asArr(v) {
+    try { var x = typeof v === 'string' ? JSON.parse(v) : v; if (x && !Array.isArray(x)) x = Object.values(x); return Array.isArray(x) ? x : null; } catch (e) { return null; }
+  }
+  function mergeById(oldArr, newArr) { // existing Firestore items win
+    var seen = {}; oldArr.forEach(function (a) { if (a && a.id != null) seen[String(a.id)] = 1; });
+    return oldArr.concat(newArr.filter(function (a) { return !(a && a.id != null && seen[String(a.id)]); }));
+  }
+  async function copyAll(db, data, parsePath, sanitizeSchools) {
+    var units = []; flatten('schoolshield', data, units, parsePath);
+    var stat = { copied: 0, merged: 0, skipped: 0, failed: 0 };
+    for (var i = 0; i < units.length; i++) {
+      var u = units[i];
+      try {
+        var cur = await db.ref(u.path).once('value');
+        var val = u.val;
+        if (/\/schoolList$/.test(u.path) && sanitizeSchools) { var sa = asArr(val); if (sa) val = sanitizeSchools(sa); }
+        if (cur.exists()) {
+          if (/\/(schoolList|userAccounts)$/.test(u.path)) {
+            var oa = asArr(cur.val()), na = asArr(val);
+            if (oa && na) { var merged = mergeById(oa, na); await db.ref(u.path).set(JSON.stringify(merged)); stat.merged++; continue; }
+          }
+          stat.skipped++; continue;
+        }
+        await db.ref(u.path).set(val); stat.copied++;
+      } catch (e) { console.error('[import] failed', u.path, e); stat.failed++; }
+    }
+    stat.total = units.length; return stat;
+  }
+  root.__ssImportCore = { flatten: flatten, copyAll: copyAll, mergeById: mergeById };
+  root.__ssImportFromRTDB = async function () {
+    var fb = root.firebase, u = fb.auth().currentUser;
+    if (!u || u.isAnonymous) { alert('Pehle superadmin se login karo.'); return; }
+    try {
+      if (!fb.database) await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+      var snap = await fb.database().ref('schoolshield').once('value');
+      var data = snap.val();
+      if (!data) { alert('Purane Realtime Database me (schoolshield) koi data nahi mila. Matlab wahan bhi delete ho chuka hai.'); return; }
+      var schools = 0; try { var sl = asArr(data.schoolList); schools = sl ? sl.length : 0; } catch (e) {}
+      if (!confirm('Realtime DB me ' + schools + ' schools (aur unka data) mila. Firestore me copy karein?\n(Firestore me jo pehle se hai wo nahi mitega.)')) return;
+      var stat = await copyAll(root.db, data, root.__ssShim.parsePath, function (arr) { return JSON.parse(root.__ssSchoolsJson(arr)); });
+      alert('Copy ho gaya ✅\nNaya: ' + stat.copied + ' | Merge: ' + stat.merged + ' | Pehle se tha (skip): ' + stat.skipped + ' | Fail: ' + stat.failed + '\n\nAb page reload karo. Phir "accounts migrate" button dabana.');
+    } catch (e) { console.error(e); alert('Import fail: ' + ((e && (e.code || e.message)) || e)); }
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -5162,7 +5288,18 @@ const prof = await withTimeout(window.__ssGetProfile(cred.user.uid), "profile");
 let accx = null; try { accx = prof && prof.acc ? JSON.parse(prof.acc) : null; } catch (e2) {}
 if (!prof || prof.active === false || !accx || prof.role === "superadmin") { await firebase.auth().signOut(); const er = new Error("no-profile"); er.code = "ss/no-profile"; throw er; }
 accx.authUid = cred.user.uid;
+if (accx.role === "parent" && accx.loginType === "rollno") {
+ssResetLoginAttempts(loginUsername);
+setRole(accx.role);
+setLoggedInUser(accx);
+if (accx.schoolId) {
+const rawSidP = String(accx.schoolId);
+setCurrentSchoolId(rawSidP.startsWith("SCH_") ? rawSidP : "SCH_" + rawSidP.replace(/[^a-zA-Z0-9]/g,""));
+}
+toast(`Welcome ${accx.name}! 👋`, "success");
+} else {
 proceedAcc(accx);
+}
 } catch (e) {
 const code = (e && e.code) || "";
 const credErr = code.indexOf("auth/") === 0 && ["auth/network-request-failed","auth/too-many-requests","auth/operation-not-allowed"].indexOf(code) < 0 || code === "ss/no-profile";
@@ -31674,7 +31811,8 @@ cursor: loading ? "not-allowed" : "pointer", fontFamily:"Outfit,sans-serif"}}>
 <p style={{color:T.text, fontWeight:700, fontSize:15, marginBottom:4}}>🛡️ Recovery Code Setup</p>
 <p style={{color:T.textMuted, fontSize:12, marginBottom:16}}>This code will be used to reset your password. Set a unique code and keep it somewhere safe.</p>
 <p style={{color:T.textMuted,fontSize:12}}>Recovery code ab use nahi hota. Password bhool jao to Username box me email likho aur Forgot Password dabao.</p>
-<button onClick={()=>window.__ssMigrateAccounts && window.__ssMigrateAccounts()} style={{marginTop:10,padding:"10px 14px",borderRadius:10,border:"1px solid #2f6bff",background:"transparent",color:"#7fb0ff",fontWeight:600,cursor:"pointer"}}>🔐 Purane staff accounts ko Firebase Auth pe migrate karo</button>
+<button onClick={()=>window.__ssImportFromRTDB && window.__ssImportFromRTDB()} style={{marginTop:10,marginRight:8,padding:"10px 14px",borderRadius:10,border:"1px solid #34c38f",background:"transparent",color:"#6fe3b4",fontWeight:600,cursor:"pointer"}}>📥 Purana data (Realtime DB) Firestore me copy karo</button>
+<button onClick={()=>window.__ssMigrateAccounts && window.__ssMigrateAccounts()} style={{marginTop:10,padding:"10px 14px",borderRadius:10,border:"1px solid #2f6bff",background:"transparent",color:"#7fb0ff",fontWeight:600,cursor:"pointer"}}>🔐 Purane accounts (staff + parents) ko Firebase Auth pe migrate karo</button>
 </div>
 </div>
 </div>
