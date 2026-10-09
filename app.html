@@ -507,7 +507,7 @@ document.head.appendChild(earlyHideStyle);
     var key = 'reset:' + acc.id; if (inflight[key]) return;
     if (!(await canProvision())) { results.push({ name: acc.name, role: acc.role, username: acc.username, error: 'Password reset sirf principal/superadmin kar sakta hai' }); return; }
     inflight[key] = 1;
-    var pw = acc.password; if (!pw || pw.length < 8) pw = genPw();
+    var pw = acc.password; if (!pw || pw.length < (acc.role === 'parent' ? 6 : 8)) pw = genPw();
     fresh[acc.id] = pw;
     try {
       var oldUid = acc.authUid, r = await createStaff(Object.assign({}, acc, { username: bump(acc.username, 2) }), pw);
@@ -32962,6 +32962,12 @@ cursor: atMax ? "default" : "pointer",
 <p style={{fontSize:10,color:T.textMuted,marginTop:4}}>Coordinator sirf inhi classes ke students dekh sakta hai</p>
 </div>
 )}
+<div>
+<p style={{fontSize:11, color:T.textMuted, marginBottom:3, fontWeight:600}}>🔑 Naya Password (khali chhodo = password wahi rahega)</p>
+<input type="text" value={editAcc.password||""} onChange={e=>setEditAcc(p=>({...p,password:e.target.value}))} placeholder="kam se kam 6 characters (parent), 8 (staff)"
+style={{width:"100%", background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:"8px 11px", fontSize:13, color:T.text, fontFamily:"Outfit,sans-serif"}} />
+<p style={{fontSize:10,color:T.textMuted,marginTop:4}}>Password badalne par naya Login ID bhi banega (jaise ..._v2). Save ke baad popup me dono dikhenge — turant share karo.</p>
+</div>
 {editAcc.role==="parent" && (
 <div>
 <p style={{fontSize:11, color:T.textMuted, marginBottom:3, fontWeight:600}}>Student Naam</p>
