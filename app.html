@@ -86,7 +86,7 @@ document.head.appendChild(earlyHideStyle);
   var norm = function (s) { return String(s == null ? '' : s).replace(/^SCH_/, ''); };
   var enc = encodeURIComponent;
   var SCHOOL_KEYED = { fcmTokens: 1, faceDescriptors: 1 };
-  var ID_KEYED = { alerts: 1, complaints: 1, busLocations: 1, sessions: 1, forceLogoutSignals: 1, panicAlerts: 1, fcmTriggers: 1 };
+  var ID_KEYED = { alerts: 1, complaints: 1, busLocations: 1, sessions: 1, forceLogoutSignals: 1, panicAlerts: 1, fcmTriggers: 1, publicEnquiries: 1, publicApplications: 1, publicPages: 1 };
 
   function parsePath(path) {
     var segs = String(path || '').split('/').filter(Boolean);
@@ -198,7 +198,7 @@ document.head.appendChild(earlyHideStyle);
         var changed = lastUid !== null && u.uid !== lastUid;
         var go = function () { lastUid = u.uid; resolveReady(); if (changed) self._restartAll(); };
         if (u.isAnonymous) { root.__ssMyProf = null; go(); }
-        else if (root.__ssGetProfile) { root.__ssGetProfile(u.uid).then(go, go); }
+        else if (root.__ssGetProfile) { root.__ssGetProfile(u.uid).then(function () { go(); try { root.__ssPublishPublicPage(self); } catch (e) {} }, go); }
         else go();
       });
     } catch (e) { resolveReady(); }
@@ -407,6 +407,38 @@ document.head.appendChild(earlyHideStyle);
   }
 
   root.SS_SA_EMAIL = 'superadmin@schoolshield.app';
+  // Public school page ke liye sirf safe (sanitized) snapshot; principal/founder/VP ke login par max 1 ghante me ek baar
+  root.__ssPublishPublicPage = function (db) {
+    var pf = root.__ssMyProf;
+    if (!pf || pf.active === false || !pf.schoolId) return;
+    if (['principal', 'founder', 'vice_principal'].indexOf(pf.role) < 0) return;
+    var sid = norm(pf.schoolId), lsKey = 'ss_pubpage_' + sid;
+    try { var last = +localStorage.getItem(lsKey) || 0; if (Date.now() - last < 3600 * 1000) return; } catch (e) {}
+    var base = 'schoolshield/schools/SCH_' + sid + '/';
+    var rd = function (p) {
+      return db.ref(p).once('value').then(function (sn) {
+        var v = sn.val();
+        if (typeof v === 'string') { try { return JSON.parse(v); } catch (e) { return null; } }
+        return v;
+      });
+    };
+    var vals = function (x) { return x && typeof x === 'object' ? Object.keys(x).map(function (k) { return x[k]; }) : []; };
+    Promise.all([
+      rd(base + 'schoolPageData'), rd(base + 'teachers'), rd(base + 'gallery'),
+      rd(base + 'students'), rd(base + 'buses'), rd(base + 'employees'),
+      db.ref('schoolshield/school_' + sid + '/vacancies').once('value').then(function (sn) { var v = sn.val(); return Array.isArray(v) ? v : []; })
+    ]).then(function (r) {
+      var teachers = vals(r[1]).filter(function (t) { return t && t.name; }).map(function (t) { return { name: t.name, subject: t.subject || '', qualification: t.qualification || '', photoUrl: t.photoUrl || '' }; });
+      var gallery = vals(r[2]).filter(function (g) { return g && g.photoUrl; }).map(function (g) { return { photoUrl: g.photoUrl }; });
+      var students = vals(r[3]).filter(function (st) { return st && st.name; }).map(function (st) { return { gender: st.gender || '', isCWSN: !!st.isCWSN, 'class': st['class'] || '' }; });
+      var buses = vals(r[4]).filter(function (b) { return b && b.busNo; }).length;
+      var emps = vals(r[5]).filter(function (e) { return e && e.name; }).length;
+      var vacs = r[6].filter(function (v) { return v && v.title && v.isOpen !== false; }).map(function (v) { return { id: v.id, title: v.title, qualification: v.qualification || '', description: v.description || '', isOpen: true }; });
+      var put = function (part, data) { return db.ref('schoolshield/publicPages/' + sid + '-' + part).set({ schoolId: sid, data: data }); };
+      return Promise.all([put('page', r[0] || {}), put('teachers', teachers), put('gallery', gallery), put('stats', { students: students, buses: buses, employees: emps }), put('vacancies', vacs)]);
+    }).then(function () { try { localStorage.setItem(lsKey, String(Date.now())); } catch (e) {} })
+      .catch(function (e) { console.warn('public page publish failed', e); });
+  };
   root.__ssGetProfile = function (uid) {
     return root.firebase.firestore().collection('users').doc(uid).get().then(function (s) { var d = s.exists ? s.data() : null; if (d) root.__ssMyProf = Object.assign({ uid: uid }, d); return d; });
   };
@@ -5517,8 +5549,8 @@ onKeyDown={e=>e.key==="Enter" && handleLogin()} />
 {bioStored && (
 <button onClick={function(){ if(window.confirm("Remove fingerprint login data?")){ localStorage.removeItem("ss_bio_cred"); setBioStored(false); toast("Fingerprint removed","success"); } }} style={{background:"none",border:"none",color:"#F75555",fontSize:11,cursor:"pointer",marginTop:2,width:"100%",fontFamily:"Outfit,sans-serif"}}>{"🗑️ Remove Fingerprint"}</button>
 )}
-{loginUsername === "superadmin" && (
-<button onClick={()=>{ const em = String(loginUsername||"").trim(); if (em.indexOf("@") > 0) { firebase.auth().sendPasswordResetEmail(em).then(()=>toast("Reset link email pe bhej diya ✅ (spam bhi dekho)","success")).catch(e=>toast("Reset error: "+((e&&e.code)||e),"error")); } else { toast("Username box me apna email likho, phir Forgot Password dabao","info"); } }}
+{(loginUsername === "superadmin" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(loginUsername||"").trim())) && (
+<button onClick={()=>{ const raw = String(loginUsername||"").trim(); const em = (raw === "superadmin") ? window.SS_SA_EMAIL : raw; if (em && em.indexOf("@") > 0) { firebase.auth().sendPasswordResetEmail(em).then(()=>toast("Reset link "+em+" par bhej diya ✅ (spam bhi dekho)","success")).catch(e=>toast("Reset error: "+((e&&e.code)||e),"error")); } else { toast("Username box me apna email likho, phir Forgot Password dabao","info"); } }}
 style={{background:"none",border:"none",color:T.accent,cursor:"pointer",fontSize:12,fontWeight:600,marginTop:4,textAlign:"center",width:"100%"}}>
 🔑 Forgot Password?
 </button>
@@ -5537,76 +5569,6 @@ style={{background:"none",border:"none",color:T.accent,cursor:"pointer",fontSize
 </div>
 )}
 
-{forgotMode && (
-<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-<div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:18,padding:28,width:"100%",maxWidth:400}} className="fadeUp">
-<h2 style={{color:T.text,fontWeight:700,fontSize:18,marginBottom:4}}>🔑 Reset Password</h2>
-<p style={{color:T.textMuted,fontSize:13,marginBottom:20}}>
-{recoveryStep===1 ? "Check Firebase Console at: schoolshield/superadmin_recovery_code — enter that code here." : "Set new password"}
-</p>
-{recoveryStep === 1 && (
-<div>
-<p style={{fontSize:12,color:T.textMuted,marginBottom:6,fontWeight:600}}>Recovery Code</p>
-<input value={recoveryCode} onChange={e=>setRecoveryCode(e.target.value)}
-placeholder="Enter recovery code"
-style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"12px 14px",color:T.text,fontSize:14,fontFamily:"Outfit,sans-serif",outline:"none",boxSizing:"border-box",marginBottom:16}} />
-<div style={{background:`${T.yellow}15`,border:`1px solid ${T.yellow}40`,borderRadius:10,padding:12,marginBottom:16}}>
-<p style={{color:T.yellow,fontSize:12,fontWeight:700}}>📍 Where to find it?</p>
-<p style={{color:T.textMuted,fontSize:11,marginTop:4}}>Firebase Console → Realtime Database → schoolshield → superadmin_recovery_code</p>
-</div>
-<div style={{display:"flex",gap:8}}>
-<button onClick={async()=>{
-if(!recoveryCode.trim()){toast("Code daalo ❗","error");return;}
-let expected = "__disabled__" + Math.random();
-if(window.firebaseReady){
-try{ const s=await window.db.ref("schoolshield/superadmin_recovery_code").once("value"); if(s.val()) expected=s.val(); }catch{}
-}
-if(recoveryCode.trim()===expected){ setRecoveryStep(2); }
-else{ toast("Galat recovery code ❌","error"); }
-}} style={{flex:1,padding:"12px",background:T.accent,border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-✅ Verify
-</button>
-<button onClick={()=>{setForgotMode(false);setRecoveryCode("");setRecoveryStep(1);setNewPassR("");setConfirmPassR("");}}
-style={{flex:1,padding:"12px",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,color:T.text,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-Cancel
-</button>
-</div>
-</div>
-)}
-{recoveryStep === 2 && (
-<div>
-<p style={{fontSize:12,color:T.textMuted,marginBottom:6,fontWeight:600}}>Naya Password</p>
-<input type="password" value={newPassR} onChange={e=>setNewPassR(e.target.value)}
-placeholder="New password (min 6 chars)"
-style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"12px 14px",color:T.text,fontSize:14,fontFamily:"Outfit,sans-serif",outline:"none",boxSizing:"border-box",marginBottom:12}} />
-<p style={{fontSize:12,color:T.textMuted,marginBottom:6,fontWeight:600}}>Confirm Password</p>
-<input type="password" value={confirmPassR} onChange={e=>setConfirmPassR(e.target.value)}
-placeholder="Password dobara daalo"
-style={{width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"12px 14px",color:T.text,fontSize:14,fontFamily:"Outfit,sans-serif",outline:"none",boxSizing:"border-box",marginBottom:16}} />
-<div style={{display:"flex",gap:8}}>
-<button onClick={async()=>{
-if(newPassR.length<6){toast("Password must be at least 6 characters ❗","error");return;}
-if(newPassR!==confirmPassR){toast("Passwords do not match ❌","error");return;}
-const hashedNewPassR = await ssHashPassword(newPassR);
-if(window.firebaseReady){
-try{ await window.db.ref("schoolshield/superadmin_password").set(hashedNewPassR); }catch{}
-}
-try{ localStorage.setItem("ss_sa_pass",hashedNewPassR); }catch{}
-toast("✅ Password reset successfully! Please login now.","success");
-setForgotMode(false); setRecoveryCode(""); setRecoveryStep(1); setNewPassR(""); setConfirmPassR("");
-}} style={{flex:1,padding:"12px",background:"#0ECB81",border:"none",borderRadius:10,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-💾 Save Password
-</button>
-<button onClick={()=>{setRecoveryStep(1);setNewPassR("");setConfirmPassR("");}}
-style={{flex:1,padding:"12px",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,color:T.text,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"Outfit,sans-serif"}}>
-← Back
-</button>
-</div>
-</div>
-)}
-</div>
-</div>
-)}
 {false && (
 <div style={{background:T.card, border:"1px solid #ccc", borderRadius:16, padding:28}}>
 <h2>{l("accessCodeLogin")}</h2>
@@ -44673,6 +44635,29 @@ if (snap.exists()) { try { var d = snap.val(); if (Array.isArray(d)) { setEnquir
 });
 return function(){ ref.off(); };
 }, [mySchoolId]);
+React.useEffect(function(){
+if (!window.firebaseReady || !mySchoolId) return;
+var inbox = window.db.ref("schoolshield/publicEnquiries");
+var busy = false;
+var cb = function(snap){
+if (busy || !snap.exists()) return;
+var d = snap.val() || {};
+var me = String(mySchoolId).replace(/^SCH_/, "");
+var ids = Object.keys(d).filter(function(k){ var r = d[k]; return r && String(r.schoolId).replace(/^SCH_/, "") === me; });
+if (!ids.length) return;
+busy = true;
+var main = window.db.ref("schoolshield/school_" + mySchoolId + "/admissionEnquiries");
+main.once("value").then(function(sn){
+var list = []; try { var x = sn.val(); if (Array.isArray(x)) list = x; } catch(e) {}
+var have = {}; list.forEach(function(e){ if (e) have[e.id] = 1; });
+var add = ids.map(function(k){ return d[k]; }).filter(function(r){ return !have[r.id]; });
+var merged = add.concat(list);
+return main.set(merged).then(function(){ return Promise.all(ids.map(function(k){ return inbox.child(k).remove(); })); }).then(function(){ setEnquiries(merged); try { localStorage.setItem(STORE_KEY, JSON.stringify(merged)); } catch(e) {} });
+}).catch(function(e){ console.warn("publicEnquiries merge failed", e); }).then(function(){ busy = false; });
+};
+inbox.on("value", cb);
+return function(){ inbox.off("value", cb); };
+}, [mySchoolId]);
 var saveEnquiries = function(list) {
 setEnquiries(list);
 try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch(e) {}
@@ -44920,6 +44905,29 @@ if (snap.exists()) { try { var d = snap.val(); if (Array.isArray(d)) { setApplic
 return function(){ ref2.off(); };
 }, [mySchoolId]);
 
+React.useEffect(function(){
+if (!window.firebaseReady || !mySchoolId) return;
+var inbox = window.db.ref("schoolshield/publicApplications");
+var busy = false;
+var cb = function(snap){
+if (busy || !snap.exists()) return;
+var d = snap.val() || {};
+var me = String(mySchoolId).replace(/^SCH_/, "");
+var ids = Object.keys(d).filter(function(k){ var r = d[k]; return r && String(r.schoolId).replace(/^SCH_/, "") === me; });
+if (!ids.length) return;
+busy = true;
+var main = window.db.ref("schoolshield/school_" + mySchoolId + "/vacancyApplications");
+main.once("value").then(function(sn){
+var list = []; try { var x = sn.val(); if (Array.isArray(x)) list = x; } catch(e) {}
+var have = {}; list.forEach(function(e){ if (e) have[e.id] = 1; });
+var add = ids.map(function(k){ return d[k]; }).filter(function(r){ return !have[r.id]; });
+var merged = add.concat(list);
+return main.set(merged).then(function(){ return Promise.all(ids.map(function(k){ return inbox.child(k).remove(); })); }).then(function(){ setApplications(merged); try { localStorage.setItem(APP_STORE_KEY, JSON.stringify(merged)); } catch(e) {} });
+}).catch(function(e){ console.warn("publicApplications merge failed", e); }).then(function(){ busy = false; });
+};
+inbox.on("value", cb);
+return function(){ inbox.off("value", cb); };
+}, [mySchoolId]);
 var saveVacancies = function(list) {
 setVacancies(list);
 try { localStorage.setItem(VAC_STORE_KEY, JSON.stringify(list)); } catch(e) {}
@@ -51132,10 +51140,6 @@ var address = getVal("adm-f-address");
 var notes = getVal("adm-f-notes");
 var submitBtn = document.getElementById("adm-f-submit-btn");
 if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting..."; }
-var enqRef = db.ref("schoolshield/school_" + school.id + "/admissionEnquiries");
-enqRef.once("value").then(function(snap) {
-var list = [];
-try { var d = snap.val(); if (Array.isArray(d)) list = d; } catch(e) {}
 var rec = {
 id: Date.now(), schoolId: school.id, name: name, phone: "", dob: dob, forClass: forClass,
 parentName: parentName, parentPhone: parentPhone, address: address,
@@ -51143,9 +51147,8 @@ source: "Online", notes: notes, status: "Enquired",
 date: new Date().toLocaleDateString("en-IN"), createdAt: new Date().toISOString(),
 addedBy: "Website (Public Page)"
 };
-list = [rec].concat(list);
-return enqRef.set(list);
-}).then(function() {
+var inboxId = String(rec.id) + Math.random().toString(36).slice(2, 6);
+db.ref("schoolshield/publicEnquiries/" + inboxId).set(rec).then(function() {
 var formBox = document.getElementById("ss-adm-form-box");
 if (formBox) formBox.innerHTML = "<div style='text-align:center;padding:30px 10px;'><div style='font-size:44px;margin-bottom:10px;'>✅</div><p style='color:#0ECB81;font-weight:800;font-size:15px;margin-bottom:8px;'>Application Submitted!</p><p style='color:#C0C8D8;font-size:12px;line-height:1.6;'>Your admission enquiry has been sent to the school. Our team will contact you soon.</p><button onclick='window.__admCloseForm()' style='margin-top:16px;background:#4F8EF7;border:none;border-radius:8px;padding:10px 20px;color:#fff;font-weight:700;cursor:pointer;'>Close</button></div>";
 }).catch(function(err) {
@@ -51195,19 +51198,14 @@ var qualification = getVal("vac-f-qualification");
 var vac = myVacancies[vacActiveIdx] || {};
 var submitBtn = document.getElementById("vac-f-submit-btn");
 if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting..."; }
-var appRef = db.ref("schoolshield/school_" + school.id + "/vacancyApplications");
-appRef.once("value").then(function(snap) {
-var list = [];
-try { var d = snap.val(); if (Array.isArray(d)) list = d; } catch(e) {}
 var rec = {
 id: Date.now(), schoolId: school.id, vacancyId: vac.id, vacancyTitle: vac.title || "",
 applicantName: name, phone: phone, qualification: qualification, resumeUrl: vacResumeUrl,
 appliedAt: new Date().toISOString(), date: new Date().toLocaleDateString("en-IN"),
 source: "Public Page"
 };
-list = [rec].concat(list);
-return appRef.set(list);
-}).then(function() {
+var inboxId = String(rec.id) + Math.random().toString(36).slice(2, 6);
+db.ref("schoolshield/publicApplications/" + inboxId).set(rec).then(function() {
 var formBox = document.getElementById("ss-vac-form-box");
 if (formBox) formBox.innerHTML = "<div style='text-align:center;padding:30px 10px;'><div style='font-size:44px;margin-bottom:10px;'>✅</div><p style='color:#0ECB81;font-weight:800;font-size:15px;margin-bottom:8px;'>Application Submitted!</p><p style='color:#C0C8D8;font-size:12px;line-height:1.6;'>Your job application has been sent to the school. They will contact you if shortlisted.</p><button onclick='window.__vacCloseForm()' style='margin-top:16px;background:#0ECB81;border:none;border-radius:8px;padding:10px 20px;color:#fff;font-weight:700;cursor:pointer;'>Close</button></div>";
 }).catch(function(err) {
@@ -51234,34 +51232,17 @@ if (code === schoolCode || String(s.id) === schoolCode) { school = s; break; }
 if (!school) { showError("School not found: " + schoolCode); return; }
 if (!school.isPublic) { showError("This school's page is not public."); return; }
 var sid = "SCH_" + String(school.id).replace("SCH_","");
-var pgRef = db.ref("schoolshield/schools/" + sid + "/schoolPageData");
-var teachRef = db.ref("schoolshield/schools/" + sid + "/teachers");
-var galRef = db.ref("schoolshield/schools/" + sid + "/gallery");
-var studRef = db.ref("schoolshield/schools/" + sid + "/students");
-var busRef = db.ref("schoolshield/schools/" + sid + "/buses");
-var empRef = db.ref("schoolshield/schools/" + sid + "/employees");
-var vacRef = db.ref("schoolshield/school_" + school.id + "/vacancies");
-Promise.all([pgRef.once("value"), teachRef.once("value"), galRef.once("value"), studRef.once("value"), busRef.once("value"), empRef.once("value"), vacRef.once("value")]).then(function(snaps) {
-var pgData = {};
-try { pgData = JSON.parse(snaps[0].val() || "{}"); } catch(e1) { pgData = {}; }
-var teachData = {};
-try { teachData = JSON.parse(snaps[1].val() || "[]"); } catch(e2) { teachData = {}; }
-var galData = {};
-try { galData = JSON.parse(snaps[2].val() || "[]"); } catch(e3) { galData = {}; }
-var studData = {};
-try { studData = JSON.parse(snaps[3].val() || "[]"); } catch(e4) { studData = {}; }
-var busData = {};
-try { busData = JSON.parse(snaps[4].val() || "[]"); } catch(e5) { busData = {}; }
-var empData = {};
-try { empData = JSON.parse(snaps[5].val() || "[]"); } catch(e6) { empData = {}; }
-var vacData = [];
-try { var vd = snaps[6].val(); if (Array.isArray(vd)) vacData = vd; } catch(e7) { vacData = []; }
-var teachers = Object.values(teachData).filter(function(t){ return t && t.name; });
-var gallery = Object.values(galData).filter(function(g){ return g && g.photoUrl; });
-var students = Object.values(studData).filter(function(st){ return st && st.name; });
-var buses = Object.values(busData).filter(function(b){ return b && b.busNo; });
-var employees = Object.values(empData).filter(function(em){ return em && em.name; });
-var vacancies = vacData.filter(function(v){ return v && v.title && v.isOpen !== false; });
+var pubId = String(school.id).replace("SCH_","");
+var rdPub = function(part) { return db.ref("schoolshield/publicPages/" + pubId + "-" + part).once("value").then(function(sn) { var v = sn.val(); return (v && v.data !== undefined) ? v.data : null; }); };
+Promise.all([rdPub("page"), rdPub("teachers"), rdPub("gallery"), rdPub("stats"), rdPub("vacancies")]).then(function(r) {
+var pgData = (r[0] && typeof r[0] === "object") ? r[0] : {};
+var teachers = (Array.isArray(r[1]) ? r[1] : []).filter(function(t){ return t && t.name; });
+var gallery = (Array.isArray(r[2]) ? r[2] : []).filter(function(g){ return g && g.photoUrl; });
+var stt = r[3] || {};
+var students = Array.isArray(stt.students) ? stt.students : [];
+var buses = []; for (var bi = 0; bi < (+stt.buses || 0); bi++) buses.push({busNo: String(bi + 1)});
+var employees = []; for (var ei = 0; ei < (+stt.employees || 0); ei++) employees.push({name: "Staff"});
+var vacancies = (Array.isArray(r[4]) ? r[4] : []).filter(function(v){ return v && v.title && v.isOpen !== false; });
 buildPage(school, pgData[school.id] || pgData[sid] || pgData || {}, teachers, gallery, students, buses, employees, vacancies);
 }).catch(function(e) { showError("Failed to load data."); });
 }).catch(function(e) { showError("Failed to load school list."); });
