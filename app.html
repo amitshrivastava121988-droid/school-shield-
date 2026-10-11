@@ -306,6 +306,7 @@ document.head.appendChild(earlyHideStyle);
       }
     } else {
       pr = db._txn(p, function (cur) { return setIn(cur, p.rest, v); });
+      if (p.kind === 'S' && /^(schoolPageData|teachers|gallery|legacy_vacancies)$/.test(p.k)) pr.then(function () { if (root.__ssPublishPublicPageSoon) root.__ssPublishPublicPageSoon(db); }, function () {});
     }
     if (typeof onComplete === 'function') pr.then(function () { onComplete(null); }, onComplete);
     return pr;
@@ -408,12 +409,16 @@ document.head.appendChild(earlyHideStyle);
 
   root.SS_SA_EMAIL = 'superadmin@schoolshield.app';
   // Public school page ke liye sirf safe (sanitized) snapshot; principal/founder/VP ke login par max 1 ghante me ek baar
-  root.__ssPublishPublicPage = function (db) {
+  root.__ssPublishPublicPageSoon = function (db) {
+    clearTimeout(root.__ssPubT);
+    root.__ssPubT = setTimeout(function () { try { root.__ssPublishPublicPage(db, true); } catch (e) {} }, 4000);
+  };
+  root.__ssPublishPublicPage = function (db, force) {
     var pf = root.__ssMyProf;
     if (!pf || pf.active === false || !pf.schoolId) return;
     if (['principal', 'founder', 'vice_principal'].indexOf(pf.role) < 0) return;
     var sid = norm(pf.schoolId), lsKey = 'ss_pubpage_' + sid;
-    try { var last = +localStorage.getItem(lsKey) || 0; if (Date.now() - last < 3600 * 1000) return; } catch (e) {}
+    if (!force) { try { var last = +localStorage.getItem(lsKey) || 0; if (Date.now() - last < 3600 * 1000) return; } catch (e) {} }
     var base = 'schoolshield/schools/SCH_' + sid + '/';
     var rd = function (p) {
       return db.ref(p).once('value').then(function (sn) {
